@@ -10,10 +10,12 @@ import java.util.Random;
 public final class DeterministicRng {
     private DeterministicRng() {}
 
+    private static final long GOLDEN = 0x9E3779B97F4A7C15L;
+
     public static Random forStep(long seed, long tick, long stepId) {
-        long h = seed;
-        h = mix(h ^ tick);
-        h = mix(h ^ stepId);
+        long h = mix(seed);
+        h = mix(h + GOLDEN + tick);
+        h = mix(h + GOLDEN + stepId);
         return new Random(h);
     }
 

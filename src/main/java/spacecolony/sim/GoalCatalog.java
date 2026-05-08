@@ -13,7 +13,7 @@ public final class GoalCatalog {
         add(new Goal("self-sufficient-mars", "Self-Sufficient Mars",
             "A Mars site with FOOD production rate >= consumption.", 8000, 0,
             w -> w.bodies.stream().filter(b -> b.id.equals("mars")).flatMap(b -> b.sites.stream())
-                  .anyMatch(s -> s.productionRateCache.getOrDefault(Resource.FOOD, 0.0) >= 0.0 && s.population > 0)));
+                  .anyMatch(s -> s.productionRateCache.getOrDefault(Resource.FOOD, 0.0) > 0.0 && s.population > 0)));
 
         add(new Goal("belt-presence", "Reach the Belt",
             "Establish a site on any belt asteroid.", 6000, 200,
