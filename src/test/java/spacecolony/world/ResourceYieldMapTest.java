@@ -41,6 +41,19 @@ class ResourceYieldMapTest {
     }
 
     @Test
+    void componentsAreNeverYielded() {
+        for (BodyType t : BodyType.values()) {
+            ResourceYieldMap m = new ResourceYieldMap(7L, t);
+            for (int i = 0; i < 5; i++) {
+                double lat = -1.0 + 0.4 * i;
+                double lon = -2.0 + 0.8 * i;
+                assertEquals(0.0, m.sample(Resource.COMPONENTS, lat, lon), 1e-12,
+                    "COMPONENTS must never be a terrain yield (BodyType=" + t + ")");
+            }
+        }
+    }
+
+    @Test
     void asteroid_skewsToOreAndMetal() {
         ResourceYieldMap m = new ResourceYieldMap(1L, BodyType.ASTEROID);
         // Average ORE yield should be > average ICE yield on a generic asteroid.

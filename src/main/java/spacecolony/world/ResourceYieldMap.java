@@ -19,10 +19,19 @@ public class ResourceYieldMap {
     public ResourceYieldMap(long bodySeed, BodyType type) {
         this.type = type;
         for (Resource r : Resource.values()) {
-            // Each resource gets its own noise stream.
-            long seed = bodySeed * 31 + r.ordinal() * 1009L;
+            // Each resource gets its own noise stream, mixed via splitmix64
+            // so adjacent ordinals don't yield correlated streams.
+            long seed = mix(bodySeed, r.ordinal());
             noises.put(r, new SimplexNoise(seed));
         }
+    }
+
+    private static long mix(long a, long b) {
+        long h = a * 1000003L + b;
+        h ^= (h >>> 33);
+        h *= 0xff51afd7ed558ccdL;
+        h ^= (h >>> 33);
+        return h;
     }
 
     /** lat in radians [-pi/2, pi/2]; lon in radians [-pi, pi]. */
@@ -42,6 +51,8 @@ public class ResourceYieldMap {
         }
         // ENERGY is not stockpiled and isn't yielded by terrain.
         if (r == Resource.ENERGY) return 0.0;
+        // COMPONENTS are manufactured (METAL+SILICATE), never extracted from terrain.
+        if (r == Resource.COMPONENTS) return 0.0;
 
         double base = baseBias(r);
         // Convert lat/lon to a 3D unit vector for seamless sampling.
