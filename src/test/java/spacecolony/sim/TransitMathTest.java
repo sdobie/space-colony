@@ -76,4 +76,28 @@ class TransitMathTest {
         w.findBody("mars").sites.add(mars);
         return mars;
     }
+
+    @Test
+    void shipDispatchedToJovianMoon_arrivesViaParentRecursion() {
+        // Verifies bodyPosition()'s moon-parent recursion: dispatching to Europa
+        // (which orbits Jovian) must use Jovian's heliocentric position plus
+        // Europa's local orbit. A non-recursive bodyPosition would put Europa
+        // at <0.004 AU from the sun and the trip would never converge.
+        World w = worldWithHaulerAtEarth();
+        Site moon = new Site("site-europa-test", "Europa Test", "europa", 0.0, 0.0, 50);
+        moon.population = 0;
+        w.findBody("europa").sites.add(moon);
+
+        Simulator sim = new Simulator();
+        sim.enqueue(new DispatchShipCommand("ship-h1", moon.id, Map.of(Resource.METAL, 30.0)));
+        for (int i = 0; i < 20000; i++) {
+            sim.advance(w);
+            Ship s = w.findShip("ship-h1");
+            if (s.state == ShipState.IDLE && i > 50) break;
+        }
+        Ship s = w.findShip("ship-h1");
+        assertEquals(ShipState.IDLE, s.state, "Ship should reach Europa");
+        assertEquals(moon.id, s.currentSiteId);
+        assertEquals(30.0, moon.stockpile.get(Resource.METAL), 1e-9);
+    }
 }

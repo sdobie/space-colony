@@ -117,7 +117,23 @@ public class Simulator {
         Ship s = w.findShip(ds.shipId());
         if (s == null) throw new CommandRejectedException("No such ship: " + ds.shipId());
         if (s.state != ShipState.IDLE) throw new CommandRejectedException("Ship not idle: " + ds.shipId());
-        if (w.findSite(ds.destSiteId()) == null) throw new CommandRejectedException("No such dest: " + ds.destSiteId());
+        Site originSite = w.findSite(s.currentSiteId);
+        Site destSite = w.findSite(ds.destSiteId());
+        if (destSite == null) throw new CommandRejectedException("No such dest: " + ds.destSiteId());
+        // Spec §3.7: estimate fuel at command time using current positions and reject if
+        // the ship clearly can't afford the manifest. The departure-time check still runs
+        // later, but this saves the player N ticks of LOADING for a doomed dispatch.
+        if (originSite != null) {
+            double[] op = bodyPosition(w, originSite.bodyId, w.tick);
+            double[] dp = bodyPosition(w, destSite.bodyId, w.tick);
+            double dx = dp[0] - op[0], dy = dp[1] - op[1];
+            double dist = Math.sqrt(dx * dx + dy * dy);
+            double manifestMass = 0.0;
+            for (Double v : ds.manifest().values()) if (v != null) manifestMass += v;
+            double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist;
+            if (s.fuel < estCost)
+                throw new CommandRejectedException("Insufficient fuel for dispatch: " + ds.shipId());
+        }
         // Move into LOADING; transit math runs in loadingAndUnloading() when manifest is filled.
         // Stash dest + manifest on Transit with PENDING_ARRIVAL_TICK; loadingAndUnloading()
         // recomputes the real arrival tick at departure.
@@ -183,7 +199,8 @@ public class Simulator {
                         w.emit(new Event(w.tick, EventSeverity.WARNING, EventKind.SHIP_OUT_OF_FUEL,
                             "Ship " + s.name + " aborted: insufficient fuel", null, null, s.id));
                         // Return cargo to origin and reset state.
-                        for (var entry : new java.util.HashMap<>(s.cargo).entrySet()) {
+                        // Snapshot via EnumMap to preserve deterministic ordinal iteration order.
+                        for (var entry : new java.util.EnumMap<>(s.cargo).entrySet()) {
                             if (entry.getValue() > 0) {
                                 origin.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
                                 s.cargo.put(entry.getKey(), 0.0);
