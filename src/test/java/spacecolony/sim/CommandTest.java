@@ -59,4 +59,46 @@ class CommandTest {
         sim.advance(w);
         assertEquals("basic-mining", w.tech.activeId);
     }
+
+    @Test
+    void buildSiteCommand_addsSiteAndConsumesColonizer() {
+        World w = WorldGenerator.generate(1L);
+        // Place a colonizer at the Earth hub.
+        Ship col = new Ship("col-1", "Pioneer", ShipClass.COLONIZER, "site-earth-hub");
+        w.ships.add(col);
+        int sitesBefore = w.findBody("earth").sites.size();
+        Simulator sim = new Simulator();
+        sim.enqueue(new BuildSiteCommand("site-earth-2", "Earth Outpost", "earth", 0.1, 0.2, "col-1"));
+        sim.advance(w);
+        assertEquals(sitesBefore + 1, w.findBody("earth").sites.size());
+        assertNotNull(w.findSite("site-earth-2"));
+        assertNull(w.findShip("col-1"), "Colonizer should be consumed");
+    }
+
+    @Test
+    void buildSiteCommand_duplicateSiteId_isRejected() {
+        World w = WorldGenerator.generate(1L);
+        Ship col = new Ship("col-1", "Pioneer", ShipClass.COLONIZER, "site-earth-hub");
+        w.ships.add(col);
+        Simulator sim = new Simulator();
+        sim.enqueue(new BuildSiteCommand("site-earth-hub", "Duplicate", "earth", 0.1, 0.2, "col-1"));
+        sim.advance(w);
+        assertTrue(w.recentEvents.stream()
+            .anyMatch(e -> e.kind() == EventKind.COMMAND_REJECTED));
+        assertNotNull(w.findShip("col-1"), "Rejected dispatch must not consume the colonizer");
+    }
+
+    @Test
+    void dispatchShipCommand_unknownDest_isRejected() {
+        World w = WorldGenerator.generate(1L);
+        Ship h = new Ship("h-1", "H1", ShipClass.HAULER, "site-earth-hub");
+        h.fuel = 1000.0;
+        w.ships.add(h);
+        Simulator sim = new Simulator();
+        sim.enqueue(new DispatchShipCommand("h-1", "site-doesnt-exist", java.util.Map.of()));
+        sim.advance(w);
+        assertEquals(ShipState.IDLE, w.findShip("h-1").state);
+        assertTrue(w.recentEvents.stream()
+            .anyMatch(e -> e.kind() == EventKind.COMMAND_REJECTED));
+    }
 }

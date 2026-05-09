@@ -10,7 +10,13 @@ public class Ship {
     public ShipState state;
     /** Site ID when state in {IDLE, LOADING, UNLOADING}; null when IN_TRANSIT. */
     public String currentSiteId;
-    /** Non-null only when state == IN_TRANSIT. */
+    /**
+     * Non-null when state in {LOADING, IN_TRANSIT, UNLOADING}.
+     * - In LOADING: holds destSiteId and the cargo manifest target; arrivalTick is
+     *   {@link Transit#PENDING_ARRIVAL_TICK} until the manifest is filled and the
+     *   ship physically departs.
+     * - In IN_TRANSIT and UNLOADING: arrivalTick is the real computed arrival tick.
+     */
     public Transit transit;
     public final Map<Resource, Double> cargo = new EnumMap<>(Resource.class);
     public double fuel;
