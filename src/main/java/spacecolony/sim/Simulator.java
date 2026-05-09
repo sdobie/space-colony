@@ -279,7 +279,126 @@ public class Simulator {
         return p;
     }
 
-    private void productionAndConsumption(World w) { /* Task 22 */ }
+    private static final double POP_FOOD_PER_DAY = 0.01;     // per person
+    private static final double POP_WATER_PER_DAY = 0.005;
+    private static final double WORKERS_PER_BUILDING = 5;
+
+    private void productionAndConsumption(World w) {
+        for (Body b : w.bodies) {
+            for (Site s : b.sites) {
+                // 1. Power balance.
+                double powerProduced = 0;
+                double powerDemand = 0;
+                for (Building bd : s.buildings) {
+                    if (!bd.enabled) continue;
+                    if (bd.type == BuildingType.POWER_PLANT) {
+                        // Solar output scales with 1/r^2 (r = distance from sun, in AU).
+                        double r = sunDistance(w, b);
+                        double output = 10.0 * bd.level / Math.max(0.05, r * r);
+                        powerProduced += output;
+                    } else {
+                        powerDemand += 2.0 * bd.level;
+                    }
+                }
+                double powerFactor = powerDemand <= 0 ? 1.0 : Math.min(1.0, powerProduced / powerDemand);
+
+                // 2. Reset cache; populate with deltas.
+                for (Resource r : Resource.values()) s.productionRateCache.put(r, 0.0);
+
+                // 3. Consumption (always paid first).
+                double foodNeed = s.population * POP_FOOD_PER_DAY;
+                double waterNeed = s.population * POP_WATER_PER_DAY;
+                consume(s, Resource.FOOD, foodNeed);
+                consume(s, Resource.WATER, waterNeed);
+
+                // 4. Resource yields require a body-attached ResourceYieldMap; sample at site lat/lon.
+                spacecolony.world.ResourceYieldMap yields = (b.resourceYields instanceof spacecolony.world.ResourceYieldMap rm) ? rm : null;
+
+                // 5. Production by building type.
+                for (Building bd : s.buildings) {
+                    if (!bd.enabled) continue;
+                    switch (bd.type) {
+                        case MINE -> {
+                            if (yields != null) {
+                                double y = yields.sample(Resource.ORE, s.lat, s.lon);
+                                double produced = bd.level * 2.0 * y * powerFactor;
+                                produce(s, Resource.ORE, produced);
+                                // Mines also yield silicate, scaled.
+                                double si = bd.level * 1.0 * yields.sample(Resource.SILICATE, s.lat, s.lon) * powerFactor;
+                                produce(s, Resource.SILICATE, si);
+                            }
+                        }
+                        case FARM -> {
+                            // Consume biomass + water; produce food.
+                            double biomassConsumed = consume(s, Resource.BIOMASS, bd.level * 0.5 * powerFactor);
+                            double waterConsumed   = consume(s, Resource.WATER,   bd.level * 0.3 * powerFactor);
+                            double foodProduced = bd.level * 1.5 * powerFactor *
+                                                  Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * 0.5));
+                            produce(s, Resource.FOOD, foodProduced);
+                        }
+                        case REFINERY -> {
+                            double oreUsed = consume(s, Resource.ORE, bd.level * 1.5 * powerFactor);
+                            produce(s, Resource.METAL, oreUsed * 0.8);
+                            double iceUsed = consume(s, Resource.ICE, bd.level * 1.0 * powerFactor);
+                            produce(s, Resource.WATER, iceUsed * 0.9);
+                        }
+                        case POWER_PLANT, HABITAT, SHIPYARD, RESEARCH_LAB -> { /* tracked elsewhere */ }
+                    }
+                }
+
+                // 6. Stockpile clipping.
+                for (Resource r : Resource.values()) {
+                    if (!r.isStockpileable()) continue;
+                    double cap = s.stockpileCap.getOrDefault(r, 1000.0);
+                    double cur = s.stockpile.getOrDefault(r, 0.0);
+                    if (cur > cap) s.stockpile.put(r, cap);
+                    if (cur < 0) s.stockpile.put(r, 0.0);
+                }
+
+                // 7. Morale & population updates.
+                updateMorale(s);
+                updatePopulation(s);
+
+                // 8. Recover power plants knocked out by solar flare (Task 23): brownout
+                // applies for the tick they were offline, but they come back online for next tick.
+                for (Building bd : s.buildings) if (bd.type == BuildingType.POWER_PLANT) bd.enabled = true;
+            }
+        }
+    }
+
+    private double consume(Site s, Resource r, double amount) {
+        double have = s.stockpile.getOrDefault(r, 0.0);
+        double taken = Math.min(have, amount);
+        s.stockpile.put(r, have - taken);
+        s.productionRateCache.merge(r, -taken, Double::sum);
+        return taken;
+    }
+
+    private void produce(Site s, Resource r, double amount) {
+        s.stockpile.merge(r, amount, Double::sum);
+        s.productionRateCache.merge(r, amount, Double::sum);
+    }
+
+    private void updateMorale(Site s) {
+        boolean shortFood = s.stockpile.getOrDefault(Resource.FOOD, 0.0) < 1e-6;
+        boolean shortWater = s.stockpile.getOrDefault(Resource.WATER, 0.0) < 1e-6;
+        if (shortFood || shortWater) s.morale = Math.max(0.0, s.morale - 0.05);
+        else s.morale = Math.min(1.0, s.morale + 0.005);
+    }
+
+    private void updatePopulation(Site s) {
+        if (s.morale > 0.7 && s.population < s.populationCap) {
+            s.population += Math.max(1, s.population / 200);
+        } else if (s.morale < 0.3) {
+            s.population = Math.max(0, s.population - Math.max(1, s.population / 100));
+        }
+    }
+
+    private static double sunDistance(World w, Body b) {
+        double[] p = bodyPosition(w, b.id, w.tick);
+        return Math.sqrt(p[0] * p[0] + p[1] * p[1]);
+    }
+
     private void randomEvents(World w)          { /* Task 23 */ }
     private void researchProgress(World w)      { /* Task 24 */ }
     private void goalCheck(World w)             { /* Task 25 */ }
