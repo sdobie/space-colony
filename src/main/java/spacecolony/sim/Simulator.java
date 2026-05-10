@@ -399,7 +399,60 @@ public class Simulator {
         return Math.sqrt(p[0] * p[0] + p[1] * p[1]);
     }
 
-    private void randomEvents(World w)          { /* Task 23 */ }
+    private static final double EVENT_BASE_RATE = 0.0008; // per body per tick
+
+    private void randomEvents(World w) {
+        java.util.Random rng = DeterministicRng.forStep(w.seed, w.tick, 6L);
+        EventKind[] kinds = {EventKind.METEOR_STRIKE, EventKind.SOLAR_FLARE,
+                              EventKind.EQUIPMENT_FAILURE, EventKind.DISEASE_OUTBREAK};
+        for (Body b : w.bodies) {
+            if (rng.nextDouble() < EVENT_BASE_RATE) {
+                EventKind k = kinds[rng.nextInt(kinds.length)];
+                applyEvent(w, b, k, rng);
+            }
+        }
+    }
+
+    private void applyEvent(World w, Body b, EventKind k, java.util.Random rng) {
+        switch (k) {
+            case METEOR_STRIKE -> {
+                for (Site s : b.sites) {
+                    if (s.buildings.isEmpty()) continue;
+                    int idx = rng.nextInt(s.buildings.size());
+                    s.buildings.get(idx).enabled = false;
+                }
+                w.emit(new Event(w.tick, EventSeverity.WARNING, k,
+                    "Meteor strike on " + b.name, b.id, null, null));
+            }
+            case SOLAR_FLARE -> {
+                // Disable all power plants for 1 tick (re-enabled at end of next productionAndConsumption).
+                for (Body bb : w.bodies) for (Site s : bb.sites)
+                    for (Building bd : s.buildings) if (bd.type == BuildingType.POWER_PLANT) bd.enabled = false;
+                w.emit(new Event(w.tick, EventSeverity.WARNING, k,
+                    "Solar flare disrupted system-wide power", null, null, null));
+            }
+            case EQUIPMENT_FAILURE -> {
+                for (Site s : b.sites) {
+                    for (Building bd : s.buildings) {
+                        if (bd.enabled && rng.nextDouble() < 0.3) { bd.enabled = false; break; }
+                    }
+                }
+                w.emit(new Event(w.tick, EventSeverity.WARNING, k,
+                    "Equipment failure on " + b.name, b.id, null, null));
+            }
+            case DISEASE_OUTBREAK -> {
+                for (Site s : b.sites) if (s.population > 0) {
+                    int loss = Math.max(1, s.population / 10);
+                    s.population -= loss;
+                    s.morale = Math.max(0, s.morale - 0.2);
+                }
+                w.emit(new Event(w.tick, EventSeverity.WARNING, k,
+                    "Disease outbreak on " + b.name, b.id, null, null));
+            }
+            default -> {}
+        }
+    }
+
     private void researchProgress(World w)      { /* Task 24 */ }
     private void goalCheck(World w)             { /* Task 25 */ }
 }
