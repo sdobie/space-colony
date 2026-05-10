@@ -281,7 +281,6 @@ public class Simulator {
 
     private static final double POP_FOOD_PER_DAY = 0.01;     // per person
     private static final double POP_WATER_PER_DAY = 0.005;
-    private static final double WORKERS_PER_BUILDING = 5;
 
     private void productionAndConsumption(World w) {
         for (Body b : w.bodies) {
@@ -331,7 +330,7 @@ public class Simulator {
                         case FARM -> {
                             // Consume biomass + water; produce food.
                             double biomassConsumed = consume(s, Resource.BIOMASS, bd.level * 0.5 * powerFactor);
-                            double waterConsumed   = consume(s, Resource.WATER,   bd.level * 0.3 * powerFactor);
+                            consume(s, Resource.WATER, bd.level * 0.3 * powerFactor);
                             double foodProduced = bd.level * 1.5 * powerFactor *
                                                   Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * 0.5));
                             produce(s, Resource.FOOD, foodProduced);
@@ -374,6 +373,7 @@ public class Simulator {
         return taken;
     }
 
+    /** Cache reflects gross output before stockpile cap clipping (which happens later). */
     private void produce(Site s, Resource r, double amount) {
         s.stockpile.merge(r, amount, Double::sum);
         s.productionRateCache.merge(r, amount, Double::sum);

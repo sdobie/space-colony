@@ -31,18 +31,18 @@ class ProductionTest {
     void noPower_throttlesProduction() {
         World w = WorldGenerator.generate(1L);
         Site s = w.findSite("site-earth-hub");
-        // Disable the power plant.
+        // Disable the power plant; powerFactor=0, ORE production should be exactly 0.
         for (Building b : s.buildings) if (b.type == BuildingType.POWER_PLANT) b.enabled = false;
         double oreBefore = s.stockpile.get(Resource.ORE);
         new Simulator().advance(w);
         double delta = s.stockpile.get(Resource.ORE) - oreBefore;
-        // Should still produce *some* (population works without power) but throttled.
-        // Compare to baseline:
+        assertEquals(0.0, delta, 1e-9, "No power should produce no ore");
+        // Regression guard: the same world WITH power produces some ore.
         World baseline = WorldGenerator.generate(1L);
         double baseBefore = baseline.findSite("site-earth-hub").stockpile.get(Resource.ORE);
         new Simulator().advance(baseline);
         double baseDelta = baseline.findSite("site-earth-hub").stockpile.get(Resource.ORE) - baseBefore;
-        assertTrue(delta < baseDelta * 0.6, "Brownout should reduce ore output");
+        assertTrue(baseDelta > 0.0, "Baseline with power should produce ore");
     }
 
     @Test
