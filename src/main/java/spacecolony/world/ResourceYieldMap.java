@@ -12,7 +12,7 @@ import spacecolony.sim.Resource;
  *
  * Output is clamped to [0, 1] where 1 means rich and 0 means absent.
  */
-public class ResourceYieldMap {
+public class ResourceYieldMap implements spacecolony.sim.ResourceYieldSampler {
     private final BodyType type;
     private final Map<Resource, SimplexNoise> noises = new EnumMap<>(Resource.class);
 

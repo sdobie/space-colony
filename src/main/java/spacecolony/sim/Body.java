@@ -17,12 +17,12 @@ public class Body {
     public final double mass;
     public final double radius;
     public final long surfaceSeed;
-    /** Resource yield multipliers; opaque container (typed Object to keep sim → world dependency one-way). */
-    public final Object resourceYields;
+    /** Resource yield multipliers; null on body construction is allowed (set during world-gen). */
+    public final ResourceYieldSampler resourceYields;
     public final List<Site> sites = new ArrayList<>();
 
     public Body(String id, String name, BodyType type, Orbit orbit,
-                double mass, double radius, long surfaceSeed, Object resourceYields) {
+                double mass, double radius, long surfaceSeed, ResourceYieldSampler resourceYields) {
         this.id = id;
         this.name = name;
         this.type = type;

@@ -311,8 +311,8 @@ public class Simulator {
                 consume(s, Resource.FOOD, foodNeed);
                 consume(s, Resource.WATER, waterNeed);
 
-                // 4. Resource yields require a body-attached ResourceYieldMap; sample at site lat/lon.
-                spacecolony.world.ResourceYieldMap yields = (b.resourceYields instanceof spacecolony.world.ResourceYieldMap rm) ? rm : null;
+                // 4. Sample yields via the sim-level ResourceYieldSampler interface; world supplies the implementation.
+                ResourceYieldSampler yields = b.resourceYields;
 
                 // 5. Production by building type.
                 for (Building bd : s.buildings) {
