@@ -92,8 +92,9 @@ public class Simulator {
     private void applyQueueResearch(World w, QueueResearchCommand qr) {
         if (TechCatalog.get(qr.techId()) == null) throw new CommandRejectedException("Unknown tech: " + qr.techId());
         if (w.tech.researched.contains(qr.techId())) throw new CommandRejectedException("Already researched: " + qr.techId());
+        // Preserve any accumulated points from goal rewards or a previously queued tech
+        // (a player switching research mid-stream gets to carry their progress forward).
         w.tech.activeId = qr.techId();
-        w.tech.accumulatedPoints = 0.0;
     }
 
     private void applyBuildSite(World w, BuildSiteCommand bsc) {

@@ -32,6 +32,7 @@ class EventsTest {
             .map(e -> e.tick() + ":" + e.kind()).toList();
         var bList = b.recentEvents.stream()
             .map(e -> e.tick() + ":" + e.kind()).toList();
+        assertFalse(aList.isEmpty(), "Test seed should produce at least one event in 2000 ticks");
         assertEquals(aList, bList);
     }
 }
