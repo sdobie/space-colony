@@ -470,5 +470,16 @@ public class Simulator {
                 "Researched " + t.name(), null, null, null));
         }
     }
-    private void goalCheck(World w)             { /* Task 25 */ }
+    private void goalCheck(World w) {
+        for (Goal g : GoalCatalog.all()) {
+            if (w.goals.achieved.contains(g.id())) continue;
+            if (g.predicate().test(w)) {
+                w.goals.achieved.add(g.id());
+                w.credits += g.creditReward();
+                w.tech.accumulatedPoints += g.researchReward();
+                w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.GOAL_ACHIEVED,
+                    "Goal achieved: " + g.name(), null, null, null));
+            }
+        }
+    }
 }
