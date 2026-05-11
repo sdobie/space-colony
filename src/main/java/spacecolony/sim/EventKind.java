@@ -1,0 +1,14 @@
+package spacecolony.sim;
+
+public enum EventKind {
+    METEOR_STRIKE,
+    SOLAR_FLARE,
+    EQUIPMENT_FAILURE,
+    DISEASE_OUTBREAK,
+    COMMAND_REJECTED,
+    SHIP_ARRIVED,
+    SHIP_DEPARTED,
+    SHIP_OUT_OF_FUEL,
+    GOAL_ACHIEVED,
+    RESEARCH_COMPLETED
+}
