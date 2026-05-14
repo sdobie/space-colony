@@ -426,8 +426,8 @@ public class PlanetGenerator {
 
         // Gas giant: latitude-banded color using the real lat parameter the caller provides.
         if (currentAppearance.latitudeBanded()) {
-            double normalizedLat = absLat / (Math.PI / 2); // [0, 1]
-            double idx = normalizedLat * (land.length - 1);
+            // absLat is already |sin(lat)| ∈ [0, 1] (computed in the per-pixel loop), so use it directly.
+            double idx = absLat * (land.length - 1);
             // Small noise-driven wobble so the bands aren't perfectly straight.
             idx += (rough - 0.5) * 1.5;
             int i = (int) Math.floor(idx);
