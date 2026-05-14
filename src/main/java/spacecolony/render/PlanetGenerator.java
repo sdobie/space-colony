@@ -230,89 +230,93 @@ public class PlanetGenerator {
         }
 
         // === COMPUTE RIVERS via flow accumulation ===
-        // Flow direction: each land cell flows to its lowest neighbor
-        // Flow accumulation: count how many cells drain through each cell
-        double[][] flow = new double[width][height];
-
-        // Initialize: every land cell starts with 1 unit of water
-        // Higher elevations get slightly more (rainfall on mountains)
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                if (elevation[x][y] >= SEA_LEVEL) {
-                    double landH = (elevation[x][y] - SEA_LEVEL) / (1.0 - SEA_LEVEL);
-                    flow[x][y] = 1.0 + landH * 0.5;
-                }
-            }
-        }
-
-        // Sort land cells by elevation (high to low) for downhill flow
-        int landCount = 0;
-        for (int x = 0; x < width; x++)
-            for (int y = 0; y < height; y++)
-                if (elevation[x][y] >= SEA_LEVEL) landCount++;
-
-        int[] sortedX = new int[landCount];
-        int[] sortedY = new int[landCount];
-        int idx = 0;
-        for (int x = 0; x < width; x++)
-            for (int y = 0; y < height; y++)
-                if (elevation[x][y] >= SEA_LEVEL) {
-                    sortedX[idx] = x; sortedY[idx] = y; idx++;
-                }
-
-        // Simple insertion sort by descending elevation (good enough for this size)
-        // Using a more efficient approach: bucket into elevation bands
-        // Actually, let's just use Arrays.sort with indices
-        Integer[] indices = new Integer[landCount];
-        for (int i = 0; i < landCount; i++) indices[i] = i;
-        java.util.Arrays.sort(indices, (a, b) ->
-            Double.compare(elevation[sortedX[b]][sortedY[b]], elevation[sortedX[a]][sortedY[a]]));
-
-        // Flow water downhill
-        int[] dx8 = {-1, 0, 1, -1, 1, -1, 0, 1};
-        int[] dy8 = {-1, -1, -1, 0, 0, 1, 1, 1};
-
-        for (int i = 0; i < landCount; i++) {
-            int ci = indices[i];
-            int cx = sortedX[ci];
-            int cy = sortedY[ci];
-            double myElev = elevation[cx][cy];
-
-            // Find lowest neighbor
-            double lowestElev = myElev;
-            int lowestX = -1, lowestY = -1;
-            for (int d = 0; d < 8; d++) {
-                int nx = (cx + dx8[d] + width) % width;
-                int ny = cy + dy8[d];
-                if (ny < 0 || ny >= height) continue;
-                if (elevation[nx][ny] < lowestElev) {
-                    lowestElev = elevation[nx][ny];
-                    lowestX = nx; lowestY = ny;
-                }
-            }
-
-            // Flow to lowest neighbor
-            if (lowestX >= 0) {
-                flow[lowestX][lowestY] += flow[cx][cy];
-            }
-        }
-
-        // Normalize flow with log scale for visualization
-        double maxFlow = 0;
-        for (int x = 0; x < width; x++)
-            for (int y = 0; y < height; y++)
-                if (flow[x][y] > maxFlow) maxFlow = flow[x][y];
-
+        // Only Earth-like bodies (BodyAppearance.computeRivers == true) get rivers.
+        // For others, riverIntensity stays all-zeros so the per-pixel river overlay below is a no-op.
         double[][] riverIntensity = new double[width][height];
-        double riverThreshold = 30; // minimum flow to show as river
-        if (maxFlow > 0) {
-            double logMax = Math.log(maxFlow);
-            double logThresh = Math.log(riverThreshold);
+        if (currentAppearance.computeRivers()) {
+            // Flow direction: each land cell flows to its lowest neighbor
+            // Flow accumulation: count how many cells drain through each cell
+            double[][] flow = new double[width][height];
+
+            // Initialize: every land cell starts with 1 unit of water
+            // Higher elevations get slightly more (rainfall on mountains)
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
-                    if (flow[x][y] > riverThreshold && elevation[x][y] >= SEA_LEVEL) {
-                        double logFlow = Math.log(flow[x][y]);
-                        riverIntensity[x][y] = Math.min(1.0, (logFlow - logThresh) / (logMax - logThresh));
+                    if (elevation[x][y] >= SEA_LEVEL) {
+                        double landH = (elevation[x][y] - SEA_LEVEL) / (1.0 - SEA_LEVEL);
+                        flow[x][y] = 1.0 + landH * 0.5;
+                    }
+                }
+            }
+
+            // Sort land cells by elevation (high to low) for downhill flow
+            int landCount = 0;
+            for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
+                    if (elevation[x][y] >= SEA_LEVEL) landCount++;
+
+            int[] sortedX = new int[landCount];
+            int[] sortedY = new int[landCount];
+            int idx = 0;
+            for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
+                    if (elevation[x][y] >= SEA_LEVEL) {
+                        sortedX[idx] = x; sortedY[idx] = y; idx++;
+                    }
+
+            // Simple insertion sort by descending elevation (good enough for this size)
+            // Using a more efficient approach: bucket into elevation bands
+            // Actually, let's just use Arrays.sort with indices
+            Integer[] indices = new Integer[landCount];
+            for (int i = 0; i < landCount; i++) indices[i] = i;
+            java.util.Arrays.sort(indices, (a, b) ->
+                Double.compare(elevation[sortedX[b]][sortedY[b]], elevation[sortedX[a]][sortedY[a]]));
+
+            // Flow water downhill
+            int[] dx8 = {-1, 0, 1, -1, 1, -1, 0, 1};
+            int[] dy8 = {-1, -1, -1, 0, 0, 1, 1, 1};
+
+            for (int i = 0; i < landCount; i++) {
+                int ci = indices[i];
+                int cx = sortedX[ci];
+                int cy = sortedY[ci];
+                double myElev = elevation[cx][cy];
+
+                // Find lowest neighbor
+                double lowestElev = myElev;
+                int lowestX = -1, lowestY = -1;
+                for (int d = 0; d < 8; d++) {
+                    int nx = (cx + dx8[d] + width) % width;
+                    int ny = cy + dy8[d];
+                    if (ny < 0 || ny >= height) continue;
+                    if (elevation[nx][ny] < lowestElev) {
+                        lowestElev = elevation[nx][ny];
+                        lowestX = nx; lowestY = ny;
+                    }
+                }
+
+                // Flow to lowest neighbor
+                if (lowestX >= 0) {
+                    flow[lowestX][lowestY] += flow[cx][cy];
+                }
+            }
+
+            // Normalize flow with log scale for visualization
+            double maxFlow = 0;
+            for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
+                    if (flow[x][y] > maxFlow) maxFlow = flow[x][y];
+
+            double riverThreshold = 30; // minimum flow to show as river
+            if (maxFlow > 0) {
+                double logMax = Math.log(maxFlow);
+                double logThresh = Math.log(riverThreshold);
+                for (int x = 0; x < width; x++) {
+                    for (int y = 0; y < height; y++) {
+                        if (flow[x][y] > riverThreshold && elevation[x][y] >= SEA_LEVEL) {
+                            double logFlow = Math.log(flow[x][y]);
+                            riverIntensity[x][y] = Math.min(1.0, (logFlow - logThresh) / (logMax - logThresh));
+                        }
                     }
                 }
             }
