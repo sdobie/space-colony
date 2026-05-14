@@ -34,7 +34,19 @@ public class SphereRenderer {
 
     private static final SimplexNoise detailNoise = new SimplexNoise(12345);
 
+    /** Default Earth-like atmosphere. */
+    private static final Color DEFAULT_ATMOSPHERE = new Color(100, 150, 255);
+
     public static BufferedImage render(BufferedImage flatMap, int size, double rotationDeg, double tiltDeg, double zoom, long starSeed) {
+        return render(flatMap, size, rotationDeg, tiltDeg, zoom, starSeed, DEFAULT_ATMOSPHERE);
+    }
+
+    /**
+     * Render with explicit atmosphere color. Pass {@code null} for airless bodies — the
+     * limb-darkening pass still runs internally but the colored glow is omitted, leaving
+     * the sphere surrounded by black space.
+     */
+    public static BufferedImage render(BufferedImage flatMap, int size, double rotationDeg, double tiltDeg, double zoom, long starSeed, Color atmosphereColor) {
         int mapW = flatMap.getWidth();
         int mapH = flatMap.getHeight();
 
@@ -134,22 +146,27 @@ public class SphereRenderer {
                     g = clampInt((int) (g * (0.3 + 0.7 * diffuse) + 255 * spec), 0, 255);
                     b = clampInt((int) (b * (0.3 + 0.7 * diffuse) + 255 * spec), 0, 255);
 
-                    // Atmospheric limb darkening/brightening at edges
-                    double edgeFactor = 1.0 - nz; // 0 at center, 1 at edge
-                    double atmoBlend = Math.pow(edgeFactor, 3) * 0.5;
-                    r = clampInt((int) (r * (1 - atmoBlend) + ATMO_R * atmoBlend), 0, 255);
-                    g = clampInt((int) (g * (1 - atmoBlend) + ATMO_G * atmoBlend), 0, 255);
-                    b = clampInt((int) (b * (1 - atmoBlend) + ATMO_B * atmoBlend), 0, 255);
+                    // Atmospheric limb darkening/brightening at edges — only blend when atmosphere present.
+                    if (atmosphereColor != null) {
+                        double edgeFactor = 1.0 - nz; // 0 at center, 1 at edge
+                        double atmoBlend = Math.pow(edgeFactor, 3) * 0.5;
+                        int ar = atmosphereColor.getRed();
+                        int ag = atmosphereColor.getGreen();
+                        int ab = atmosphereColor.getBlue();
+                        r = clampInt((int) (r * (1 - atmoBlend) + ar * atmoBlend), 0, 255);
+                        g = clampInt((int) (g * (1 - atmoBlend) + ag * atmoBlend), 0, 255);
+                        b = clampInt((int) (b * (1 - atmoBlend) + ab * atmoBlend), 0, 255);
+                    }
 
                     output.setRGB(px, py, (r << 16) | (g << 8) | b);
 
-                } else if (dist < radius + radius * 0.04) {
-                    // Atmospheric glow around the sphere
+                } else if (atmosphereColor != null && dist < radius + radius * 0.04) {
+                    // Atmospheric glow around the sphere — airless bodies skip this entirely.
                     double glowDist = (dist - radius) / (radius * 0.04);
                     double glowIntensity = Math.pow(1.0 - glowDist, 2) * 0.6;
-                    int r = clampInt((int) (ATMO_R * glowIntensity), 0, 255);
-                    int g = clampInt((int) (ATMO_G * glowIntensity), 0, 255);
-                    int b = clampInt((int) (ATMO_B * glowIntensity), 0, 255);
+                    int r = clampInt((int) (atmosphereColor.getRed()   * glowIntensity), 0, 255);
+                    int g = clampInt((int) (atmosphereColor.getGreen() * glowIntensity), 0, 255);
+                    int b = clampInt((int) (atmosphereColor.getBlue()  * glowIntensity), 0, 255);
                     output.setRGB(px, py, (r << 16) | (g << 8) | b);
                 }
                 // else: stays black (space)
