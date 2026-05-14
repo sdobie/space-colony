@@ -233,4 +233,43 @@ public class SphereRenderer {
     private static int clampInt(int v, int min, int max) {
         return Math.max(min, Math.min(max, v));
     }
+
+    /**
+     * Convert a screen pixel on a rendered sphere back to (lat, lon). The inverse of the
+     * forward projection in {@link #render}: returns {@code null} when the pixel falls
+     * outside the rendered disc.
+     *
+     * @param px screen x in {@code [0, size)}
+     * @param py screen y in {@code [0, size)}
+     * @param size the size argument passed to render()
+     * @param rotationDeg the rotationDeg passed to render()
+     * @param tiltDeg the tiltDeg passed to render() (clamped to [-80, 80] internally)
+     * @param zoom the zoom passed to render()
+     * @return {@code {lat, lon}} in radians (lat in [-π/2, π/2], lon in (-π, π]), or
+     *         {@code null} if the pixel is outside the sphere disc
+     */
+    public static double[] unproject(int px, int py, int size, double rotationDeg, double tiltDeg, double zoom) {
+        double radius = size * 0.45 * zoom;
+        double cx = size / 2.0;
+        double cy = size / 2.0;
+        double nx = (px - cx) / radius;
+        double nyScreen = (py - cy) / radius;
+        double d2 = nx * nx + nyScreen * nyScreen;
+        if (d2 > 1.0) return null; // outside the disc
+        double nz = Math.sqrt(1.0 - d2); // camera-facing point on unit sphere
+        // Forward projection rotates (ny, nz) about X by tilt: ny2 = ny*cosT - nz*sinT;
+        // so this is the identity transform on the screen-space (nx, nyScreen, nz) frame.
+        // We pass nyScreen as ny since the forward formula reads ny directly from screen y.
+        double tiltClamped = Math.max(-80.0, Math.min(80.0, tiltDeg));
+        double tiltRad = Math.toRadians(tiltClamped);
+        double cosT = Math.cos(tiltRad), sinT = Math.sin(tiltRad);
+        double ny2 = nyScreen * cosT - nz * sinT;
+        double nz2 = nyScreen * sinT + nz * cosT;
+        double rotRad = Math.toRadians(rotationDeg);
+        double lat = Math.asin(clamp(-ny2, -1.0, 1.0));
+        double lon = Math.atan2(nx, nz2) + rotRad;
+        // Normalize lon to (-π, π].
+        lon = ((lon + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+        return new double[] { lat, lon };
+    }
 }
