@@ -14,6 +14,8 @@ public class PlanetGenerator {
     private final int width;
     private final int height;
 
+    private BodyAppearance currentAppearance = BodyAppearances.defaultFor(spacecolony.sim.BodyType.ROCKY);
+
     // Water colors
     private static final Color DEEP_OCEAN        = new Color(15, 35, 90);
     private static final Color OCEAN             = new Color(25, 55, 130);
@@ -357,6 +359,15 @@ public class PlanetGenerator {
     }
 
     /**
+     * Generate a body-typed equirectangular map. Uses {@code appearance}'s palettes and
+     * pipeline flags instead of the Earth-default biome logic.
+     */
+    public BufferedImage generate(long seed, BodyAppearance appearance) {
+        this.currentAppearance = appearance;
+        return generate(seed);
+    }
+
+    /**
      * Apply a brightness multiplier to a color, clamping to [0, 255].
      */
     private static Color applyShading(Color c, double factor) {
@@ -406,75 +417,36 @@ public class PlanetGenerator {
     private static final double SEA_LEVEL = 0.50;
 
     private Color getBiomeColor(double elevation, double moisture, double temperature, double absLat, double rough) {
-        // Coastal transition zone: use roughness to create a textured shoreline
-        // Within a narrow band around SEA_LEVEL, mix water and land based on roughness
-        double coastBand = 0.012; // width of the transition zone
-        double distFromSea = elevation - SEA_LEVEL;
+        Color[] ocean = currentAppearance.oceanPalette();
+        Color[] land = currentAppearance.landPalette();
 
-        if (distFromSea < -coastBand) {
-            // Fully water
-            double depth = (SEA_LEVEL - elevation) / SEA_LEVEL;
-            if (temperature < 0.05) {
-                return lerpColor(getWaterColor(depth), ICE, smoothstep((0.05 - temperature) / 0.05));
+        // Gas giant: latitude-banded color using the real lat parameter the caller provides.
+        if (currentAppearance.latitudeBanded()) {
+            double normalizedLat = absLat / (Math.PI / 2); // [0, 1]
+            double idx = normalizedLat * (land.length - 1);
+            // Small noise-driven wobble so the bands aren't perfectly straight.
+            idx += (rough - 0.5) * 1.5;
+            int i = (int) Math.floor(idx);
+            return land[Math.max(0, Math.min(land.length - 1, i))];
+        }
+
+        // Below sea level: ocean palette (depth-banded) or fall back to land[0] for airless bodies.
+        if (elevation < SEA_LEVEL) {
+            if (ocean != null) {
+                double depth = (SEA_LEVEL - elevation) / SEA_LEVEL;
+                if (depth > 0.55) return ocean[0];
+                if (depth > 0.30) return lerpColor(ocean[1], ocean[0], (depth - 0.30) / 0.25);
+                if (depth > 0.10) return lerpColor(ocean[2], ocean[1], (depth - 0.10) / 0.20);
+                return lerpColor(ocean[3], ocean[2], depth / 0.10);
             }
-            if (temperature < 0.15 && depth < 0.3) {
-                double iceAmount = smoothstep((0.15 - temperature) / 0.10);
-                return lerpColor(getWaterColor(depth), ICE, iceAmount * 0.7);
-            }
-            return getWaterColor(depth);
+            return land[0];
         }
 
-        if (distFromSea < coastBand) {
-            // Transition zone: use rough noise to decide water vs land at each pixel
-            double t = (distFromSea + coastBand) / (2.0 * coastBand); // 0 to 1
-            // Roughness creates irregular threshold — some pixels are water, some land
-            double threshold = 0.3 + rough * 0.5; // rough varies ~0-1
-            if (t < threshold) {
-                // Show as water (shore water)
-                return SHORE_WATER;
-            }
-            // Show as beach/land with partial blend
-            double landBlend = smoothstep((t - threshold) / (1.0 - threshold));
-            Color biome = getLandBiome(moisture, temperature);
-            return lerpColor(SHORE_WATER, lerpColor(BEACH, biome, landBlend * 0.5), landBlend);
-        }
-
-        double landHeight = (elevation - SEA_LEVEL) / (1.0 - SEA_LEVEL);
-        Color biome = getLandBiome(moisture, temperature);
-
-        // Beach — use roughness noise to make the border irregular
-        double beachWidth = 0.06 + rough * 0.10; // varies from 0.06 to 0.16
-        if (landHeight < beachWidth) {
-            return lerpColor(BEACH, biome, smoothstep(landHeight / beachWidth));
-        }
-
-        // Snow/ice at very cold temperatures — use roughness for patchy edges
-        if (temperature < 0.08) {
-            double snowThreshold = 0.08 + (rough - 0.5) * 0.04; // vary threshold with roughness
-            double snowT = smoothstep((snowThreshold - temperature) / 0.08);
-            return lerpColor(biome, SNOW, snowT * 0.85);
-        }
-
-        // Alpine/treeline zone — vegetation thins out into bare rock before snow
-        double treeLine = 0.35 + temperature * 0.25 + (rough - 0.5) * 0.08;
-        if (landHeight > treeLine) {
-            // Blend from biome to alpine rock as we go above treeline
-            double alpineProgress = smoothstep((landHeight - treeLine) / 0.15);
-            Color alpineRock = lerpColor(ALPINE_ROCK, ALPINE_SCREE, rough); // vary rock color
-            Color alpineColor = lerpColor(biome, alpineRock, alpineProgress);
-
-            // Snow above the snow line
-            double snowLine = treeLine + 0.15 + temperature * 0.15 + (rough - 0.5) * 0.10;
-            if (landHeight > snowLine) {
-                double snowProgress = (landHeight - snowLine) / 0.20;
-                double patchiness = rough * 0.5;
-                double snowT = smoothstep(Math.min(1.0, snowProgress + patchiness - 0.2));
-                return lerpColor(alpineColor, SNOW, snowT * 0.75);
-            }
-            return alpineColor;
-        }
-
-        return biome;
+        // Above sea level: linear bucket lookup into the land palette.
+        double base = (ocean != null) ? SEA_LEVEL : 0.0;
+        double t = (elevation - base) / Math.max(1e-9, 1.0 - base);
+        int idx = (int) Math.floor(t * (land.length - 1));
+        return land[Math.max(0, Math.min(land.length - 1, idx))];
     }
 
     private Color getWaterColor(double depth) {
