@@ -33,3 +33,10 @@ tasks.named<Test>("test") {
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
 }
+
+tasks.register<JavaExec>("render-demo") {
+    group = "application"
+    description = "Render one flat-map + sphere PNG per BodyType for visual inspection."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "spacecolony.render.RenderDemo"
+}
