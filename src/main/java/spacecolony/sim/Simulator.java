@@ -125,8 +125,8 @@ public class Simulator {
         // the ship clearly can't afford the manifest. The departure-time check still runs
         // later, but this saves the player N ticks of LOADING for a doomed dispatch.
         if (originSite != null) {
-            double[] op = bodyPosition(w, originSite.bodyId, w.tick);
-            double[] dp = bodyPosition(w, destSite.bodyId, w.tick);
+            double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
+            double[] dp = OrbitalGeometry.bodyPosition(w, destSite.bodyId, w.tick);
             double dx = dp[0] - op[0], dy = dp[1] - op[1];
             double dist = Math.sqrt(dx * dx + dy * dy);
             double manifestMass = 0.0;
@@ -245,10 +245,10 @@ public class Simulator {
         Site origin = w.findSite(s.transit.originSiteId());
         Site dest = w.findSite(s.transit.destSiteId());
         if (origin == null || dest == null) return depart + 1;
-        double[] op = bodyPosition(w, origin.bodyId, depart);
+        double[] op = OrbitalGeometry.bodyPosition(w, origin.bodyId, depart);
         long t = depart + 1;
         for (int iter = 0; iter < 6; iter++) {
-            double[] dp = bodyPosition(w, dest.bodyId, t);
+            double[] dp = OrbitalGeometry.bodyPosition(w, dest.bodyId, t);
             double dx = dp[0] - op[0], dy = dp[1] - op[1];
             double dist = Math.sqrt(dx * dx + dy * dy);
             long newT = depart + (long) Math.ceil(dist / speed);
@@ -262,22 +262,10 @@ public class Simulator {
         Site origin = w.findSite(originId);
         Site dest = w.findSite(destId);
         if (origin == null || dest == null) return 0.0;
-        double[] op = bodyPosition(w, origin.bodyId, t0);
-        double[] dp = bodyPosition(w, dest.bodyId, t1);
+        double[] op = OrbitalGeometry.bodyPosition(w, origin.bodyId, t0);
+        double[] dp = OrbitalGeometry.bodyPosition(w, dest.bodyId, t1);
         double dx = dp[0] - op[0], dy = dp[1] - op[1];
         return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    /** Heliocentric (x, y) position of a body at the given tick, accounting for moon parents. */
-    private static double[] bodyPosition(World w, String bodyId, long tick) {
-        Body b = w.findBody(bodyId);
-        if (b == null) return new double[] {0, 0};
-        double[] p = b.orbit.position(tick);
-        if (b.orbit.parentBodyId() != null) {
-            double[] parent = bodyPosition(w, b.orbit.parentBodyId(), tick);
-            return new double[] { parent[0] + p[0], parent[1] + p[1] };
-        }
-        return p;
     }
 
     private static final double POP_FOOD_PER_DAY = 0.01;     // per person
@@ -293,7 +281,7 @@ public class Simulator {
                     if (!bd.enabled) continue;
                     if (bd.type == BuildingType.POWER_PLANT) {
                         // Solar output scales with 1/r^2 (r = distance from sun, in AU).
-                        double r = sunDistance(w, b);
+                        double r = OrbitalGeometry.sunDistance(w, b);
                         double output = 10.0 * bd.level / Math.max(0.05, r * r);
                         powerProduced += output;
                     } else {
@@ -393,11 +381,6 @@ public class Simulator {
         } else if (s.morale < 0.3) {
             s.population = Math.max(0, s.population - Math.max(1, s.population / 100));
         }
-    }
-
-    private static double sunDistance(World w, Body b) {
-        double[] p = bodyPosition(w, b.id, w.tick);
-        return Math.sqrt(p[0] * p[0] + p[1] * p[1]);
     }
 
     private static final double EVENT_BASE_RATE = 0.0008; // per body per tick
