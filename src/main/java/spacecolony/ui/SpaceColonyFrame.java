@@ -26,9 +26,11 @@ public class SpaceColonyFrame extends JFrame {
         getContentPane().setBackground(UiColors.BACKGROUND);
 
         add(new TopBar(engine), BorderLayout.NORTH);
-        add(placeholder("ColonyListPanel (Task 16)", new Dimension(220, 0)), BorderLayout.WEST);
-        add(placeholder("MainViewPanel (Task 14)",   new Dimension(0, 0)),   BorderLayout.CENTER);
-        add(placeholder("DetailPanel (Task 18)",    new Dimension(280, 0)), BorderLayout.EAST);
+        ColonyListPanel colonyList = new ColonyListPanel(engine);
+        colonyList.setPreferredSize(new Dimension(220, 0));
+        add(colonyList, BorderLayout.WEST);
+        add(new MainViewPanel(engine), BorderLayout.CENTER);
+        add(placeholder("DetailPanel (Task 18)", new Dimension(280, 0)), BorderLayout.EAST);
         add(new EventStripPanel(engine), BorderLayout.SOUTH);
 
         pack();
