@@ -40,3 +40,11 @@ tasks.register<JavaExec>("render-demo") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "spacecolony.render.RenderDemo"
 }
+
+tasks.register<JavaExec>("play") {
+    group = "application"
+    description = "Launch the Swing UI."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "spacecolony.SpaceColonyApp"
+    standardInput = System.`in`
+}
