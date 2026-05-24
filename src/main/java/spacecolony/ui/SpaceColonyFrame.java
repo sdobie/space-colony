@@ -30,7 +30,9 @@ public class SpaceColonyFrame extends JFrame {
         colonyList.setPreferredSize(new Dimension(220, 0));
         add(colonyList, BorderLayout.WEST);
         add(new MainViewPanel(engine), BorderLayout.CENTER);
-        add(placeholder("DetailPanel (Task 18)", new Dimension(280, 0)), BorderLayout.EAST);
+        DetailPanel detail = new DetailPanel(engine);
+        detail.setPreferredSize(new Dimension(280, 0));
+        add(detail, BorderLayout.EAST);
         add(new EventStripPanel(engine), BorderLayout.SOUTH);
 
         pack();
