@@ -57,6 +57,16 @@ class PanelSmokeTest {
     }
 
     @Test
+    void bodyViewPanel_paintsWithoutCrashing() {
+        Engine engine = new Engine(WorldGenerator.generate(1L));
+        BodyViewPanel p = new BodyViewPanel(engine);
+        p.setSize(600, 600);
+        paintToImage(p, 600, 600);
+        engine.setSelection(Selection.body("earth"));
+        paintToImage(p, 600, 600);
+    }
+
+    @Test
     void eventStripPanel_paintsWithoutCrashing() {
         Engine engine = new Engine(WorldGenerator.generate(1L));
         EventStripPanel p = new EventStripPanel(engine);
