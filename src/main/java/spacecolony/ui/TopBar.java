@@ -41,8 +41,8 @@ public class TopBar extends JPanel {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         right.setOpaque(false);
-        right.add(menuButton("Tech",  () -> { /* Task 25 wires this */ }));
-        right.add(menuButton("Goals", () -> { /* Task 26 wires this */ }));
+        right.add(menuButton("Tech",  () -> TechModal.show(this, engine)));
+        right.add(menuButton("Goals", () -> GoalsModal.show(this, engine)));
 
         add(left,   BorderLayout.WEST);
         add(center, BorderLayout.CENTER);
