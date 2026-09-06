@@ -3322,7 +3322,7 @@ EOF
 
 Return the PR URL.
 
-- [ ] **Step 6: Commit the determinism test**
+- [x] **Step 6: Commit the determinism test**
 
 ```bash
 git add src/test/java/spacecolony/sim/DeterminismTest.java
