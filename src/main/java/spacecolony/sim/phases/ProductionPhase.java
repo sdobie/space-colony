@@ -21,6 +21,9 @@ public final class ProductionPhase {
     public static void run(World w) {
         for (Body b : w.bodies) {
             for (Site s : b.sites) {
+                // 0. Population cap from HABITATs + colony-management techs (spec 5.1).
+                recomputeCap(s, w.tech);
+
                 // 1. Power balance.
                 double powerProduced = 0;
                 double powerDemand = 0;
@@ -125,6 +128,16 @@ public final class ProductionPhase {
     private static void produce(Site s, Resource r, double amount) {
         s.stockpile.merge(r, amount, Double::sum);
         s.productionRateCache.merge(r, amount, Double::sum);
+    }
+
+    /** populationCap = round((siteBase + sum(enabled HABITAT level * 100)) * popCapMultiplier). */
+    private static void recomputeCap(Site s, TechState tech) {
+        int boost = 0;
+        for (Building b : s.buildings) {
+            if (b.enabled && b.type == BuildingType.HABITAT) boost += b.level * 100;
+        }
+        s.populationCap = (int) Math.round(
+            (s.siteBase + boost) * TechEffects.popCapMultiplier(tech));
     }
 
     private static void updateMorale(Site s, TechState tech) {

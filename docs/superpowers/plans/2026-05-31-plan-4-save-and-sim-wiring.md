@@ -1730,7 +1730,7 @@ Each tick, recompute `populationCap` from `siteBase + Σ(habitat.level × 100)` 
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/ProductionPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/HabitatCapTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/sim/HabitatCapTest.java
@@ -1803,7 +1803,7 @@ class HabitatCapTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests HabitatCapTest
@@ -1811,7 +1811,7 @@ class HabitatCapTest {
 
 Expected: most FAIL — current code doesn't recompute cap.
 
-- [ ] **Step 3: Add `recomputeCap` to `ProductionPhase.java`**
+- [x] **Step 3: Add `recomputeCap` to `ProductionPhase.java`**
 
 Add a private static method:
 
@@ -1840,7 +1840,7 @@ for (Body b : w.bodies) {
 }
 ```
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests HabitatCapTest --tests ProductionTest --tests SupplyTest --tests DeterminismTest
@@ -1848,7 +1848,7 @@ for (Body b : w.bodies) {
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/ProductionPhase.java \

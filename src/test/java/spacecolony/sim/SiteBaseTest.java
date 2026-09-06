@@ -31,6 +31,8 @@ class SiteBaseTest {
         Site planted = w.findSite("site-mars-new");
         assertNotNull(planted);
         assertEquals(100, planted.siteBase);
-        assertEquals(100, planted.populationCap);
+        // CommandPhase plants every colonizer site with an L1 HABITAT, and ProductionPhase
+        // recomputes the cap in this same tick: siteBase 100 + habitat boost 100 = 200.
+        assertEquals(200, planted.populationCap);
     }
 }
