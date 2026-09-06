@@ -2390,7 +2390,7 @@ Trivial holder; needed so `SaveFile.load` can throw a typed exception that the U
 **Files:**
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/save/IncompatibleSaveException.java`
 
-- [ ] **Step 1: Write the class**
+- [x] **Step 1: Write the class**
 
 ```java
 // src/main/java/spacecolony/save/IncompatibleSaveException.java
@@ -2413,7 +2413,7 @@ public class IncompatibleSaveException extends Exception {
 }
 ```
 
-- [ ] **Step 2: Compile and commit**
+- [x] **Step 2: Compile and commit**
 
 ```bash
 ./gradlew compileJava
@@ -2431,7 +2431,7 @@ Build the envelope `JsonValue` from a `World` and atomically write it to disk vi
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/save/SaveFile.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/save/SaveFileSaveTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // src/test/java/spacecolony/save/SaveFileSaveTest.java
@@ -2498,7 +2498,7 @@ class SaveFileSaveTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests SaveFileSaveTest
@@ -2506,7 +2506,7 @@ class SaveFileSaveTest {
 
 Expected: compilation failure.
 
-- [ ] **Step 3: Write `SaveFile.java` (save side only — `load` stub in Task 17)**
+- [x] **Step 3: Write `SaveFile.java` (save side only — `load` stub in Task 17)**
 
 ```java
 // src/main/java/spacecolony/save/SaveFile.java
@@ -2691,7 +2691,7 @@ public final class SaveFile {
 }
 ```
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests SaveFileSaveTest
@@ -2699,7 +2699,7 @@ public final class SaveFile {
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/save/SaveFile.java \
