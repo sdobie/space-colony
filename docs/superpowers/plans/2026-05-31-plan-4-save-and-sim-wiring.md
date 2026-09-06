@@ -437,7 +437,7 @@ git commit -m "feat(engine): add WorldReplaced event and route through 7 panels"
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/Simulator.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/SimulatorClearCommandsTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // src/test/java/spacecolony/sim/SimulatorClearCommandsTest.java
@@ -461,7 +461,7 @@ class SimulatorClearCommandsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests SimulatorClearCommandsTest
@@ -469,7 +469,7 @@ class SimulatorClearCommandsTest {
 
 Expected: compilation failure (`clearCommands` does not exist).
 
-- [ ] **Step 3: Add the method to `Simulator.java`**
+- [x] **Step 3: Add the method to `Simulator.java`**
 
 Insert immediately after the `enqueue` method (around line 35):
 
@@ -478,7 +478,7 @@ Insert immediately after the `enqueue` method (around line 35):
     public void clearCommands() { commandQueue.clear(); }
 ```
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests SimulatorClearCommandsTest
@@ -486,7 +486,7 @@ Insert immediately after the `enqueue` method (around line 35):
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/Simulator.java \

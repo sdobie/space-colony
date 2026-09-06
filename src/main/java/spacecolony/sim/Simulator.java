@@ -33,6 +33,9 @@ public class Simulator {
 
     public void enqueue(Command c) { commandQueue.addLast(c); }
 
+    /** Drop all pending commands. Used by {@link spacecolony.engine.Engine#reset} on world swap. */
+    public void clearCommands() { commandQueue.clear(); }
+
     public void advance(World w) {
         CommandPhase.drain(w, commandQueue);
         w.tick++;
