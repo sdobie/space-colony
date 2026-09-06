@@ -13,6 +13,19 @@ import static org.junit.jupiter.api.Assertions.*;
 class PanelSmokeTest {
 
     @Test
+    void fileMenu_buildsWithoutCrashing() throws Exception {
+        // Null owner: it is only used as the parent component for modal dialogs, which
+        // this test never opens. Constructing the menu exercises the action wiring.
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            FileMenu menu = new FileMenu(null, engine);
+            assertEquals(1, menu.getMenuCount());
+            assertEquals("File", menu.getMenu(0).getText());
+            assertEquals(5, menu.getMenu(0).getMenuComponentCount(), "New/Save/Load/separator/Quit");
+        });
+    }
+
+    @Test
     void sphereMiniRenderer_paintsWithoutCrashing() throws Exception {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));

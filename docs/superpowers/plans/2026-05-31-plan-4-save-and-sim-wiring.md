@@ -3011,7 +3011,7 @@ Add a JMenuBar with File menu (New / Save / Load / Quit) on `SpaceColonyFrame`. 
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/ui/FileMenu.java`
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/ui/SpaceColonyFrame.java`
 
-- [ ] **Step 1: Write `FileMenu.java`**
+- [x] **Step 1: Write `FileMenu.java`**
 
 ```java
 // src/main/java/spacecolony/ui/FileMenu.java
@@ -3179,7 +3179,7 @@ public final class FileMenu extends JMenuBar {
 }
 ```
 
-- [ ] **Step 2: Mount `FileMenu` on `SpaceColonyFrame`**
+- [x] **Step 2: Mount `FileMenu` on `SpaceColonyFrame`**
 
 In `SpaceColonyFrame.java`'s constructor, add the menu bar after `super("Space Colony");` and before the `add(new TopBar(...))` line. The full constructor:
 
@@ -3211,7 +3211,7 @@ public SpaceColonyFrame(Engine engine) {
 }
 ```
 
-- [ ] **Step 3: Run all tests + verify UI launches**
+- [x] **Step 3: Run all tests + verify UI launches**
 
 ```bash
 ./gradlew test
@@ -3220,7 +3220,7 @@ public SpaceColonyFrame(Engine engine) {
 
 Expected: all tests PASS; UI launches with a "File" menu in the menu bar showing New / Save / Load / Quit. Close the window manually.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/main/java/spacecolony/ui/FileMenu.java \
