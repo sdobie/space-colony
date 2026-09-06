@@ -196,7 +196,7 @@ git commit -m "chore(build): enable -ea on test/run/play tasks for EDT assertion
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/CommandPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/SiteBaseTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // src/test/java/spacecolony/sim/SiteBaseTest.java
@@ -238,7 +238,7 @@ class SiteBaseTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests SiteBaseTest
@@ -246,7 +246,7 @@ class SiteBaseTest {
 
 Expected: compilation failure (`siteBase` does not exist on `Site`).
 
-- [ ] **Step 3: Update `Site.java`**
+- [x] **Step 3: Update `Site.java`**
 
 Replace the file with:
 
@@ -297,7 +297,7 @@ public class Site {
 }
 ```
 
-- [ ] **Step 4: Update `WorldGenerator.java`**
+- [x] **Step 4: Update `WorldGenerator.java`**
 
 The Earth Hub already passes `200` as the trailing constructor arg — that argument is now `siteBase` rather than `populationCap`. No code change required, but verify by re-reading line 22 of `WorldGenerator.java` after the edit. The existing call site:
 
@@ -308,15 +308,15 @@ Site start = new Site("site-earth-hub", "Earth Hub",
 
 still compiles correctly — `200` now means `siteBase`. Leave as-is.
 
-- [ ] **Step 5: Update `CommandPhase.java`'s `applyBuildSite`**
+- [x] **Step 5: Update `CommandPhase.java`'s `applyBuildSite`**
 
 Line 99 currently reads `new Site(bsc.siteId(), bsc.name(), bsc.bodyId(), bsc.lat(), bsc.lon(), 100);` — the `100` is now `siteBase` (was `populationCap`). Same value, different meaning. Leave as-is.
 
-- [ ] **Step 6: Update `SiteBaseTest` to use the new `Site` constructor for the stub**
+- [x] **Step 6: Update `SiteBaseTest` to use the new `Site` constructor for the stub**
 
 Re-check that the test's `new Site("site-mars-stub", "Mars Stub", "mars", 0.1, 0.1, 100)` line works — yes, `100` is now `siteBase`. Same code.
 
-- [ ] **Step 7: Run all tests, confirm pass**
+- [x] **Step 7: Run all tests, confirm pass**
 
 ```bash
 ./gradlew test
@@ -324,7 +324,7 @@ Re-check that the test's `new Site("site-mars-stub", "Mars Stub", "mars", 0.1, 0
 
 Expected: 86 + 2 = 88 PASSED. Pay attention to any pre-existing test that constructs a `Site` and assumes the int argument is `populationCap` — semantically they're equivalent (cap initializes to `siteBase`), so existing tests should still pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/Site.java \
