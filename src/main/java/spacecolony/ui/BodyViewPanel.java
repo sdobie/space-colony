@@ -44,7 +44,11 @@ public class BodyViewPanel extends JPanel {
         add(sphere, BorderLayout.CENTER);
 
         engine.addListener(e -> {
+            // A replaced World may carry different surfaceSeeds under the same body ids,
+            // so the per-body flat maps must be discarded before repainting.
+            if (e instanceof EngineEvent.WorldReplaced) flatCache.clear();
             if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced
              || e instanceof EngineEvent.SelectionChanged
              || e instanceof EngineEvent.ViewChanged) sphere.repaint();
         });

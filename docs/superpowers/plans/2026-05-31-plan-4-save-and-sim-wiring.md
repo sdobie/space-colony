@@ -348,7 +348,7 @@ Add a new sealed permitee for the case where the engine swaps in a fresh `World`
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/ui/SystemMapPanel.java`
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/ui/EventStripPanel.java`
 
-- [ ] **Step 1: Add `WorldReplaced` to `EngineEvent.java`**
+- [x] **Step 1: Add `WorldReplaced` to `EngineEvent.java`**
 
 Replace the file with:
 
@@ -385,7 +385,7 @@ public sealed interface EngineEvent
 }
 ```
 
-- [ ] **Step 2: Update each panel's `onEvent` switch to include `WorldReplaced`**
+- [x] **Step 2: Update each panel's `onEvent` switch to include `WorldReplaced`**
 
 For each of the 7 panels listed in **Files**, find the `instanceof EngineEvent.WorldChanged` check and add `WorldReplaced`. The current pattern in `ColonyListPanel.java:39` is:
 
@@ -411,7 +411,7 @@ Apply the same pattern to each of the 7 panels — add `|| e instanceof EngineEv
 - `SystemMapPanel.java:28` — add to existing `||` chain.
 - `EventStripPanel.java:38` — change `if (e instanceof EngineEvent.WorldChanged) refresh();` to `if (e instanceof EngineEvent.WorldChanged || e instanceof EngineEvent.WorldReplaced) refresh();`.
 
-- [ ] **Step 3: Run all tests**
+- [x] **Step 3: Run all tests**
 
 ```bash
 ./gradlew test
@@ -419,7 +419,7 @@ Apply the same pattern to each of the 7 panels — add `|| e instanceof EngineEv
 
 Expected: all 88 tests still PASS. No new tests yet (these are wired in Task 4's `EngineResetTest`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/main/java/spacecolony/engine/EngineEvent.java \

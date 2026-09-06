@@ -36,7 +36,9 @@ public class ColonyListPanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
 
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.WorldChanged || e instanceof EngineEvent.SelectionChanged) refresh();
+            if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced
+             || e instanceof EngineEvent.SelectionChanged) refresh();
         });
         refresh();
     }
