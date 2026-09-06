@@ -25,6 +25,7 @@ application {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    jvmArgs("-ea")
     testLogging {
         events("passed", "skipped", "failed")
     }
@@ -32,6 +33,7 @@ tasks.named<Test>("test") {
 
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+    jvmArgs("-ea")
 }
 
 tasks.register<JavaExec>("render-demo") {
@@ -47,4 +49,5 @@ tasks.register<JavaExec>("play") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "spacecolony.SpaceColonyApp"
     standardInput = System.`in`
+    jvmArgs("-ea")
 }

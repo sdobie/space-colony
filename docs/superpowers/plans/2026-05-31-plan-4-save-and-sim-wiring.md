@@ -97,7 +97,7 @@ Create the feature branch and enable JVM assertions on the `test`, `run`, and `p
 **Files:**
 - Modify: `/Users/steve/projects/space-colony/build.gradle.kts`
 
-- [ ] **Step 1: Set JAVA_HOME and create branch**
+- [x] **Step 1: Set JAVA_HOME and create branch**
 
 ```bash
 cd /Users/steve/projects/space-colony
@@ -109,7 +109,7 @@ git checkout -b plan-4/save-and-sim-wiring
 
 Expected: switched to `plan-4/save-and-sim-wiring` from latest `main`.
 
-- [ ] **Step 2: Enable assertions in Gradle tasks**
+- [x] **Step 2: Enable assertions in Gradle tasks**
 
 Edit `build.gradle.kts`. Replace the `tasks.named<Test>("test")` block and the `tasks.named<JavaExec>("run")` block, and the registered `play` task, so each has `jvmArgs("-ea")`. The final file should read:
 
@@ -169,7 +169,7 @@ tasks.register<JavaExec>("play") {
 }
 ```
 
-- [ ] **Step 3: Verify build still passes**
+- [x] **Step 3: Verify build still passes**
 
 ```bash
 ./gradlew test
@@ -177,7 +177,7 @@ tasks.register<JavaExec>("play") {
 
 Expected: all 86 existing tests PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add build.gradle.kts
