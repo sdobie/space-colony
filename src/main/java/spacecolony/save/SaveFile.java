@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +14,16 @@ import spacecolony.sim.Body;
 import spacecolony.sim.Building;
 import spacecolony.sim.Event;
 import spacecolony.sim.Resource;
+import spacecolony.sim.BuildingType;
+import spacecolony.sim.EventKind;
+import spacecolony.sim.EventSeverity;
 import spacecolony.sim.Ship;
+import spacecolony.sim.ShipClass;
+import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
+import spacecolony.sim.Transit;
 import spacecolony.sim.World;
+import spacecolony.world.WorldGenerator;
 
 /** Save/load entry points. Schema version 1. */
 public final class SaveFile {
@@ -163,10 +171,126 @@ public final class SaveFile {
         return new JsonValue.JsonObject(o);
     }
 
-    // ===== LOAD (stub — implemented in Task 17) =====
+    // ===== LOAD =====
 
     public static World load(Path file) throws IOException, IncompatibleSaveException {
-        throw new UnsupportedOperationException("Implemented in Task 17");
+        String text = Files.readString(file);
+        JsonValue.JsonObject root = (JsonValue.JsonObject) JsonReader.parse(text);
+        int version = (int) ((JsonValue.JsonNumber) root.values().get("schemaVersion")).asLong();
+        if (version != SCHEMA_VERSION) throw new IncompatibleSaveException(version, SCHEMA_VERSION);
+
+        long seed = ((JsonValue.JsonNumber) root.values().get("seed")).asLong();
+        World w = WorldGenerator.generate(seed);
+        w.tick = ((JsonValue.JsonNumber) root.values().get("tick")).asLong();
+        w.credits = ((JsonValue.JsonNumber) root.values().get("credits")).asLong();
+
+        // Geometry comes from the seed, but player-placed sites come from the file.
+        // Wipe the generated sites (including the Earth Hub) so the file is authoritative.
+        for (Body b : w.bodies) b.sites.clear();
+        for (JsonValue bv : ((JsonValue.JsonArray) root.values().get("bodies")).values()) {
+            JsonValue.JsonObject bo = (JsonValue.JsonObject) bv;
+            String bodyId = ((JsonValue.JsonString) bo.values().get("id")).value();
+            Body body = w.findBody(bodyId);
+            if (body == null) continue; // body removed from layout — skip
+            for (JsonValue sv : ((JsonValue.JsonArray) bo.values().get("sites")).values()) {
+                body.sites.add(loadSite(bodyId, (JsonValue.JsonObject) sv));
+            }
+        }
+
+        w.ships.clear();
+        for (JsonValue sv : ((JsonValue.JsonArray) root.values().get("ships")).values()) {
+            w.ships.add(loadShip((JsonValue.JsonObject) sv));
+        }
+
+        JsonValue.JsonObject tech = (JsonValue.JsonObject) root.values().get("tech");
+        for (JsonValue v : ((JsonValue.JsonArray) tech.values().get("researched")).values()) {
+            w.tech.researched.add(((JsonValue.JsonString) v).value());
+        }
+        JsonValue activeId = tech.values().get("activeId");
+        w.tech.activeId = activeId instanceof JsonValue.JsonString jsa ? jsa.value() : null;
+        w.tech.accumulatedPoints = ((JsonValue.JsonNumber) tech.values().get("accumulatedPoints")).asDouble();
+
+        JsonValue.JsonObject goals = (JsonValue.JsonObject) root.values().get("goals");
+        for (JsonValue v : ((JsonValue.JsonArray) goals.values().get("achieved")).values()) {
+            w.goals.achieved.add(((JsonValue.JsonString) v).value());
+        }
+
+        for (JsonValue ev : ((JsonValue.JsonArray) root.values().get("events")).values()) {
+            w.emit(loadEvent((JsonValue.JsonObject) ev));
+        }
+
+        return w;
+    }
+
+    private static Site loadSite(String bodyId, JsonValue.JsonObject o) {
+        String id = ((JsonValue.JsonString) o.values().get("id")).value();
+        String name = ((JsonValue.JsonString) o.values().get("name")).value();
+        double lat = ((JsonValue.JsonNumber) o.values().get("lat")).asDouble();
+        double lon = ((JsonValue.JsonNumber) o.values().get("lon")).asDouble();
+        int siteBase = (int) ((JsonValue.JsonNumber) o.values().get("siteBase")).asLong();
+        Site s = new Site(id, name, bodyId, lat, lon, siteBase);
+        s.population = (int) ((JsonValue.JsonNumber) o.values().get("population")).asLong();
+        s.populationCap = (int) ((JsonValue.JsonNumber) o.values().get("populationCap")).asLong();
+        s.morale = ((JsonValue.JsonNumber) o.values().get("morale")).asDouble();
+        loadResourceMap((JsonValue.JsonObject) o.values().get("stockpile"),    s.stockpile);
+        loadResourceMap((JsonValue.JsonObject) o.values().get("stockpileCap"), s.stockpileCap);
+        for (JsonValue bv : ((JsonValue.JsonArray) o.values().get("buildings")).values()) {
+            JsonValue.JsonObject bo = (JsonValue.JsonObject) bv;
+            BuildingType type = BuildingType.valueOf(
+                ((JsonValue.JsonString) bo.values().get("type")).value());
+            int level = (int) ((JsonValue.JsonNumber) bo.values().get("level")).asLong();
+            Building b = new Building(type, level);
+            b.enabled = ((JsonValue.JsonBool) bo.values().get("enabled")).value();
+            s.buildings.add(b);
+        }
+        return s;
+    }
+
+    private static Ship loadShip(JsonValue.JsonObject o) {
+        String id = ((JsonValue.JsonString) o.values().get("id")).value();
+        String name = ((JsonValue.JsonString) o.values().get("name")).value();
+        ShipClass cls = ShipClass.valueOf(((JsonValue.JsonString) o.values().get("class")).value());
+        JsonValue currentSiteIdV = o.values().get("currentSiteId");
+        String currentSiteId = currentSiteIdV instanceof JsonValue.JsonString jss ? jss.value() : null;
+        Ship s = new Ship(id, name, cls, currentSiteId);
+        s.state = ShipState.valueOf(((JsonValue.JsonString) o.values().get("state")).value());
+        s.fuel = ((JsonValue.JsonNumber) o.values().get("fuel")).asDouble();
+        loadResourceMap((JsonValue.JsonObject) o.values().get("cargo"), s.cargo);
+        JsonValue tv = o.values().get("transit");
+        if (tv instanceof JsonValue.JsonObject to) {
+            Map<Resource, Double> snapshot = new EnumMap<>(Resource.class);
+            loadResourceMap((JsonValue.JsonObject) to.values().get("cargoSnapshot"), snapshot);
+            s.transit = new Transit(
+                ((JsonValue.JsonString) to.values().get("originSiteId")).value(),
+                ((JsonValue.JsonString) to.values().get("destSiteId")).value(),
+                ((JsonValue.JsonNumber) to.values().get("departureTick")).asLong(),
+                ((JsonValue.JsonNumber) to.values().get("arrivalTick")).asLong(),
+                snapshot);
+        }
+        return s;
+    }
+
+    private static Event loadEvent(JsonValue.JsonObject o) {
+        long tick = ((JsonValue.JsonNumber) o.values().get("tick")).asLong();
+        EventSeverity sev = EventSeverity.valueOf(
+            ((JsonValue.JsonString) o.values().get("severity")).value());
+        EventKind kind = EventKind.valueOf(
+            ((JsonValue.JsonString) o.values().get("kind")).value());
+        String msg = ((JsonValue.JsonString) o.values().get("message")).value();
+        return new Event(tick, sev, kind, msg,
+            optString(o, "bodyId"), optString(o, "siteId"), optString(o, "shipId"));
+    }
+
+    private static String optString(JsonValue.JsonObject o, String key) {
+        JsonValue v = o.values().get(key);
+        return v instanceof JsonValue.JsonString js ? js.value() : null;
+    }
+
+    private static void loadResourceMap(JsonValue.JsonObject o, Map<Resource, Double> target) {
+        for (Resource r : Resource.values()) {
+            JsonValue v = o.values().get(r.name());
+            if (v instanceof JsonValue.JsonNumber jn) target.put(r, jn.asDouble());
+        }
     }
 
     // ===== helpers =====

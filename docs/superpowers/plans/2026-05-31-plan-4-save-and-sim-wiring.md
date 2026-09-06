@@ -2717,7 +2717,7 @@ Parse the envelope; if schema mismatch, throw `IncompatibleSaveException`. Other
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/save/SaveFile.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/save/SaveFileLoadTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/save/SaveFileLoadTest.java
@@ -2833,7 +2833,7 @@ class SaveFileLoadTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests SaveFileLoadTest
@@ -2841,7 +2841,7 @@ class SaveFileLoadTest {
 
 Expected: tests that exercise `load` either fail or throw `UnsupportedOperationException` from the stub.
 
-- [ ] **Step 3: Replace the `load` stub in `SaveFile.java`**
+- [x] **Step 3: Replace the `load` stub in `SaveFile.java`**
 
 Replace the `load` method body and add private helpers:
 
@@ -2985,7 +2985,7 @@ import spacecolony.sim.ShipState;
 
 (Some are already imported. Just make sure all are present.)
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests SaveFileLoadTest --tests SaveFileSaveTest
@@ -2993,7 +2993,7 @@ import spacecolony.sim.ShipState;
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/save/SaveFile.java \
