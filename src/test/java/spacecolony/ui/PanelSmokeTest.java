@@ -6,72 +6,87 @@ import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
 import spacecolony.engine.Engine;
 import spacecolony.engine.Selection;
+import spacecolony.testutil.Edt;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PanelSmokeTest {
 
     @Test
-    void sphereMiniRenderer_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        SphereMiniRenderer panel = new SphereMiniRenderer(engine);
-        panel.setBody(engine.world().findBody("earth"));
-        panel.setSize(200, 200);
-        paintToImage(panel, 200, 200);
+    void sphereMiniRenderer_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            SphereMiniRenderer panel = new SphereMiniRenderer(engine);
+            panel.setBody(engine.world().findBody("earth"));
+            panel.setSize(200, 200);
+            paintToImage(panel, 200, 200);
+        });
     }
 
     @Test
-    void topBar_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        TopBar p = new TopBar(engine);
-        p.setSize(800, 40);
-        paintToImage(p, 800, 40);
+    void topBar_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            TopBar p = new TopBar(engine);
+            p.setSize(800, 40);
+            paintToImage(p, 800, 40);
+        });
     }
 
     @Test
-    void colonyListPanel_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        ColonyListPanel p = new ColonyListPanel(engine);
-        p.setSize(220, 600);
-        paintToImage(p, 220, 600);
+    void colonyListPanel_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            ColonyListPanel p = new ColonyListPanel(engine);
+            p.setSize(220, 600);
+            paintToImage(p, 220, 600);
+        });
     }
 
     @Test
-    void systemMapPanel_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        SystemMapPanel p = new SystemMapPanel(engine);
-        p.setSize(800, 600);
-        paintToImage(p, 800, 600);
+    void systemMapPanel_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            SystemMapPanel p = new SystemMapPanel(engine);
+            p.setSize(800, 600);
+            paintToImage(p, 800, 600);
+        });
     }
 
     @Test
-    void detailPanel_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        DetailPanel p = new DetailPanel(engine);
-        p.setSize(280, 600);
-        paintToImage(p, 280, 600);
-        engine.setSelection(Selection.body("earth"));
-        paintToImage(p, 280, 600);
-        engine.setSelection(Selection.site("site-earth-hub"));
-        paintToImage(p, 280, 600);
+    void detailPanel_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            DetailPanel p = new DetailPanel(engine);
+            p.setSize(280, 600);
+            paintToImage(p, 280, 600);
+            engine.setSelection(Selection.body("earth"));
+            paintToImage(p, 280, 600);
+            engine.setSelection(Selection.site("site-earth-hub"));
+            paintToImage(p, 280, 600);
+        });
     }
 
     @Test
-    void bodyViewPanel_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        BodyViewPanel p = new BodyViewPanel(engine);
-        p.setSize(600, 600);
-        paintToImage(p, 600, 600);
-        engine.setSelection(Selection.body("earth"));
-        paintToImage(p, 600, 600);
+    void bodyViewPanel_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            BodyViewPanel p = new BodyViewPanel(engine);
+            p.setSize(600, 600);
+            paintToImage(p, 600, 600);
+            engine.setSelection(Selection.body("earth"));
+            paintToImage(p, 600, 600);
+        });
     }
 
     @Test
-    void eventStripPanel_paintsWithoutCrashing() {
-        Engine engine = new Engine(WorldGenerator.generate(1L));
-        EventStripPanel p = new EventStripPanel(engine);
-        p.setSize(800, 110);
-        paintToImage(p, 800, 110);
+    void eventStripPanel_paintsWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            EventStripPanel p = new EventStripPanel(engine);
+            p.setSize(800, 110);
+            paintToImage(p, 800, 110);
+        });
     }
 
     private static void paintToImage(JPanel panel, int w, int h) {

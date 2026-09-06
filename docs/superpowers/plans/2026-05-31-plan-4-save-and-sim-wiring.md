@@ -691,7 +691,7 @@ Add a tiny static helper that asserts the caller is (or is not) on the EDT, and 
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/engine/Engine.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/engine/EngineEdtTest.java`
 
-- [ ] **Step 1: Write `EdtGuard`**
+- [x] **Step 1: Write `EdtGuard`**
 
 ```java
 // src/main/java/spacecolony/engine/EdtGuard.java
@@ -714,7 +714,7 @@ public final class EdtGuard {
 }
 ```
 
-- [ ] **Step 2: Write the failing EDT-guard test**
+- [x] **Step 2: Write the failing EDT-guard test**
 
 ```java
 // src/test/java/spacecolony/engine/EngineEdtTest.java
@@ -748,7 +748,7 @@ class EngineEdtTest {
 }
 ```
 
-- [ ] **Step 3: Run, confirm fail**
+- [x] **Step 3: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests EngineEdtTest
@@ -756,7 +756,7 @@ class EngineEdtTest {
 
 Expected: both fail (guards not yet installed → `enqueueOffEdt_throwsAssertionError` fails because no `AssertionError` is thrown).
 
-- [ ] **Step 4: Install guards on `Engine.java`**
+- [x] **Step 4: Install guards on `Engine.java`**
 
 Add `import spacecolony.engine.EdtGuard;` (already in same package — so just `EdtGuard.assertEdt()` works without import). Insert `EdtGuard.assertEdt();` as the first line of each of:
 
@@ -787,7 +787,7 @@ public void tick() {
 
 Apply the same one-line insertion to `addListener`, `removeListener`, and `reset`.
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 ```bash
 ./gradlew test
@@ -795,7 +795,7 @@ Apply the same one-line insertion to `addListener`, `removeListener`, and `reset
 
 Expected: `EngineEdtTest` PASSES; previously-passing `EngineResetTest` and `EngineTest` still PASS because they already wrap calls in `SwingUtilities.invokeAndWait`. Existing `GameLoopTest` runs the timer fire on the EDT (Swing Timer fires on EDT). If any existing test fails with `AssertionError: Must be called on EDT`, that test was calling `engine.enqueue/tick/etc.` from a worker thread — fix that test by wrapping the call in `SwingUtilities.invokeAndWait`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/spacecolony/engine/EdtGuard.java \

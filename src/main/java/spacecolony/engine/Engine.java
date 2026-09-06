@@ -27,13 +27,23 @@ public class Engine {
     public Speed speed() { return speed; }
     public EngineEvent.ViewChanged.View view() { return view; }
 
-    public void addListener(EngineListener l) { listeners.add(l); }
-    public void removeListener(EngineListener l) { listeners.remove(l); }
+    public void addListener(EngineListener l) {
+        EdtGuard.assertEdt();
+        listeners.add(l);
+    }
+    public void removeListener(EngineListener l) {
+        EdtGuard.assertEdt();
+        listeners.remove(l);
+    }
 
-    public void enqueue(Command c) { simulator.enqueue(c); }
+    public void enqueue(Command c) {
+        EdtGuard.assertEdt();
+        simulator.enqueue(c);
+    }
 
     /** Advance the simulator one tick, then fire WorldChanged. */
     public void tick() {
+        EdtGuard.assertEdt();
         simulator.advance(world);
         fire(new EngineEvent.WorldChanged(world.tick));
     }
@@ -44,6 +54,7 @@ public class Engine {
      * {@link EngineEvent.WorldReplaced} so panels can rebind their cached state.
      */
     public void reset(World newWorld) {
+        EdtGuard.assertEdt();
         this.world = newWorld;
         simulator.clearCommands();
         if (!Selection.NONE.equals(selection)) {
