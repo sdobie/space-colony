@@ -814,7 +814,7 @@ Create the single source of truth for tech-driven multipliers. Each method is a 
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/TechEffects.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/TechEffectsTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/sim/TechEffectsTest.java
@@ -907,7 +907,7 @@ class TechEffectsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests TechEffectsTest
@@ -915,7 +915,7 @@ class TechEffectsTest {
 
 Expected: compilation failure (`TechEffects` does not exist).
 
-- [ ] **Step 3: Write `TechEffects.java`**
+- [x] **Step 3: Write `TechEffects.java`**
 
 ```java
 // src/main/java/spacecolony/sim/TechEffects.java
@@ -999,7 +999,7 @@ public final class TechEffects {
 }
 ```
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests TechEffectsTest
@@ -1007,7 +1007,7 @@ public final class TechEffects {
 
 Expected: all 27+ TechEffects tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/TechEffects.java \
