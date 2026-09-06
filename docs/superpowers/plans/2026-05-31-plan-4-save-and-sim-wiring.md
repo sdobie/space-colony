@@ -1392,7 +1392,7 @@ When `atm-mining` is researched and the MINE building is on a `GAS_GIANT` body, 
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/ProductionPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/AtmMiningTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // src/test/java/spacecolony/sim/AtmMiningTest.java
@@ -1447,7 +1447,7 @@ class AtmMiningTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests AtmMiningTest
@@ -1455,7 +1455,7 @@ class AtmMiningTest {
 
 Expected: the `with` test FAILS (MINE doesn't sample FUEL yet); the `without` and rocky tests PASS by default.
 
-- [ ] **Step 3: Update the MINE case in `ProductionPhase.run`**
+- [x] **Step 3: Update the MINE case in `ProductionPhase.run`**
 
 The MINE case currently produces ORE and SILICATE. Add a conditional FUEL production for gas-giant bodies when `atm-mining` is researched. The complete updated MINE case:
 
@@ -1482,7 +1482,7 @@ case MINE -> {
 
 (`BodyType` is already imported in `ProductionPhase.java`.)
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests AtmMiningTest --tests ProductionTest
@@ -1490,7 +1490,7 @@ case MINE -> {
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/ProductionPhase.java \

@@ -1,6 +1,7 @@
 package spacecolony.sim.phases;
 
 import spacecolony.sim.Body;
+import spacecolony.sim.BodyType;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.OrbitalGeometry;
@@ -63,6 +64,12 @@ public final class ProductionPhase {
                                 double si = bd.level * 1.0 * yields.sample(Resource.SILICATE, s.lat, s.lon) * powerFactor
                                           * TechEffects.mineSilicateMultiplier(w.tech);
                                 produce(s, Resource.SILICATE, si);
+                                // Atmospheric mining: gas-giant MINE buildings extract FUEL when the tech is researched.
+                                if (b.type == BodyType.GAS_GIANT && TechEffects.gasGiantFuelEnabled(w.tech)) {
+                                    double fy = yields.sample(Resource.FUEL, s.lat, s.lon);
+                                    double fuel = bd.level * 2.0 * fy * powerFactor;
+                                    produce(s, Resource.FUEL, fuel);
+                                }
                             }
                         }
                         case FARM -> {
