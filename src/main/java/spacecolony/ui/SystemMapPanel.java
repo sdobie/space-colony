@@ -25,7 +25,9 @@ public class SystemMapPanel extends JPanel {
         this.engine = engine;
         setBackground(UiColors.STARFIELD_BG);
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.WorldChanged || e instanceof EngineEvent.SelectionChanged) repaint();
+            if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced
+             || e instanceof EngineEvent.SelectionChanged) repaint();
         });
         addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {

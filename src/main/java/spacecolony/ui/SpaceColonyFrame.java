@@ -25,6 +25,8 @@ public class SpaceColonyFrame extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(UiColors.BACKGROUND);
 
+        setJMenuBar(new FileMenu(this, engine));
+
         add(new TopBar(engine), BorderLayout.NORTH);
         ColonyListPanel colonyList = new ColonyListPanel(engine);
         colonyList.setPreferredSize(new Dimension(220, 0));

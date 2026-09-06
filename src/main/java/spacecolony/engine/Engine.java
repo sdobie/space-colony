@@ -13,7 +13,7 @@ import spacecolony.sim.commands.Command;
  * Not thread-safe — meant to be driven from the EDT.
  */
 public class Engine {
-    private final World world;
+    private World world;
     private final Simulator simulator = new Simulator();
     private final List<EngineListener> listeners = new ArrayList<>();
     private Selection selection = Selection.NONE;
@@ -27,15 +27,41 @@ public class Engine {
     public Speed speed() { return speed; }
     public EngineEvent.ViewChanged.View view() { return view; }
 
-    public void addListener(EngineListener l) { listeners.add(l); }
-    public void removeListener(EngineListener l) { listeners.remove(l); }
+    public void addListener(EngineListener l) {
+        EdtGuard.assertEdt();
+        listeners.add(l);
+    }
+    public void removeListener(EngineListener l) {
+        EdtGuard.assertEdt();
+        listeners.remove(l);
+    }
 
-    public void enqueue(Command c) { simulator.enqueue(c); }
+    public void enqueue(Command c) {
+        EdtGuard.assertEdt();
+        simulator.enqueue(c);
+    }
 
     /** Advance the simulator one tick, then fire WorldChanged. */
     public void tick() {
+        EdtGuard.assertEdt();
         simulator.advance(world);
         fire(new EngineEvent.WorldChanged(world.tick));
+    }
+
+    /**
+     * Swap in a fresh World (used by save/load and New Game). Clears any pending commands,
+     * resets selection to {@link Selection#NONE}, and notifies listeners via
+     * {@link EngineEvent.WorldReplaced} so panels can rebind their cached state.
+     */
+    public void reset(World newWorld) {
+        EdtGuard.assertEdt();
+        this.world = newWorld;
+        simulator.clearCommands();
+        if (!Selection.NONE.equals(selection)) {
+            selection = Selection.NONE;
+            fire(new EngineEvent.SelectionChanged(Selection.NONE));
+        }
+        fire(new EngineEvent.WorldReplaced(newWorld.tick));
     }
 
     public void setSelection(Selection s) {

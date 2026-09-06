@@ -25,6 +25,7 @@ application {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    jvmArgs("-ea")
     testLogging {
         events("passed", "skipped", "failed")
     }
@@ -32,6 +33,7 @@ tasks.named<Test>("test") {
 
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+    jvmArgs("-ea")
 }
 
 tasks.register<JavaExec>("render-demo") {
@@ -41,10 +43,31 @@ tasks.register<JavaExec>("render-demo") {
     mainClass = "spacecolony.render.RenderDemo"
 }
 
+/**
+ * GUI play-test harness (Plan 4, Task 19 Step 4). Needs a desktop session: it shows a real
+ * window and drives the real menus and dialogs. Screenshots land in build/playtest.
+ */
+tasks.register<JavaExec>("playTest") {
+    group = "verification"
+    description = "Drive the Swing UI through the Plan 4 manual play-test checklist."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.PlayTestDriver"
+    jvmArgs("-ea")
+}
+
+tasks.register<JavaExec>("cacheCheck") {
+    group = "verification"
+    description = "Verify the per-body flat-map cache is invalidated on WorldReplaced."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.CacheDriver"
+    jvmArgs("-ea")
+}
+
 tasks.register<JavaExec>("play") {
     group = "application"
     description = "Launch the Swing UI."
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "spacecolony.SpaceColonyApp"
     standardInput = System.`in`
+    jvmArgs("-ea")
 }

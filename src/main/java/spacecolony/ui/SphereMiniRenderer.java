@@ -29,7 +29,11 @@ public class SphereMiniRenderer extends JPanel {
         setOpaque(false);
         setPreferredSize(new Dimension(SIZE, SIZE));
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.WorldChanged) repaint();
+            // A replaced World may carry different surfaceSeeds under the same body ids,
+            // so the per-body flat maps must be discarded before repainting.
+            if (e instanceof EngineEvent.WorldReplaced) flatCache.clear();
+            if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced) repaint();
         });
     }
 

@@ -8,6 +8,7 @@ import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
+import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 
@@ -56,7 +57,8 @@ public final class TransitPhase {
                     long depart = w.tick;
                     long arrival = computeArrivalTick(w, s, depart);
                     double dist = distanceBetweenSitesAtTicks(w, s.transit.originSiteId(), s.transit.destSiteId(), depart, arrival);
-                    double cost = FUEL_K * (s.shipClass.dryMass() + s.cargoMass()) * dist;
+                    double cost = FUEL_K * (s.shipClass.dryMass() + s.cargoMass()) * dist
+                                * TechEffects.fuelCostMultiplier(w.tech);
                     if (s.fuel < cost) {
                         w.emit(new Event(w.tick, EventSeverity.WARNING, EventKind.SHIP_OUT_OF_FUEL,
                             "Ship " + s.name + " aborted: insufficient fuel", null, null, s.id));

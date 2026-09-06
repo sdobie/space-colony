@@ -35,7 +35,8 @@ public class EventStripPanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
 
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.WorldChanged) refresh();
+            if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced) refresh();
         });
         refresh();
     }

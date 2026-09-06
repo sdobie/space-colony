@@ -49,7 +49,9 @@ public class TopBar extends JPanel {
         add(right,  BorderLayout.EAST);
 
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.WorldChanged || e instanceof EngineEvent.SpeedChanged) {
+            if (e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced
+             || e instanceof EngineEvent.SpeedChanged) {
                 refresh();
             }
         });

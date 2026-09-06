@@ -9,6 +9,7 @@ import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
 import spacecolony.sim.Site;
+import spacecolony.sim.TechEffects;
 import spacecolony.sim.World;
 
 public final class EventPhase {
@@ -28,6 +29,14 @@ public final class EventPhase {
                 applyEvent(w, b, k, rng);
             }
         }
+    }
+
+    /**
+     * Test seam: apply a specific event kind to a body, bypassing the random draw in
+     * {@link #run}. Public because tests live in {@code spacecolony.sim}, not this package.
+     */
+    public static void applyForTest(World w, Body b, EventKind kind, Random rng) {
+        applyEvent(w, b, kind, rng);
     }
 
     private static void applyEvent(World w, Body b, EventKind k, Random rng) {
@@ -58,10 +67,12 @@ public final class EventPhase {
                     "Equipment failure on " + b.name, b.id, null, null));
             }
             case DISEASE_OUTBREAK -> {
+                // Truncating (not rounding) keeps severity=1.0 identical to pre-tech behaviour.
+                double severity = TechEffects.diseaseSeverityMultiplier(w.tech);
                 for (Site s : b.sites) if (s.population > 0) {
-                    int loss = Math.max(1, s.population / 10);
+                    int loss = (int) Math.max(1, (s.population / 10.0) * severity);
                     s.population -= loss;
-                    s.morale = Math.max(0, s.morale - 0.2);
+                    s.morale = Math.max(0, s.morale - 0.2 * severity);
                 }
                 w.emit(new Event(w.tick, EventSeverity.WARNING, k,
                     "Disease outbreak on " + b.name, b.id, null, null));

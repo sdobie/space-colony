@@ -13,6 +13,7 @@ import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechCatalog;
+import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.sim.commands.BuildBuildingCommand;
@@ -119,7 +120,8 @@ public final class CommandPhase {
             double dist = Math.sqrt(dx * dx + dy * dy);
             double manifestMass = 0.0;
             for (Double v : ds.manifest().values()) if (v != null) manifestMass += v;
-            double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist;
+            double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
+                           * TechEffects.fuelCostMultiplier(w.tech);
             if (s.fuel < estCost)
                 throw new CommandRejectedException("Insufficient fuel for dispatch: " + ds.shipId());
         }

@@ -44,7 +44,9 @@ public class DetailPanel extends JPanel {
         this.miniRenderer = new SphereMiniRenderer(engine);
 
         engine.addListener(e -> {
-            if (e instanceof EngineEvent.SelectionChanged || e instanceof EngineEvent.WorldChanged) refresh();
+            if (e instanceof EngineEvent.SelectionChanged
+             || e instanceof EngineEvent.WorldChanged
+             || e instanceof EngineEvent.WorldReplaced) refresh();
         });
         refresh();
     }
