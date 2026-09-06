@@ -7,6 +7,8 @@ import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Resource;
 import spacecolony.sim.ResourceYieldSampler;
 import spacecolony.sim.Site;
+import spacecolony.sim.TechEffects;
+import spacecolony.sim.TechState;
 import spacecolony.sim.World;
 
 public final class ProductionPhase {
@@ -26,7 +28,8 @@ public final class ProductionPhase {
                     if (bd.type == BuildingType.POWER_PLANT) {
                         // Solar output scales with 1/r^2 (r = distance from sun, in AU).
                         double r = OrbitalGeometry.sunDistance(w, b);
-                        double output = 10.0 * bd.level / Math.max(0.05, r * r);
+                        double output = 10.0 * bd.level / Math.max(0.05, r * r)
+                                      * TechEffects.powerPlantMultiplier(w.tech);
                         powerProduced += output;
                     } else {
                         powerDemand += 2.0 * bd.level;
@@ -53,26 +56,31 @@ public final class ProductionPhase {
                         case MINE -> {
                             if (yields != null) {
                                 double y = yields.sample(Resource.ORE, s.lat, s.lon);
-                                double produced = bd.level * 2.0 * y * powerFactor;
+                                double produced = bd.level * 2.0 * y * powerFactor
+                                                * TechEffects.mineOreMultiplier(w.tech);
                                 produce(s, Resource.ORE, produced);
                                 // Mines also yield silicate, scaled.
-                                double si = bd.level * 1.0 * yields.sample(Resource.SILICATE, s.lat, s.lon) * powerFactor;
+                                double si = bd.level * 1.0 * yields.sample(Resource.SILICATE, s.lat, s.lon) * powerFactor
+                                          * TechEffects.mineSilicateMultiplier(w.tech);
                                 produce(s, Resource.SILICATE, si);
                             }
                         }
                         case FARM -> {
                             // Consume biomass + water; produce food.
+                            double waterDemandFactor = TechEffects.farmWaterDemandMultiplier(w.tech);
                             double biomassConsumed = consume(s, Resource.BIOMASS, bd.level * 0.5 * powerFactor);
-                            consume(s, Resource.WATER, bd.level * 0.3 * powerFactor);
+                            consume(s, Resource.WATER, bd.level * 0.3 * powerFactor * waterDemandFactor);
                             double foodProduced = bd.level * 1.5 * powerFactor *
-                                                  Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * 0.5));
+                                                  Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * 0.5))
+                                                * TechEffects.farmFoodMultiplier(w.tech);
                             produce(s, Resource.FOOD, foodProduced);
                         }
                         case REFINERY -> {
+                            double mult = TechEffects.refineryMultiplier(w.tech);
                             double oreUsed = consume(s, Resource.ORE, bd.level * 1.5 * powerFactor);
-                            produce(s, Resource.METAL, oreUsed * 0.8);
+                            produce(s, Resource.METAL, oreUsed * 0.8 * mult);
                             double iceUsed = consume(s, Resource.ICE, bd.level * 1.0 * powerFactor);
-                            produce(s, Resource.WATER, iceUsed * 0.9);
+                            produce(s, Resource.WATER, iceUsed * 0.9 * mult);
                         }
                         case POWER_PLANT, HABITAT, SHIPYARD, RESEARCH_LAB -> { /* tracked elsewhere */ }
                     }
@@ -88,7 +96,7 @@ public final class ProductionPhase {
                 }
 
                 // 7. Morale & population updates.
-                updateMorale(s);
+                updateMorale(s, w.tech);
                 updatePopulation(s);
 
                 // 8. Recover power plants knocked out by solar flare (Task 23): brownout
@@ -112,11 +120,12 @@ public final class ProductionPhase {
         s.productionRateCache.merge(r, amount, Double::sum);
     }
 
-    private static void updateMorale(Site s) {
+    private static void updateMorale(Site s, TechState tech) {
         boolean shortFood = s.stockpile.getOrDefault(Resource.FOOD, 0.0) < 1e-6;
         boolean shortWater = s.stockpile.getOrDefault(Resource.WATER, 0.0) < 1e-6;
+        double ceiling = TechEffects.moraleCeiling(tech);
         if (shortFood || shortWater) s.morale = Math.max(0.0, s.morale - 0.05);
-        else s.morale = Math.min(1.0, s.morale + 0.005);
+        else s.morale = Math.min(ceiling, s.morale + 0.005);
     }
 
     private static void updatePopulation(Site s) {

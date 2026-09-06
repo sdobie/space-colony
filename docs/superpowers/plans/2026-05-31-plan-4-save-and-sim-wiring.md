@@ -1025,7 +1025,7 @@ Apply mine, farm, refinery, power, and morale-ceiling multipliers at their exist
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/ProductionPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/ProductionTechEffectsTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/sim/ProductionTechEffectsTest.java
@@ -1153,7 +1153,7 @@ class ProductionTechEffectsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests ProductionTechEffectsTest
@@ -1161,7 +1161,7 @@ class ProductionTechEffectsTest {
 
 Expected: all 6 FAIL.
 
-- [ ] **Step 3: Wire multipliers into `ProductionPhase.java`**
+- [x] **Step 3: Wire multipliers into `ProductionPhase.java`**
 
 Modify `ProductionPhase.run(World w)` and `updateMorale`. The final shape (showing modified regions only — keep everything else unchanged):
 
@@ -1231,7 +1231,7 @@ And update the call site in `run` from `updateMorale(s);` to `updateMorale(s, w.
 
 Add `import spacecolony.sim.TechEffects;` and `import spacecolony.sim.TechState;` at the top of the file (TechState may already be reachable since same package, in which case skip).
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests ProductionTechEffectsTest --tests ProductionTest --tests SupplyTest --tests DeterminismTest
@@ -1239,7 +1239,7 @@ Add `import spacecolony.sim.TechEffects;` and `import spacecolony.sim.TechState;
 
 Expected: all PASS. Existing `ProductionTest` and `SupplyTest` should be unaffected because no techs are researched in those test worlds (multipliers = 1.0). `DeterminismTest` should still PASS because the multipliers are pure functions of `TechState`, which is part of the deterministic state.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/ProductionPhase.java \
