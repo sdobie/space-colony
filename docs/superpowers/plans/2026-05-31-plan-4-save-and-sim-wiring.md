@@ -1629,7 +1629,7 @@ Apply `TechEffects.researchLabMultiplier` to the lab points accumulator.
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/ResearchPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/ResearchTechEffectsTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // src/test/java/spacecolony/sim/ResearchTechEffectsTest.java
@@ -1679,7 +1679,7 @@ class ResearchTechEffectsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests ResearchTechEffectsTest
@@ -1687,7 +1687,7 @@ class ResearchTechEffectsTest {
 
 Expected: both FAIL.
 
-- [ ] **Step 3: Wire multiplier in `ResearchPhase.java`**
+- [x] **Step 3: Wire multiplier in `ResearchPhase.java`**
 
 Change the points accumulator line:
 
@@ -1704,7 +1704,7 @@ if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB)
 
 Add `import spacecolony.sim.TechEffects;` at the top.
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests ResearchTechEffectsTest --tests ResearchTest --tests DeterminismTest
@@ -1712,7 +1712,7 @@ Add `import spacecolony.sim.TechEffects;` at the top.
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/ResearchPhase.java \

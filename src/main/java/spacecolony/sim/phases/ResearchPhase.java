@@ -8,6 +8,7 @@ import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
 import spacecolony.sim.Site;
 import spacecolony.sim.Tech;
+import spacecolony.sim.TechEffects;
 import spacecolony.sim.TechCatalog;
 import spacecolony.sim.World;
 
@@ -21,7 +22,8 @@ public final class ResearchPhase {
         double points = 0;
         for (Body b : w.bodies) for (Site s : b.sites)
             for (Building bd : s.buildings)
-                if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB) points += bd.level * 1.0;
+                if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB)
+                    points += bd.level * 1.0 * TechEffects.researchLabMultiplier(w.tech);
         w.tech.accumulatedPoints += points;
         if (w.tech.accumulatedPoints >= t.researchCost()) {
             w.tech.researched.add(t.id());
