@@ -1508,7 +1508,7 @@ Apply `TechEffects.diseaseSeverityMultiplier` to the population-loss and morale-
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/EventPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/EventTechEffectsTest.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The DISEASE_OUTBREAK case is randomly triggered. We can't easily wait for one in a deterministic test. Instead, we'll expose a package-private hook that directly invokes the event with a fixed RNG.
 
@@ -1576,7 +1576,7 @@ class EventTechEffectsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests EventTechEffectsTest
@@ -1584,7 +1584,7 @@ class EventTechEffectsTest {
 
 Expected: both FAIL.
 
-- [ ] **Step 3: Wire severity multiplier in `EventPhase.java`**
+- [x] **Step 3: Wire severity multiplier in `EventPhase.java`**
 
 Change the DISEASE_OUTBREAK case in `applyEvent`:
 
@@ -1603,7 +1603,7 @@ case DISEASE_OUTBREAK -> {
 
 Add `import spacecolony.sim.TechEffects;` at the top.
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests EventTechEffectsTest --tests EventsTest --tests DeterminismTest
@@ -1611,7 +1611,7 @@ Add `import spacecolony.sim.TechEffects;` at the top.
 
 Expected: all PASS. `EventsTest`'s timeline equality should still hold (no techs researched in that test → severity = 1.0 → behaviour unchanged).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/EventPhase.java \
