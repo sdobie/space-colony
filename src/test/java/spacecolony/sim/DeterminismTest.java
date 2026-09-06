@@ -50,4 +50,23 @@ class DeterminismTest {
             assertEquals(sa.stockpile.get(r), sb.stockpile.get(r), 1e-6, "stockpile " + r);
         }
     }
+
+    @Test
+    void techWiring_stillDeterministic() {
+        World a = spacecolony.world.WorldGenerator.generate(7777L);
+        World b = spacecolony.world.WorldGenerator.generate(7777L);
+        Simulator s1 = new Simulator();
+        Simulator s2 = new Simulator();
+        s1.enqueue(new spacecolony.sim.commands.QueueResearchCommand("basic-mining"));
+        s2.enqueue(new spacecolony.sim.commands.QueueResearchCommand("basic-mining"));
+        for (int i = 0; i < 2000; i++) { s1.advance(a); s2.advance(b); }
+        assertEquals(a.tech.researched, b.tech.researched);
+        Site sa = a.findSite("site-earth-hub");
+        Site sb = b.findSite("site-earth-hub");
+        assertEquals(sa.population, sb.population);
+        for (Resource r : Resource.values()) {
+            if (!r.isStockpileable()) continue;
+            assertEquals(sa.stockpile.get(r), sb.stockpile.get(r), 1e-6, "stockpile " + r);
+        }
+    }
 }

@@ -3234,7 +3234,7 @@ git commit -m "feat(ui): add File menu (New/Save/Load/Quit) backed by SwingWorke
 
 Final regression checks + manual UI test. No new code.
 
-- [ ] **Step 1: Add a determinism test that exercises tech effects**
+- [x] **Step 1: Add a determinism test that exercises tech effects**
 
 ```java
 // Append to src/test/java/spacecolony/sim/DeterminismTest.java
@@ -3258,7 +3258,7 @@ void techWiring_stillDeterministic() {
 }
 ```
 
-- [ ] **Step 2: Run full test suite**
+- [x] **Step 2: Run full test suite**
 
 ```bash
 ./gradlew test
@@ -3266,7 +3266,7 @@ void techWiring_stillDeterministic() {
 
 Expected: all ~125 tests PASS (86 carryover + ~39 new).
 
-- [ ] **Step 3: Verify no Swing imports leaked into sim/world/save**
+- [x] **Step 3: Verify no Swing imports leaked into sim/world/save**
 
 ```bash
 grep -r "import javax.swing\|import java.awt" \
@@ -3277,7 +3277,7 @@ grep -r "import javax.swing\|import java.awt" \
 
 Expected: no matches. (`spacecolony.save` is allowed to depend on `sim` + `world`, but never on Swing/AWT.)
 
-- [ ] **Step 4: Manual play-test checklist**
+- [x] **Step 4: Manual play-test checklist**
 
 Launch:
 
@@ -3295,7 +3295,7 @@ Run through this checklist, fixing anything that fails before opening the PR:
 6. **Malformed save error.** Overwrite the file with `{not json`. File → Load → see error dialog; world unchanged.
 7. **Mid-transit save.** Build a Hauler, dispatch it Earth → Mars (via build/dispatch dialogs). Save while it's IN_TRANSIT. Load. Ship should still be IN_TRANSIT with the same arrival tick.
 
-- [ ] **Step 5: Push branch and open PR**
+- [x] **Step 5: Push branch and open PR**
 
 ```bash
 git push -u origin plan-4/save-and-sim-wiring
