@@ -1258,7 +1258,7 @@ Apply `TechEffects.fuelCostMultiplier` at the two places fuel is computed: `Tran
 - Modify: `/Users/steve/projects/space-colony/src/main/java/spacecolony/sim/phases/CommandPhase.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/sim/TransitTechEffectsTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/sim/TransitTechEffectsTest.java
@@ -1323,7 +1323,7 @@ class TransitTechEffectsTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests TransitTechEffectsTest
@@ -1331,7 +1331,7 @@ class TransitTechEffectsTest {
 
 Expected: all 3 FAIL.
 
-- [ ] **Step 3: Wire fuel multiplier in `TransitPhase.loadingAndUnloading`**
+- [x] **Step 3: Wire fuel multiplier in `TransitPhase.loadingAndUnloading`**
 
 Find the line in `TransitPhase.java` that reads:
 
@@ -1348,7 +1348,7 @@ double cost = FUEL_K * (s.shipClass.dryMass() + s.cargoMass()) * dist
 
 Add `import spacecolony.sim.TechEffects;` at the top.
 
-- [ ] **Step 4: Wire fuel multiplier in `CommandPhase.applyDispatchShip`**
+- [x] **Step 4: Wire fuel multiplier in `CommandPhase.applyDispatchShip`**
 
 Find the line in `CommandPhase.java`:
 
@@ -1365,7 +1365,7 @@ double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
 
 Add `import spacecolony.sim.TechEffects;` at the top.
 
-- [ ] **Step 5: Run, confirm pass**
+- [x] **Step 5: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests TransitTechEffectsTest --tests TransitMathTest --tests DeterminismTest
@@ -1373,7 +1373,7 @@ Add `import spacecolony.sim.TechEffects;` at the top.
 
 Expected: all PASS. Existing `TransitMathTest` should be unaffected (no techs in its world → multiplier = 1.0).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/spacecolony/sim/phases/TransitPhase.java \
