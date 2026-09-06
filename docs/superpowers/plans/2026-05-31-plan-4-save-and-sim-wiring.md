@@ -2198,7 +2198,7 @@ Pretty-printer matched to the reader. Sorts object keys alphabetically (so save-
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/save/JsonWriter.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/save/JsonWriterTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/save/JsonWriterTest.java
@@ -2267,7 +2267,7 @@ class JsonWriterTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests JsonWriterTest
@@ -2275,7 +2275,7 @@ class JsonWriterTest {
 
 Expected: compilation failure.
 
-- [ ] **Step 3: Write `JsonWriter.java`**
+- [x] **Step 3: Write `JsonWriter.java`**
 
 ```java
 // src/main/java/spacecolony/save/JsonWriter.java
@@ -2365,7 +2365,7 @@ public final class JsonWriter {
 }
 ```
 
-- [ ] **Step 4: Run, confirm pass**
+- [x] **Step 4: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests JsonWriterTest --tests JsonReaderTest
@@ -2373,7 +2373,7 @@ public final class JsonWriter {
 
 Expected: all PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/spacecolony/save/JsonWriter.java \
