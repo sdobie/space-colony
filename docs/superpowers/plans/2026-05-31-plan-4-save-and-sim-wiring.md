@@ -1868,7 +1868,7 @@ Build the hand-rolled JSON parser. Sealed hierarchy of value types; recursive-de
 - Create: `/Users/steve/projects/space-colony/src/main/java/spacecolony/save/JsonReader.java`
 - Create: `/Users/steve/projects/space-colony/src/test/java/spacecolony/save/JsonReaderTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 // src/test/java/spacecolony/save/JsonReaderTest.java
@@ -1959,7 +1959,7 @@ class JsonReaderTest {
 }
 ```
 
-- [ ] **Step 2: Run, confirm fail**
+- [x] **Step 2: Run, confirm fail**
 
 ```bash
 ./gradlew test --tests JsonReaderTest
@@ -1967,7 +1967,7 @@ class JsonReaderTest {
 
 Expected: compilation failures (`JsonValue`, `JsonReader`, `JsonParseException` don't exist).
 
-- [ ] **Step 3: Write `JsonValue.java`**
+- [x] **Step 3: Write `JsonValue.java`**
 
 ```java
 // src/main/java/spacecolony/save/JsonValue.java
@@ -2001,7 +2001,7 @@ public sealed interface JsonValue
 }
 ```
 
-- [ ] **Step 4: Write `JsonParseException.java`**
+- [x] **Step 4: Write `JsonParseException.java`**
 
 ```java
 // src/main/java/spacecolony/save/JsonParseException.java
@@ -2017,7 +2017,7 @@ public class JsonParseException extends RuntimeException {
 }
 ```
 
-- [ ] **Step 5: Write `JsonReader.java`**
+- [x] **Step 5: Write `JsonReader.java`**
 
 ```java
 // src/main/java/spacecolony/save/JsonReader.java
@@ -2170,7 +2170,7 @@ public final class JsonReader {
 }
 ```
 
-- [ ] **Step 6: Run, confirm pass**
+- [x] **Step 6: Run, confirm pass**
 
 ```bash
 ./gradlew test --tests JsonReaderTest
@@ -2178,7 +2178,7 @@ public final class JsonReader {
 
 Expected: all PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/main/java/spacecolony/save/JsonValue.java \
