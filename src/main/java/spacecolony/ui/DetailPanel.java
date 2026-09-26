@@ -21,6 +21,7 @@ import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
+import spacecolony.sim.TechEffects;
 
 public class DetailPanel extends JPanel {
     private final Engine engine;
@@ -89,7 +90,7 @@ public class DetailPanel extends JPanel {
         if (s == null) { renderNone(); return; }
         addLabel(s.name, UiColors.FOREGROUND);
         addLabel("Body: " + s.bodyId + "  ·  pop " + s.population + "/" + s.populationCap, UiColors.FOREGROUND_DIM);
-        addLabel(String.format("Morale: %.2f", s.morale), UiColors.FOREGROUND_DIM);
+        addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(engine.world().tech)), moraleColor(s.morale));
         content.add(Box.createVerticalStrut(6));
         addLabel("Stockpile:", UiColors.FOREGROUND_DIM);
         JPanel stockGrid = new JPanel(new GridLayout(0, 2, 6, 2));
@@ -140,6 +141,19 @@ public class DetailPanel extends JPanel {
             dispatch.addActionListener(e -> spacecolony.ui.dialogs.DispatchShipDialog.show(this, engine, s.id));
             content.add(dispatch);
         }
+    }
+
+    /** "Morale: 0.95 / 1.00", with a note once life-support techs lift the ceiling. */
+    static String moraleLine(double morale, double ceiling) {
+        String line = String.format("Morale: %.2f / %.2f", morale, ceiling);
+        return ceiling > 1.0 + 1e-9 ? line + String.format("  (life support +%.0f%%)", (ceiling - 1.0) * 100.0) : line;
+    }
+
+    // Growth needs morale > 0.7 and decline starts below 0.3 (ProductionPhase).
+    private static java.awt.Color moraleColor(double morale) {
+        if (morale < 0.3) return UiColors.ERROR;
+        if (morale <= 0.7) return UiColors.WARNING;
+        return UiColors.FOREGROUND_DIM;
     }
 
     private void addLabel(String text, java.awt.Color fg) {
