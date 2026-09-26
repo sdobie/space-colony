@@ -6,6 +6,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Speed;
@@ -14,6 +15,8 @@ public class TopBar extends JPanel {
     private final Engine engine;
     private final JLabel tickLabel = new JLabel();
     private final JLabel creditsLabel = new JLabel();
+    private final JLabel statusLabel = new JLabel();
+    private final Timer statusClear = new Timer(3000, e -> statusLabel.setText(""));
     private final JButton pauseBtn = speedButton("⏸", Speed.PAUSED);
     private final JButton x1Btn = speedButton("1×", Speed.X1);
     private final JButton x4Btn = speedButton("4×", Speed.X4);
@@ -31,6 +34,9 @@ public class TopBar extends JPanel {
         creditsLabel.setForeground(UiColors.FOREGROUND);
         left.add(tickLabel);
         left.add(creditsLabel);
+        statusLabel.setForeground(UiColors.INFO);
+        left.add(statusLabel);
+        statusClear.setRepeats(false);
 
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 4));
         center.setOpaque(false);
@@ -57,6 +63,14 @@ public class TopBar extends JPanel {
         });
         refresh();
     }
+
+    /** Shows {@code text} (e.g. "Saved “colony”") for 3 seconds. */
+    public void toast(String text) {
+        statusLabel.setText(text);
+        statusClear.restart();
+    }
+
+    String statusText() { return statusLabel.getText(); }
 
     private JButton speedButton(String label, Speed s) {
         JButton b = new JButton(label);

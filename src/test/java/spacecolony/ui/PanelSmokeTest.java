@@ -3,9 +3,12 @@ package spacecolony.ui;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import spacecolony.engine.Engine;
 import spacecolony.engine.Selection;
+import spacecolony.save.SaveSlots;
 import spacecolony.testutil.Edt;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,15 +16,21 @@ import static org.junit.jupiter.api.Assertions.*;
 class PanelSmokeTest {
 
     @Test
-    void fileMenu_buildsWithoutCrashing() throws Exception {
+    void fileMenu_buildsWithoutCrashing(@TempDir Path tmp) throws Exception {
         // Null owner: it is only used as the parent component for modal dialogs, which
         // this test never opens. Constructing the menu exercises the action wiring.
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
-            FileMenu menu = new FileMenu(null, engine);
+            GameSession session = new GameSession(engine, new SaveSlots(tmp), new GameSession.Ui() {
+                public boolean confirmQuit() { return false; }
+                public boolean quitAnyway(String msg) { return false; }
+                public void savedToast(String label) {}
+            }, code -> {});
+            FileMenu menu = new FileMenu(null, engine, session);
             assertEquals(1, menu.getMenuCount());
             assertEquals("File", menu.getMenu(0).getText());
-            assertEquals(5, menu.getMenu(0).getMenuComponentCount(), "New/Save/Load/separator/Quit");
+            assertEquals(7, menu.getMenu(0).getMenuComponentCount(),
+                "New/Save/Save As/Load/Load from file/separator/Quit");
         });
     }
 
@@ -41,6 +50,8 @@ class PanelSmokeTest {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
             TopBar p = new TopBar(engine);
+            p.toast("Saved “colony”");
+            assertEquals("Saved “colony”", p.statusText());
             p.setSize(800, 40);
             paintToImage(p, 800, 40);
         });

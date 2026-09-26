@@ -3,8 +3,9 @@ package spacecolony.save;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import spacecolony.sim.World;
@@ -14,112 +15,117 @@ import static org.junit.jupiter.api.Assertions.*;
 class SaveSlotsTest {
 
     @Test
-    void validateName_trimsAndDropsJsonExtension() {
-        assertEquals("Colony One", SaveSlots.validateName("  Colony One  "));
-        assertEquals("mars-run", SaveSlots.validateName("mars-run.json"));
-        assertEquals("v1.2 (backup)", SaveSlots.validateName("v1.2 (backup)"));
-    }
-
-    @Test
-    void validateName_rejectsUnusableNames() {
-        for (String bad : new String[] {null, "", "   ", ".json", "../escape", "a/b", "a\\b", ".hidden",
-                "_autosave", "trailing.", "mine.autosave", "Mine.AUTOSAVE", "x".repeat(65)}) {
-            assertThrows(IllegalArgumentException.class, () -> SaveSlots.validateName(bad), "accepted: " + bad);
+    void validateName() {
+        assertNull(SaveSlots.validateName("colony 1"));
+        assertNull(SaveSlots.validateName("mars_run-2"));
+        assertNull(SaveSlots.validateName("  padded  "));
+        assertNull(SaveSlots.validateName("x".repeat(40)));
+        for (String bad : List.of("", "   ", "x".repeat(41), "_x", "a/b", "a.json", "a.autosave", "..", "a\\b")) {
+            assertNotNull(SaveSlots.validateName(bad), bad);
         }
+        assertNotNull(SaveSlots.validateName(null));
     }
 
     @Test
-    void files_followSpecNaming(@TempDir Path tmp) {
-        SaveSlots slots = new SaveSlots(tmp);
-        assertEquals(tmp.resolve("alpha.json"), slots.fileFor("alpha"));
-        assertEquals(tmp.resolve("alpha.autosave.json"), slots.autosaveFileFor("alpha"));
-        assertEquals(tmp.resolve("_autosave.json"), slots.autosaveFileFor(null));
+    void paths(@TempDir Path dir) {
+        SaveSlots s = new SaveSlots(dir);
+        assertEquals(dir.resolve("colony.json"), s.slotPath("colony"));
+        assertEquals(dir.resolve("colony.autosave.json"), s.autosavePath("colony"));
+        assertEquals(dir.resolve("_autosave.json"), s.autosavePath(null));
+        assertThrows(IllegalArgumentException.class, () -> s.slotPath("a/b"));
+        assertThrows(IllegalArgumentException.class, () -> s.autosavePath("_x"));
     }
 
     @Test
-    void list_isEmptyWhenDirectoryMissing(@TempDir Path tmp) throws Exception {
-        assertEquals(List.of(), new SaveSlots(tmp.resolve("nope")).list());
+    void slotOf_mapsFilesBackToSlots(@TempDir Path dir) {
+        SaveSlots s = new SaveSlots(dir);
+        assertEquals("belt", s.slotOf(s.slotPath("belt")));
+        assertEquals("mars", s.slotOf(s.autosavePath("mars")));
+        assertNull(s.slotOf(s.autosavePath(null)));
+        assertNull(s.slotOf(dir.resolve("my save!.json")), "hand-named file");
+        assertNull(s.slotOf(dir.resolveSibling("elsewhere").resolve("x.json")), "outside the slots dir");
     }
 
     @Test
-    void list_newestFirst_skipsTmpAndOtherFiles(@TempDir Path tmp) throws Exception {
-        SaveSlots slots = new SaveSlots(tmp);
-        World w = WorldGenerator.generate(3L);
-        slots.save(w, "old");
-        slots.save(w, "new");
-        slots.autosave(w, "old");
-        Files.setLastModifiedTime(slots.fileFor("old"), FileTime.from(Instant.parse("2026-01-01T00:00:00Z")));
-        Files.setLastModifiedTime(slots.autosaveFileFor("old"), FileTime.from(Instant.parse("2026-02-01T00:00:00Z")));
-        Files.setLastModifiedTime(slots.fileFor("new"), FileTime.from(Instant.parse("2026-03-01T00:00:00Z")));
-        Files.writeString(tmp.resolve("half.json.tmp"), "{");
-        Files.writeString(tmp.resolve("notes.txt"), "hi");
-        Files.createDirectory(tmp.resolve("dir.json"));
-
-        List<String> names = slots.list().stream().map(SaveSlots.Slot::name).toList();
-        assertEquals(List.of("new", "old.autosave", "old"), names);
+    void list_newestFirst_withHeaders(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        World a = WorldGenerator.generate(1L); a.tick = 10; a.credits = 111;
+        World b = WorldGenerator.generate(2L); b.tick = 20; b.credits = 222;
+        SaveFile.save(a, s.slotPath("alpha"));
+        SaveFile.save(b, s.slotPath("beta"));
+        SaveFile.save(b, s.autosavePath("beta"));
+        Files.setLastModifiedTime(s.slotPath("alpha"), FileTime.fromMillis(1_000));
+        Files.setLastModifiedTime(s.slotPath("beta"), FileTime.fromMillis(2_000));
+        Files.setLastModifiedTime(s.autosavePath("beta"), FileTime.fromMillis(3_000));
+        List<SlotInfo> l = s.list();
+        assertEquals(List.of("beta", "beta", "alpha"), l.stream().map(SlotInfo::name).toList());
+        assertTrue(l.get(0).autosave());
+        assertFalse(l.get(1).autosave());
+        assertEquals(20L, l.get(1).tick());
+        assertEquals(2L, l.get(1).seed());
+        assertEquals(111L, l.get(2).credits());
+        assertEquals(SlotInfo.Status.OK, l.get(2).status());
     }
 
     @Test
-    void saveThenLoad_roundTripsThroughSlot(@TempDir Path tmp) throws Exception {
-        SaveSlots slots = new SaveSlots(tmp.resolve("saves"));
-        World w = WorldGenerator.generate(11L);
-        w.tick = 250;
-        w.credits = 777;
-        slots.save(w, "first colony");
-        assertTrue(slots.exists("first colony"));
-
-        SaveSlots.Slot slot = slots.list().get(0);
-        World loaded = slots.load(slot);
-        assertEquals(11L, loaded.seed);
-        assertEquals(250L, loaded.tick);
-        assertEquals(777L, loaded.credits);
+    void list_unnamedAutosave_isAnAutosave(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        SaveFile.save(WorldGenerator.generate(3L), s.autosavePath(null));
+        SlotInfo only = s.list().get(0);
+        assertEquals(SaveSlots.UNNAMED_AUTOSAVE, only.name());
+        assertTrue(only.autosave());
     }
 
     @Test
-    void autosave_leavesNamedSlotUntouched(@TempDir Path tmp) throws Exception {
-        SaveSlots slots = new SaveSlots(tmp);
-        World w = WorldGenerator.generate(5L);
-        w.tick = 10;
-        slots.save(w, "main");
-        String before = Files.readString(slots.fileFor("main"));
-
-        w.tick = 99;
-        slots.autosave(w, "main");
-        assertEquals(before, Files.readString(slots.fileFor("main")));
-        assertEquals(99L, SaveFile.load(slots.autosaveFileFor("main")).tick);
+    void list_unreadableAndWrongSchema_stillListed(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        Files.writeString(dir.resolve("junk.json"), "{nope");
+        Files.writeString(dir.resolve("empty.json"), "[]");
+        SaveFile.save(WorldGenerator.generate(1L), s.slotPath("tmp"));
+        String good = Files.readString(s.slotPath("tmp"));
+        Files.delete(s.slotPath("tmp"));
+        Files.writeString(dir.resolve("old.json"), good.replace("\"schemaVersion\": 1", "\"schemaVersion\": 99"));
+        Map<String, SlotInfo> byName = s.list().stream().collect(Collectors.toMap(SlotInfo::name, x -> x));
+        assertEquals(SlotInfo.Status.UNREADABLE, byName.get("junk").status());
+        assertEquals(SlotInfo.Status.UNREADABLE, byName.get("empty").status());
+        assertEquals(SlotInfo.Status.OTHER_SCHEMA, byName.get("old").status());
+        assertEquals(99, byName.get("old").schemaVersion());
+        assertEquals(-1L, byName.get("old").tick());
     }
 
     @Test
-    void autosave_withoutSlot_writesUnnamedAutosave(@TempDir Path tmp) throws Exception {
-        SaveSlots slots = new SaveSlots(tmp);
-        slots.autosave(WorldGenerator.generate(5L), null);
-        assertTrue(Files.exists(tmp.resolve("_autosave.json")));
-        SaveSlots.Slot only = slots.list().get(0);
-        assertTrue(only.isAutosave());
-        assertNull(only.owningSlot());
+    void list_skipsTmpAndNonJson(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        SaveFile.save(WorldGenerator.generate(1L), s.slotPath("real"));
+        Files.writeString(dir.resolve("half.json.tmp"), "{");
+        Files.writeString(dir.resolve("notes.txt"), "hi");
+        Files.createDirectory(dir.resolve("folder.json"));
+        assertEquals(List.of("real"), s.list().stream().map(SlotInfo::name).toList());
     }
 
     @Test
-    void slot_owningSlot_mapsAutosaveBackToItsSlot(@TempDir Path tmp) {
-        assertEquals("main", slot(tmp, "main").owningSlot());
-        assertEquals("main", slot(tmp, "main.autosave").owningSlot());
-        assertTrue(slot(tmp, "main.autosave").isAutosave());
-        assertFalse(slot(tmp, "main").isAutosave());
-        // Hand-copied files with names the picker would refuse fall back to the unnamed autosave.
-        assertNull(slot(tmp, "my save!").owningSlot());
-        assertNull(slot(tmp, "my save!.autosave").owningSlot());
+    void delete_removesOnlyTarget(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        World w = WorldGenerator.generate(1L);
+        SaveFile.save(w, s.slotPath("c"));
+        SaveFile.save(w, s.autosavePath("c"));
+        s.delete("c", false);
+        assertFalse(Files.exists(s.slotPath("c")));
+        assertTrue(Files.exists(s.autosavePath("c")));
+        s.delete("c", true);
+        assertFalse(Files.exists(s.autosavePath("c")));
     }
 
     @Test
-    void delete_removesFile(@TempDir Path tmp) throws Exception {
-        SaveSlots slots = new SaveSlots(tmp);
-        slots.save(WorldGenerator.generate(1L), "gone");
-        slots.delete(slots.list().get(0));
-        assertFalse(slots.exists("gone"));
-        assertEquals(List.of(), slots.list());
+    void delete_byInfo_handlesHandNamedFiles(@TempDir Path dir) throws Exception {
+        SaveSlots s = new SaveSlots(dir);
+        Files.writeString(dir.resolve("my save!.json"), "{nope");
+        s.delete(s.list().get(0));
+        assertEquals(List.of(), s.list());
     }
 
-    private static SaveSlots.Slot slot(Path dir, String name) {
-        return new SaveSlots.Slot(name, dir.resolve(name + ".json"), Instant.EPOCH);
+    @Test
+    void list_missingDir_isEmpty(@TempDir Path dir) throws Exception {
+        assertEquals(List.of(), new SaveSlots(dir.resolve("nope")).list());
     }
 }
