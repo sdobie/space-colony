@@ -12,7 +12,7 @@ After Plan 4 the game is playable session to session, but three parts of the v1 
 
 1. **Debug mode (spec §8).** Nothing in the game lets a developer step the sim, see where tick time goes, inspect an object, force an event, or read a log. There is no logging at all, and an uncaught exception on the EDT just prints to stderr.
 2. **Save slots and autosave (spec §9).** Save and Load go through a raw `JFileChooser`. There is no slot list, no delete, and quitting without saving loses the session.
-3. **Panel polish (spec §7.3–§7.4).** Plan 4 made tech and habitats matter in the sim, but the UI hides it. Morale can now exceed 1.0 (life-support techs) and the dock still prints `0.xx`. The pop cap has no breakdown. The tech list shows no prerequisites, and clicking a locked tech queues it anyway, because `CommandPhase.applyQueueResearch` never checks prerequisites. Goals show no progress. The event strip can't be filtered and doesn't link to what it's about.
+3. **Panel polish (spec §7.3–§7.4).** PR #5 surfaced tech effects and the morale ceiling (see §6), but gaps remain. The pop cap has no breakdown and production rates aren't shown. The tech list has no structure or ETA. Goals show no progress. The event strip can't be filtered and doesn't link to what it's about. The sim also still accepts research whose prerequisites are missing: `CommandPhase.applyQueueResearch` never checks them, and only the UI blocks it.
 
 Plan 5 closes all three. When it lands, every "In v1" bullet of spec §14 is implemented.
 
@@ -82,7 +82,7 @@ These are small, test-first changes that the UI work in §4–§6 depends on.
 
 ### 3.1 Research prerequisites (bug fix)
 
-`CommandPhase.applyQueueResearch` accepts any known, unresearched tech, even when its prerequisites are missing, and `TechModal` lets the player click a locked row. Fix both through one helper:
+`CommandPhase.applyQueueResearch` accepts any known, unresearched tech, even when its prerequisites are missing. Since PR #5 the tech modal blocks locked rows with its own private check, but anything that enqueues a `QueueResearchCommand` directly bypasses it. Fix the sim and share one helper with the modal:
 
 ```java
 package spacecolony.sim;
@@ -361,37 +361,37 @@ The table loads in a `SwingWorker`. Load/Save IO keeps Plan 4's `SwingWorker` an
 
 ## 6. Panel polish (spec §7.3–§7.4)
 
+PR #5 (merged 2026-09-26, while this design was being written) already covers part of this:
+- Per-tech effect deltas in the tech modal (`TechEffects.deltas`), plus "needs …" and no clicking on locked techs, and an active-research line.
+- Morale shown against its ceiling in the dock (`Morale: 1.10 / 1.56 (life support +56%)`, amber at ≤0.7, red below 0.3).
+- A goals summary header, and rewards of 0 hidden.
+- Game dates, kind tooltips and an empty state in the event strip.
+
+Plan 5 keeps all of it and adds only what's below.
+
 ### 6.1 Detail panel (site)
 
 - **Population:** `pop 250 / 468` plus a dim breakdown line from `PopCapBreakdown`: `base 200 + habitats 100 × 1.56 (colony mgmt)`. The multiplier part is omitted at ×1.00.
-- **Morale:** a `JProgressBar` from 0 to the tech ceiling, labelled `1.12 / 1.56`. It turns the warning colour below 0.3 (the pop-decline threshold) and shows the plain `0.84 / 1.00` when no life-support tech is researched.
-- **Production:** a "Net rate / day" grid from `productionRateCache`, showing non-zero resources with a sign and red for negatives. Spec §7.3 asks for production rates; the cache has existed since Plan 1 but was never shown.
-- **Buildings:** each row gets its active tech multiplier, e.g. `MINE L2  ore ×1.43`, `FARM L1  food ×1.43 · water ×0.70`, `POWER_PLANT L1  ×1.25`, `REFINERY L1  ×1.20`, `RESEARCH_LAB L1  ×1.56`. Rows at ×1.00 show nothing extra. The mapping from building type to `TechEffects` calls lives in one private method.
+- **Production:** a "Net / day" grid from `productionRateCache`, showing non-zero resources with a sign and red for negatives. Spec §7.3 asks for production rates; the cache has existed since Plan 1 but was never shown.
+- **Buildings:** each row gets its active tech multiplier, e.g. `MINE L2  ore ×1.43`, `FARM L1  food ×1.43 · water ×0.70`, `POWER_PLANT L1  ×1.25`, `REFINERY L1  ×1.20`, `RESEARCH_LAB L1  ×1.56`. Rows at ×1.00 show nothing extra. The mapping from building type to `TechEffects` calls lives in one package-private method so it can be unit-tested.
 
 ### 6.2 Tech modal
 
+- **One prereq rule:** the modal's private prereq check is replaced by `TechAvailability.missingPrereqs`, the same helper `CommandPhase` uses (§3.1).
 - **Tiers:** techs are grouped under "Tier 0", "Tier 1" and "Tier 2" headers (antimatter is the deepest, at tier 2) by `TechAvailability.tier`, in catalog order within a tier. This gives the tree's shape without drawing a graph.
-- **Row states:**
-  - Researched: ✓ and dim.
-  - Active: highlighted, with a progress bar of `accumulatedPoints / researchCost` and an ETA in days at the current lab rate.
-  - Available: normal and clickable.
-  - Locked: greyed and not clickable, with the tooltip "Requires: Ion Drives".
-- Each row shows its description and prereq names.
-- **Active effects:** a footer lists every non-1.0 multiplier from `TechEffects`, e.g. "Ore ×1.43 · Fuel cost ×0.56 · Pop cap ×1.20 · Morale cap ×1.20".
-- **Lab rate:** the header shows the current research points per day. That's the same sum `ResearchPhase` uses, so the loop moves to a small public `ResearchPhase.pointsPerTick(World)` that both call.
-- The modal stays **modal** but refreshes on `WorldChanged`. Its listener is added on show and removed on dispose, so the progress bar moves while the game runs underneath.
+- **Lab rate:** the header adds the current research points per day. That's the same sum `ResearchPhase` uses, so the loop moves to a small public `ResearchPhase.pointsPerTick(World)` that both call.
+- **Active tech:** a progress bar of `accumulatedPoints / researchCost` with an ETA in days at the current lab rate.
+- **Live refresh:** the modal stays **modal** but refreshes on `WorldChanged`. Its listener is added on show and removed on dispose, so the progress bar moves while the game runs underneath.
 
 ### 6.3 Goals modal
 
-- Goals are grouped by `GoalCategory`. Each row shows ✓/○, name, rewards, description and a progress bar (§3.2) with its fraction label (`412 / 1,000`, `3 / 5 bodies`, or "done").
+- Goals are grouped by `GoalCategory`. Each row keeps PR #5's name and reward text and adds a progress bar (§3.2) with a fraction label (`412 / 1,000`, `3 / 5 bodies`, or "done").
 - Refreshes on `WorldChanged` like the tech modal.
 
 ### 6.4 Event strip
 
-- Dates show as `Y2 D114` (matching `TopBar`) instead of `t=844`.
 - **Filter toggles** on the right: INFO / WARNING / ERROR, all on by default. The toggles persist for the session only.
 - **Click to select:** clicking an event that carries a `shipId`, `siteId` or `bodyId` (checked in that order) sets the selection, if the entity still exists. The cursor becomes a hand over such rows.
-- Hovering shows the full message as a tooltip. Long messages are truncated in the row.
 
 ## 7. Testing strategy
 
@@ -432,7 +432,7 @@ The table loads in a `SwingWorker`. Load/Save IO keeps Plan 4's `SwingWorker` an
 ### 7.4 UI smoke tests (extend `PanelSmokeTest`)
 
 - The File menu has 7 components (New/Save/Save As/Load/Load from file/separator/Quit).
-- `DetailPanel` with a site selected and `life-support-i` researched paints, and its text contains `/ 1.20`.
+- `DetailPanel` with a site selected and `colony-mgmt-i` researched paints, and its text contains `× 1.20 (colony mgmt)` and `Net / day:`.
 - `DebugOverlayPanel`, `ObjectInspectorDialog` (not shown, just built), `LogViewerDialog` and `SaveSlotDialog` construct and paint without throwing.
 - `SystemMapPanel` paints with debug on and a ship in transit.
 - `DebugController`: toggling on adds the Debug menu and the overlay, and toggling off removes both.
@@ -456,9 +456,9 @@ The table loads in a `SwingWorker`. Load/Save IO keeps Plan 4's `SwingWorker` an
 | Debug package | ~20 |
 | Save slots + session | ~10 |
 | UI smoke | ~7 |
-| **Plan 5 new** | **~57** |
-| Carried over (current `main`) | 170 |
-| **Total after Plan 5** | **~227** |
+| **Plan 5 new** | **~52** |
+| Carried over (current `main`) | 183 |
+| **Total after Plan 5** | **~235** |
 
 ### 7.7 Manual play-test checklist
 
@@ -473,8 +473,8 @@ The table loads in a `SwingWorker`. Load/Save IO keeps Plan 4's `SwingWorker` an
 9. Throw from a debug-only "Throw test exception" menu item: in debug mode the banner appears. Without debug, the crash dialog appears once, and Continue resumes the game.
 10. Save As "colony", play on, then close the window: `colony.autosave.json` exists. Relaunch, Load…: both rows are listed, and loading the autosave restores the later tick.
 11. Delete a slot from the Load dialog: the file is gone.
-12. Research life-support-i: the dock's morale reads `x / 1.20`. Build a HABITAT: the breakdown line updates.
-13. Tech modal: Fusion Drives is locked with "Requires: Ion Drives" and not clickable. The active tech's bar moves while the modal is open.
+12. Build a HABITAT: the pop breakdown line updates. Research basic-mining: the MINE row shows `ore ×1.10`, and the net-rate grid shows positive ORE.
+13. Tech modal: techs are grouped by tier, the header shows pts/day, and the active tech's bar and ETA move while the modal is open.
 14. Goals modal: Population 1,000 shows a partial bar.
 15. Event strip: untick INFO and only warnings remain. Click a ship event and the ship is selected.
 

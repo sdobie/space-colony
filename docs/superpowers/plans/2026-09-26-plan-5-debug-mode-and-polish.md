@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Finish the v1 scope of the game-design spec (§14). Add the debug mode from spec §8 (overlay, sim controls, object inspector, log viewer, map overlays, determinism check, logging, crash handling). Replace the raw file chooser with named save slots plus autosave on quit (spec §9). Make the Plan 4 sim changes visible in the UI: morale ceiling, pop-cap breakdown, production rates, tech prerequisites and effects, goal progress, and a filterable event strip.
+**Goal:** Finish the v1 scope of the game-design spec (§14). Add the debug mode from spec §8 (overlay, sim controls, object inspector, log viewer, map overlays, determinism check, logging, crash handling). Replace the raw file chooser with named save slots plus autosave on quit (spec §9). Finish the panel polish that PR #5 started: pop-cap breakdown, production rates, per-building tech multipliers, tech tiers with research rate and ETA, goal categories and progress bars, event filters and click-to-select. Also enforce tech prerequisites in the sim.
 
 **Architecture:** One new package, `spacecolony.debug`, which depends on `engine`, `sim`, `save` and `world` and never on `ui`. A few small sim helpers (`TechAvailability`, `PopCapBreakdown`, `SimPhase` + `PhaseObserver`, `TransitPhase.fuelCost`, `ResearchPhase.pointsPerTick`) give the UI and debug tools one source of truth for numbers the phases already compute. `Engine` gains debug-mode state, stepping, multi-tick advance and a single audited `applyDebugEdit` mutation path. `save` gains `SaveSlots` and string-level `SaveFile.toJson/fromJson`. `ui` gains `GameSession` (current slot + quit/autosave) and `SaveSlotDialog`.
 
@@ -16,12 +16,12 @@
 
 ## Context
 
-Plans 1–4 are on `main`: 8-phase sim, deterministic world-gen, Swing shell with 5 panels, `GameLoop` on a Swing `Timer`, save/load (schema v1), all 17 techs wired through `TechEffects`, HABITAT cap, and EDT guards. There are 170 tests, all passing.
+Plans 1–4 are on `main`: 8-phase sim, deterministic world-gen, Swing shell with 5 panels, `GameLoop` on a Swing `Timer`, save/load (schema v1), all 17 techs wired through `TechEffects`, HABITAT cap, and EDT guards. PR #5 (merged 2026-09-26) then did part of the panel polish: per-tech effect deltas (`TechEffects.deltas`), morale shown against its ceiling, locked techs blocked in the UI, a goals summary header, and game dates in the event strip. There are 183 tests, all passing.
 
 Key facts about the existing code that this plan relies on:
 
 - `Simulator.advance` calls `CommandPhase.drain`, `w.tick++`, `TransitPhase.advanceTransits`, `ProductionPhase.run`, `TransitPhase.loadingAndUnloading`, `EventPhase.run`, `ResearchPhase.run` and `GoalPhase.run`, in that order.
-- `CommandPhase.applyQueueResearch` checks only "unknown" and "already researched". **It does not check prerequisites**, and `TechModal` lets the player click locked techs. Task 1 fixes this.
+- `CommandPhase.applyQueueResearch` checks only "unknown" and "already researched". **It does not check prerequisites.** Since PR #5 the tech modal blocks locked techs, but the sim still accepts them. Task 1 fixes the sim and Task 25 makes the modal share the same rule.
 - `ProductionPhase.recomputeCap(Site, TechState)` is private and holds the HABITAT cap formula.
 - `TransitPhase.loadingAndUnloading` computes the departure fuel cost inline from the private `distanceBetweenSitesAtTicks`.
 - `EventPhase.applyForTest(World, Body, EventKind, Random)` is public and used by `EventTechEffectsTest`.
@@ -111,7 +111,8 @@ src/test/java/spacecolony/
 - `ui/SpaceColonyFrame.java`: `GameSession`, window close, `DebugController`, SOUTH stack.
 - `ui/FileMenu.java`: slot-based menu.
 - `ui/TopBar.java`: save toast.
-- `ui/DetailPanel.java`, `ui/TechModal.java`, `ui/GoalsModal.java`, `ui/EventStripPanel.java`: polish.
+- `ui/DetailPanel.java`, `ui/TechModal.java`, `ui/GoalsModal.java`, `ui/EventStripPanel.java`: the polish PR #5 didn't cover (Tasks 24–27 build on its code rather than replacing it).
+- `test/.../ui/PanelFormattingTest.java`: new formatting cases.
 - `ui/SystemMapPanel.java`, `ui/ColonyListPanel.java`, `ui/BodyViewPanel.java`: Shift+click inspector and map overlays.
 - `test/.../sim/EventTechEffectsTest.java`: renamed seam.
 - `test/.../ui/PanelSmokeTest.java`, `test/.../playtest/PlayTestDriver.java`: new menu and dialogs.
@@ -136,7 +137,7 @@ git checkout -b plan-5/debug-mode-and-polish
 ./gradlew test
 ```
 
-Expected: 170 tests pass.
+Expected: 183 tests pass.
 
 ---
 
@@ -1892,116 +1893,91 @@ Every action keeps Plan 4's pause/restore-speed and `EdtGuard.assertEdt()`. Work
 
 ### Task 24: Detail panel polish
 
-**Files:** `src/main/java/spacecolony/ui/DetailPanel.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`
+PR #5 already added the morale line (`DetailPanel.moraleLine`, e.g. `Morale: 1.10 / 1.56  (life support +56%)`) and its colours. **Keep both.** This task adds only what's still missing from design §6.1.
 
-- [ ] **Step 1: Population**
+**Files:** `src/main/java/spacecolony/ui/DetailPanel.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`, `src/test/java/spacecolony/ui/PanelFormattingTest.java`
 
-```java
-PopCapBreakdown cap = PopCapBreakdown.of(s, w.tech);
-addLabel("Body: " + s.bodyId + "  ·  pop " + s.population + " / " + cap.cap(), UiColors.FOREGROUND_DIM);
-String brk = "  base " + cap.siteBase() + " + habitats " + cap.habitatBoost()
-    + (cap.techMultiplier() != 1.0 ? String.format(" × %.2f (colony mgmt)", cap.techMultiplier()) : "");
-addLabel(brk, UiColors.FOREGROUND_DIM);
-```
-
-Use `cap.cap()` rather than `s.populationCap`, because the breakdown must add up. They're equal after any tick.
-
-- [ ] **Step 2: Morale bar**
+- [ ] **Step 1: Failing formatting tests** (append to `PanelFormattingTest`, which already covers `moraleLine`)
 
 ```java
-double ceiling = TechEffects.moraleCeiling(w.tech);
-JProgressBar bar = new JProgressBar(0, (int) Math.round(ceiling * 100));
-bar.setValue((int) Math.round(s.morale * 100));
-bar.setStringPainted(true);
-bar.setString(String.format("Morale %.2f / %.2f", s.morale, ceiling));
-bar.setForeground(s.morale < 0.3 ? UiColors.WARNING : UiColors.INFO);
-bar.setAlignmentX(LEFT_ALIGNMENT);
-content.add(bar);
-```
-
-- [ ] **Step 3: Net rate grid** after the stockpile grid: header "Net / day:", then a 2-column grid for each resource with `|rate| > 1e-6` from `s.productionRateCache`, formatted `%+.1f`, in `UiColors.ERROR` when negative. If none, show a dim `(idle)`.
-
-- [ ] **Step 4: Building multipliers**
-
-```java
-private static String techNote(BuildingType t, TechState tech) {
-    List<String> parts = new ArrayList<>();
-    switch (t) {
-        case MINE -> { mult(parts, "ore", TechEffects.mineOreMultiplier(tech));
-                       mult(parts, "silicate", TechEffects.mineSilicateMultiplier(tech)); }
-        case FARM -> { mult(parts, "food", TechEffects.farmFoodMultiplier(tech));
-                       mult(parts, "water", TechEffects.farmWaterDemandMultiplier(tech)); }
-        case POWER_PLANT  -> mult(parts, null, TechEffects.powerPlantMultiplier(tech));
-        case REFINERY     -> mult(parts, null, TechEffects.refineryMultiplier(tech));
-        case RESEARCH_LAB -> mult(parts, null, TechEffects.researchLabMultiplier(tech));
-        default -> {}
+    @Test void capBreakdown_omitsMultiplierAtOne() {
+        assertEquals("  base 200 + habitats 100", DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.0, 300)));
+        assertEquals("  base 200 + habitats 100 × 1.56 (colony mgmt)",
+            DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.56, 468)));
     }
-    return parts.isEmpty() ? "" : "  " + String.join(" · ", parts);
-}
-private static void mult(List<String> parts, String what, double m) {
-    if (Math.abs(m - 1.0) < 1e-9) return;
-    parts.add((what == null ? "" : what + " ") + String.format("×%.2f", m));
-}
-```
 
-Building rows become `"  " + b.type + " L" + b.level + techNote(b.type, w.tech) + enabled`.
-
-- [ ] **Step 5: Smoke test**
-
-```java
-    @Test void detailPanel_site_showsMoraleCeiling() throws Exception {
-        Edt.run(() -> {
-            World w = WorldGenerator.generate(1L);
-            w.tech.researched.add("life-support-i");
-            Engine e = new Engine(w);
-            DetailPanel p = new DetailPanel(e);
-            e.setSelection(Selection.site("site-earth-hub"));
-            p.setSize(280, 800);
-            paintToImage(p, 280, 800);
-            assertTrue(allText(p).contains("/ 1.20"));
-        });
+    @Test void techNote_listsOnlyChangedMultipliers() {
+        TechState t = new TechState();
+        assertEquals("", DetailPanel.techNote(BuildingType.MINE, t));
+        t.researched.add("basic-mining");
+        t.researched.add("hydroponics");
+        assertEquals("  ore ×1.10", DetailPanel.techNote(BuildingType.MINE, t));
+        assertEquals("  food ×1.30 · water ×0.70", DetailPanel.techNote(BuildingType.FARM, t));
+        assertEquals("", DetailPanel.techNote(BuildingType.SHIPYARD, t));
     }
 ```
 
-`allText(Component)` is a small recursive helper in the test that collects `JLabel` text and `JProgressBar.getString()`.
+- [ ] **Step 2: Population + breakdown.** Change the pop line to use `PopCapBreakdown.of(s, w.tech).cap()` and add a dim line under it with the package-private `capBreakdown`:
 
-- [ ] **Step 6:** Commit. `feat(ui): detail panel shows cap breakdown, morale ceiling, net rates, tech multipliers`.
+```java
+    static String capBreakdown(PopCapBreakdown c) {
+        return "  base " + c.siteBase() + " + habitats " + c.habitatBoost()
+            + (Math.abs(c.techMultiplier() - 1.0) > 1e-9 ? String.format(" × %.2f (colony mgmt)", c.techMultiplier()) : "");
+    }
+```
+
+Use `cap.cap()` rather than `s.populationCap` so the breakdown always adds up. They're equal after any tick.
+
+- [ ] **Step 3: Net rate grid.** After the stockpile grid, add a "Net / day:" header, then a 2-column grid for each resource with `|rate| > 1e-6` from `s.productionRateCache`, formatted `%+.1f`, in `UiColors.ERROR` when negative. If none, show a dim `(idle)`.
+
+- [ ] **Step 4: Building multipliers.** Add package-private `static String techNote(BuildingType, TechState)`:
+  - MINE: ore via `mineOreMultiplier`, silicate via `mineSilicateMultiplier`.
+  - FARM: food via `farmFoodMultiplier`, water via `farmWaterDemandMultiplier`.
+  - POWER_PLANT, REFINERY, RESEARCH_LAB: the bare multiplier.
+
+  Each part is formatted `what ×%.2f` (bare `×%.2f` when there's no label), skipping values within 1e-9 of 1.0. Parts are joined with ` · ` and prefixed with two spaces, or the result is `""` when nothing changed. Building rows become `"  " + b.type + " L" + b.level + techNote(b.type, w.tech) + enabled`.
+
+- [ ] **Step 5: Smoke test.** Select the Earth Hub with `colony-mgmt-i` researched, paint, and assert the collected label text contains `× 1.20 (colony mgmt)` and `Net / day:`. `allText(Component)` is a small recursive helper in the test.
+
+- [ ] **Step 6:** Commit. `feat(ui): detail panel shows pop-cap breakdown, net rates, per-building tech multipliers`.
 
 ---
 
 ### Task 25: Tech modal polish
 
-**Files:** `src/main/java/spacecolony/ui/TechModal.java`
+PR #5 rebuilt `TechModal` as `header(TechState)` + `buildList(Engine, Runnable)`, with per-tech effect deltas (`TechEffects.deltas`, `formatDelta`), "needs …" for locked techs (which can't be clicked), and an active-research line. **Keep all of that**, including the `PanelFormattingTest` coverage. This task adds the rest of design §6.2.
 
-- [ ] **Step 1: Structure.** Keep `TechModal.show(Component, Engine)`. Build the dialog, then `rebuild()` the content from the current world. Register an engine listener (`WorldChanged`/`WorldReplaced` → `rebuild()`) and remove it in a `WindowAdapter.windowClosed`. Call `dlg.setDefaultCloseOperation(DISPOSE_ON_CLOSE)` so `windowClosed` fires.
-- [ ] **Step 2: Header:** `String.format("Research: %.1f pts/day", ResearchPhase.pointsPerTick(w))`, or "No research labs: build a RESEARCH_LAB" when 0.
-- [ ] **Step 3: Tiers.** Group `TechCatalog.all()` by `TechAvailability.tier`, keeping catalog order within a tier. Add a "Tier N" header row per group. Each tech row is a small panel with a name line and a dim description line. Where there are prereqs, add ` · requires Ion Drives` to the description line.
-  - **Researched:** `✓ name`, dim, not clickable.
-  - **Active:** highlighted background plus a `JProgressBar(0, cost)` at `accumulatedPoints`, labelled `"%d / %d  ·  ETA %d days"`. ETA is `ceil((cost − pts) / rate)`, or `"no labs"` when the rate is 0.
-  - **Available:** normal and clickable. The click enqueues `QueueResearchCommand` and disposes, as today.
-  - **Locked:** `FOREGROUND_DIM` and not clickable. Tooltip `"Requires: " + names(missingPrereqs)`.
-- [ ] **Step 4: Footer "Active effects".** Build the list from each `TechEffects` method whose value ≠ 1.0, with labels Ore, Silicate, Food, Farm water, Power, Refinery, Morale cap, Fuel cost, Research, Pop cap and Disease. Add "Gas-giant FUEL mining" when `gasGiantFuelEnabled`. Show "(none yet)" when empty.
-- [ ] **Step 5:** Smoke test: build the dialog content via a package-private `TechModal.contentForTest(engine)` with `ion-drives` researched and `fusion-drives` active. Paint it and assert the text contains "Tier 2" and "requires Fusion Drives". Commit. `feat(ui): tiered tech modal with prereqs, progress, ETA and active effects`.
+**Files:** `src/main/java/spacecolony/ui/TechModal.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`
+
+- [ ] **Step 1: Shared prereq logic.** Replace `TechModal`'s private `missingPrereqs` with `TechAvailability.missingPrereqs` (Task 1) mapped to names, so the UI and `CommandPhase` use one rule.
+- [ ] **Step 2: Research rate in the header.** `header` takes the `World` (or the `TechState` plus a rate) and appends `String.format("  ·  %.1f pts/day", ResearchPhase.pointsPerTick(w))`, or "  ·  no research labs" when 0. Update any `PanelFormattingTest`/smoke call sites of `header(...)`.
+- [ ] **Step 3: Tiers.** In `buildList`, group `TechCatalog.all()` by `TechAvailability.tier` (catalog order within a tier) and insert a "Tier N" header label before each group.
+- [ ] **Step 4: Progress bar + ETA on the active row.** Under the title line of the active tech, add a `JProgressBar(0, (int) cost)` at `(int) accumulatedPoints`, labelled `"%d / %d  ·  ETA %d days"`. ETA is `ceil((cost − pts) / rate)`, or `"no labs"` when the rate is 0.
+- [ ] **Step 5: Live refresh.** `show` builds its content through a `rebuild()` that replaces the NORTH header and the scroll view. An engine listener (`WorldChanged`/`WorldReplaced` → `rebuild()`) is added on show and removed in `windowClosed` (`setDefaultCloseOperation(DISPOSE_ON_CLOSE)`). The dialog stays modal. The Swing timer keeps ticking underneath, so the bar moves.
+- [ ] **Step 6: Smoke test.** With `ion-drives` researched, `fusion-drives` active and a RESEARCH_LAB on the Earth Hub, build `buildList` and assert the collected text contains "Tier 2", "ETA" and "needs Fusion Drives" (antimatter). Commit. `feat(ui): tech modal tiers, research rate, progress bar with ETA, live refresh`.
 
 ---
 
 ### Task 26: Goals modal polish
 
+PR #5 added the `header(Engine)` summary ("n / 8 achieved · earned …") and `rewardText(Goal)`. **Keep both.** This task adds categories, progress bars and live refresh (design §6.3).
+
 **Files:** `src/main/java/spacecolony/ui/GoalsModal.java`
 
-- [ ] **Step 1:** Same live-refresh structure as Task 25. Group by `GoalCategory` in enum order with a header per category.
-- [ ] **Step 2:** Row: `✓/○ name  —  +N credits  +N research`, the dim description, and a `JProgressBar(0, 1000)` at `(int) (g.displayProgress(w) * 1000)`, labelled by a per-goal fraction string. Achieved goals show "done". Fractions: `pop-*` → `"%,d / %,d"` total pop vs target; `fleet-10` → `ships / 10`; `five-bodies` → `n / 5 bodies`; binary → `not yet`. Put this mapping in one private method keyed by goal id and category. For an unknown future goal, fall back to a percentage.
-- [ ] **Step 3:** Smoke test via `GoalsModal.contentForTest(engine)`: text contains "100 / 1,000". Commit. `feat(ui): goals grouped by category with progress bars`.
+- [ ] **Step 1:** Same live-refresh structure as Task 25 (a `rebuild()` that replaces the header and list). Group by `GoalCategory` in enum order, with a header per category.
+- [ ] **Step 2:** Each row keeps its current line (`✓/○ name  —  rewardText(g)`) and dim description, and adds a `JProgressBar(0, 1000)` at `(int) (g.displayProgress(w) * 1000)` labelled by a package-private `progressText(Goal, World)`. Achieved goals read "done". `pop-*` goals read `"%,d / %,d"` total pop against the target, `fleet-10` reads `n / 10 ships`, `five-bodies` reads `n / 5 bodies`, and the other goals read `not yet`. An unknown goal id falls back to a percentage.
+- [ ] **Step 3:** Add `progressText` cases to `PanelFormattingTest`. On a fresh world, `pop-1000` gives `100 / 1,000` and `five-bodies` gives `1 / 5 bodies`. Commit. `feat(ui): goals grouped by category with progress bars and live refresh`.
 
 ---
 
 ### Task 27: Event strip polish
 
+PR #5 added game dates (`EventStripPanel.format`: `Y0 D12  Meteor strike on Mars`), a kind tooltip and an empty state. **Keep them.** This task adds filters and click-to-select (design §6.4).
+
 **Files:** `src/main/java/spacecolony/ui/EventStripPanel.java`
 
-- [ ] **Step 1: Filters.** Put an EAST panel of three `JToggleButton`s (INFO, WARN, ERROR), all selected. Toggling calls `refresh()`. `refresh()` skips events whose severity toggle is off, still showing up to `VISIBLE_EVENTS` matching rows.
-- [ ] **Step 2: Dates.** Row text becomes `String.format("Y%d D%d  %s: %s", tick / 365, tick % 365 + 1, kind, message)`, the same formula as `TopBar`. Set the tooltip to the full message.
-- [ ] **Step 3: Click to select.** For events with a target:
+- [ ] **Step 1: Filters.** Add an EAST panel of three `JToggleButton`s (INFO, WARN, ERROR), all selected. Toggling calls `refresh()`, which skips events whose severity toggle is off and still shows up to `VISIBLE_EVENTS` matching rows. The empty-state text becomes "No matching events." when filters hide everything.
+- [ ] **Step 2: Click to select.** Resolve a target, preferring ship, then site, then body:
 
 ```java
 Selection target = ev.shipId() != null && w.findShip(ev.shipId()) != null ? Selection.ship(ev.shipId())
@@ -2010,14 +1986,14 @@ Selection target = ev.shipId() != null && w.findShip(ev.shipId()) != null ? Sele
                  : null;
 ```
 
-If a target exists, set a hand cursor and add a `MouseAdapter` that calls `engine.setSelection(target)`.
-- [ ] **Step 4:** Smoke test: emit one WARNING with a `bodyId` and one INFO, untoggle INFO, and assert one row is shown. Simulate a click on it with `dispatchEvent(new MouseEvent(...MOUSE_PRESSED...))`, then assert `engine.selection()` is the body. Commit. `feat(ui): event strip severity filters, game dates, click-to-select`.
+If there is a target, set a hand cursor and add a `MouseAdapter` that calls `engine.setSelection(target)`. The tooltip becomes `prettyKind(kind) + " at tick " + tick + " · click to select"`.
+- [ ] **Step 3: Smoke test.** Emit one WARNING with a `bodyId` and one INFO, then turn off INFO and assert one row is shown. Dispatch a `MOUSE_PRESSED` on the row and assert `engine.selection()` is the body. Commit. `feat(ui): event strip severity filters and click-to-select`.
 
 ---
 
 ### Task 28: Verification, play-test, PR
 
-- [ ] **Step 1: Full suite.** `./gradlew test`. Expected: about 227 tests pass (170 carried over plus about 57 new).
+- [ ] **Step 1: Full suite.** `./gradlew test`. Expected: about 235 tests pass (183 carried over plus about 52 new).
 - [ ] **Step 2: Layering checks**
 
 ```bash
@@ -2056,7 +2032,7 @@ Use the same body structure as Plan 4's PR: Summary, Test plan (checkboxes for t
 
 ## Verification
 
-1. `./gradlew test`: about 227 tests pass.
+1. `./gradlew test`: about 235 tests pass.
 2. The layering greps in Task 28 Step 2 print nothing.
 3. `./gradlew run --args="--seed 1 --ticks 1000"` completes and prints the summary.
 4. `./gradlew play --args="--seed 1 --debug"` opens with the overlay. Ctrl+D toggles it.
@@ -2112,6 +2088,7 @@ Checked against the code on `main` while writing:
 - `JsonWriter` emits `"key": value` with sorted keys and two-space indent, so the schema-99 `replace` in Tasks 6 and 20 matches.
 - `BodyViewPanel` has no site markers; Shift+click there inspects the body (design §4.4 says so explicitly).
 - `SwingWorker` exceptions never reach the default uncaught handler, so worker `done()` bodies route unexpected failures to `CrashHandler.reportIfInstalled` (Tasks 11, 22).
+- PR #5 merged while this plan was being written. Tasks 1 and 24–27 were revised against it: they keep `TechEffects.deltas`, `DetailPanel.moraleLine`, `TechModal.header/buildList/formatDelta`, `GoalsModal.header/rewardText` and `EventStripPanel.format`, and add only what's still missing.
 - Starting world has no RESEARCH_LAB; tests that need research points add one (Tasks 4, 10).
 - `EngineEvent` listeners all use `instanceof`; adding `DebugModeChanged` needs no listener edits.
 - `DebugControllerTest` lives under `src/test/java/spacecolony/ui/` because it builds `SpaceColonyFrame`; `debug` must not depend on `ui` even in tests.
