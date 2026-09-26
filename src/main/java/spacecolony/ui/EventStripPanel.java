@@ -12,6 +12,7 @@ import javax.swing.ScrollPaneConstants;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
 import spacecolony.sim.Event;
+import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
 
 public class EventStripPanel extends JPanel {
@@ -47,14 +48,38 @@ public class EventStripPanel extends JPanel {
         var iter = engine.world().recentEvents.descendingIterator();
         while (iter.hasNext() && shown < VISIBLE_EVENTS) {
             Event ev = iter.next();
-            JLabel label = new JLabel(String.format("[t=%d] %s: %s", ev.tick(), ev.kind(), ev.message()));
+            JLabel label = new JLabel(format(ev));
             label.setForeground(colorFor(ev.severity()));
+            label.setToolTipText(prettyKind(ev.kind()) + " at tick " + ev.tick());
             label.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             list.add(label);
             shown++;
         }
+        if (shown == 0) {
+            JLabel empty = new JLabel("No events yet.");
+            empty.setForeground(UiColors.FOREGROUND_DIM);
+            empty.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            list.add(empty);
+        }
         list.revalidate();
         list.repaint();
+    }
+
+    /**
+     * e.g. "Y0 D12  Meteor strike on Mars", on the same calendar as the top bar. Sim messages
+     * already name what happened, so the kind is only prefixed for rejected commands, whose
+     * message is the bare rejection reason.
+     */
+    static String format(Event ev) {
+        String msg = ev.kind() == EventKind.COMMAND_REJECTED
+            ? prettyKind(ev.kind()) + ": " + ev.message() : ev.message();
+        return String.format("Y%d D%d  %s", ev.tick() / 365, ev.tick() % 365 + 1, msg);
+    }
+
+    /** SHIP_OUT_OF_FUEL -> "Ship out of fuel". */
+    static String prettyKind(EventKind k) {
+        String s = k.name().replace('_', ' ').toLowerCase(java.util.Locale.ROOT);
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private static Color colorFor(EventSeverity s) {
