@@ -1,5 +1,6 @@
 package spacecolony.sim.phases;
 
+import java.util.List;
 import java.util.Random;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
@@ -31,25 +32,20 @@ public final class EventPhase {
         }
     }
 
+    /** RNG step id reserved for debug-forced events; never used by a sim phase. */
+    public static final long DEBUG_STEP_ID = 99L;
+
     /**
-     * Test seam: apply a specific event kind to a body, bypassing the random draw in
-     * {@link #run}. Public because tests live in {@code spacecolony.sim}, not this package.
+     * Apply a specific event kind to a body, bypassing the random draw in {@link #run}.
+     * Used by tests and by the debug "Trigger event…" control, which passes
+     * {@code DeterministicRng.forStep(seed, tick, DEBUG_STEP_ID)} so forced events are reproducible.
      */
-    public static void applyForTest(World w, Body b, EventKind kind, Random rng) {
+    public static void applyForced(World w, Body b, EventKind kind, Random rng) {
         applyEvent(w, b, kind, rng);
     }
 
-    /**
-     * Debug-mode seam: force-roll {@code kind} on {@code b} right now. Uses the RNG stream
-     * reserved for debug (step 99), so it never perturbs the draws {@link #run} makes and a
-     * forced event is reproducible from the log line that records it.
-     */
-    public static void force(World w, Body b, EventKind kind) {
-        applyEvent(w, b, kind, DeterministicRng.forStep(w.seed, w.tick, 99L));
-    }
-
-    /** Event kinds {@link #run} can roll, and therefore the ones {@link #force} supports. */
-    public static EventKind[] randomKinds() { return RANDOM_KINDS.clone(); }
+    /** The event kinds {@link #run} can roll (the ones the debug trigger offers). */
+    public static List<EventKind> randomKinds() { return List.of(RANDOM_KINDS); }
 
     private static void applyEvent(World w, Body b, EventKind k, Random rng) {
         switch (k) {

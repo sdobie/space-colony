@@ -1,136 +1,101 @@
 package spacecolony.debug;
 
-import java.util.ArrayDeque;
-import java.util.Iterator;
-import java.util.function.LongSupplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JMenuBar;
+import javax.swing.JPanel;
+import javax.swing.KeyStroke;
 import spacecolony.engine.EdtGuard;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
-import spacecolony.engine.EngineListener;
-import spacecolony.engine.Selection;
-import spacecolony.sim.Body;
-import spacecolony.sim.Event;
-import spacecolony.sim.EventKind;
-import spacecolony.sim.EventSeverity;
-import spacecolony.sim.phases.EventPhase;
 
 /**
- * Engine-side half of debug mode (spec §8): phase timings, tick-rate measurement,
- * single-tick stepping, Run N ticks, forced events, and mirroring the world's event log
- * into java.util.logging so the log viewer shows one merged stream. EDT-only.
+ * Owns debug-mode UI lifecycle. Constructed once by SpaceColonyFrame; listens for
+ * DebugModeChanged and mounts/unmounts the overlay, Debug menu, phase timings, and map
+ * overlays. Ctrl+D is bound on the frame's root pane.
  */
 public final class DebugController {
-    private static final Logger EVENTS_LOG = Logger.getLogger(DebugLogging.ROOT + ".sim.events");
-    static {
-        // Game events belong in the log viewer, not echoed to the terminal on every tick.
-        EVENTS_LOG.setUseParentHandlers(false);
-        EVENTS_LOG.addHandler(DebugLogging.buffer());
-    }
-    private static final Logger LOG = Logger.getLogger(DebugController.class.getName());
+    public static final KeyStroke TOGGLE_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK);
+    public static final KeyStroke STEP_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_F10, 0);
+    public static final int TIMING_WINDOW = 50;
 
-    public static final int MAX_RUN_TICKS = 10_000;
-
+    private final JFrame frame;
+    private final JMenuBar menuBar;
+    private final JPanel southStack;
     private final Engine engine;
-    private final PhaseTimings timings = new PhaseTimings();
-    private final TickRateMeter tickRate = new TickRateMeter();
-    private final LongSupplier clock;
-    private final EngineListener listener = this::onEvent;
-    /** Last world event already mirrored to the log, compared by identity. */
-    private Event lastMirrored;
+    private final ExceptionLog exceptions;
+    private final Runnable repaintMap;
+    private final DebugActions actions;
+    private final DebugOverlayPanel overlay;
+    private final DebugMenu menu;
+    private PhaseTimings timings = new PhaseTimings(TIMING_WINDOW);
+    private boolean mapOverlays = true;
+    private boolean mounted;
 
-    public DebugController(Engine engine) { this(engine, System::nanoTime); }
-
-    DebugController(Engine engine, LongSupplier clock) {
+    public DebugController(JFrame frame, JMenuBar menuBar, JPanel southStack, Engine engine,
+                           ExceptionLog exceptions, Runnable repaintMap) {
         EdtGuard.assertEdt();
+        this.frame = frame;
+        this.menuBar = menuBar;
+        this.southStack = southStack;
         this.engine = engine;
-        this.clock = clock;
-        engine.setPhaseObserver(timings);
-        engine.addListener(listener);
-        lastMirrored = engine.world().recentEvents.peekLast();
+        this.exceptions = exceptions;
+        this.repaintMap = repaintMap;
+        this.actions = new DebugActions(this);
+        this.overlay = new DebugOverlayPanel(this);
+        this.menu = new DebugMenu(this);
+
+        frame.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(TOGGLE_KEY, "toggleDebug");
+        frame.getRootPane().getActionMap().put("toggleDebug", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { engine.setDebugEnabled(!engine.debugEnabled()); }
+        });
+        engine.addListener(e -> { if (e instanceof EngineEvent.DebugModeChanged) apply(); });
+        apply();
     }
 
+    public JFrame frame() { return frame; }
     public Engine engine() { return engine; }
+    public ExceptionLog exceptions() { return exceptions; }
     public PhaseTimings timings() { return timings; }
+    public DebugActions actions() { return actions; }
+    public DebugOverlayPanel overlay() { return overlay; }
+    public DebugMenu menu() { return menu; }
 
-    public double ticksPerSecond() { return tickRate.ticksPerSecond(clock.getAsLong()); }
+    /** True when debug is on and the "Map overlays" toggle is on (default on). */
+    public boolean mapOverlaysOn() { return engine.debugEnabled() && mapOverlays; }
 
-    public void setDebugEnabled(boolean on) { engine.setDebugEnabled(on); }
-    public void toggleDebug() { engine.setDebugEnabled(!engine.debugEnabled()); }
-
-    /** Advance exactly one tick. Only allowed while paused, per spec. */
-    public void stepOne() {
-        EdtGuard.assertEdt();
-        if (!engine.speed().isPaused()) throw new IllegalStateException("Step 1 tick requires the game to be paused");
-        engine.tick();
+    void setMapOverlays(boolean on) {
+        mapOverlays = on;
+        repaintMap.run();
     }
+    boolean mapOverlaysToggle() { return mapOverlays; }
 
-    /** Advance {@code n} ticks without repainting between them. */
-    public void runTicks(int n) {
-        EdtGuard.assertEdt();
-        if (n <= 0 || n > MAX_RUN_TICKS) {
-            throw new IllegalArgumentException("Tick count must be 1.." + MAX_RUN_TICKS + ", was " + n);
+    private void apply() {
+        boolean on = engine.debugEnabled();
+        if (on == mounted) return;
+        mounted = on;
+        if (on) {
+            timings = new PhaseTimings(TIMING_WINDOW);
+            engine.setPhaseObserver(timings);
+            southStack.add(overlay, 0);
+            menuBar.add(menu);
+            // The look and feel binds F10 to "focus the menu bar", which would swallow the
+            // Step accelerator; mask it only while debug mode owns F10.
+            menuBar.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(STEP_KEY, "none");
+        } else {
+            engine.setPhaseObserver(null);
+            southStack.remove(overlay);
+            menuBar.remove(menu);
+            menuBar.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).remove(STEP_KEY);
         }
-        long start = System.nanoTime();
-        engine.advanceTicks(n);
-        long ms = (System.nanoTime() - start) / 1_000_000;
-        LOG.info(() -> "Ran " + n + " ticks in " + ms + " ms (now tick " + engine.world().tick + ")");
-    }
-
-    /** Force-roll {@code kind} on the given body immediately. Paused only. */
-    public void triggerEvent(String bodyId, EventKind kind) {
-        EdtGuard.assertEdt();
-        Body b = engine.world().findBody(bodyId);
-        if (b == null) throw new IllegalArgumentException("No body with id " + bodyId);
-        engine.applyDebugEdit("trigger " + kind + " on " + b.id + " at tick " + engine.world().tick,
-            w -> EventPhase.force(w, b, kind));
-    }
-
-    /** The live sim object a selection points at, or null. */
-    public static Object resolve(Engine engine, Selection sel) {
-        return switch (sel.kind()) {
-            case BODY -> engine.world().findBody(sel.id());
-            case SITE -> engine.world().findSite(sel.id());
-            case SHIP -> engine.world().findShip(sel.id());
-            case NONE -> null;
-        };
-    }
-
-    public void dispose() {
-        engine.removeListener(listener);
-        engine.setPhaseObserver(null);
-    }
-
-    private void onEvent(EngineEvent e) {
-        if (e instanceof EngineEvent.WorldChanged wc) {
-            tickRate.record(clock.getAsLong(), wc.tick());
-            mirrorNewEvents();
-        } else if (e instanceof EngineEvent.WorldReplaced) {
-            tickRate.reset();
-            timings.clear();
-            lastMirrored = engine.world().recentEvents.peekLast();
-        }
-    }
-
-    private void mirrorNewEvents() {
-        var events = engine.world().recentEvents;
-        // Walk back from the newest event until we hit the last one we logged.
-        ArrayDeque<Event> fresh = new ArrayDeque<>();
-        for (Iterator<Event> it = events.descendingIterator(); it.hasNext(); ) {
-            Event ev = it.next();
-            if (ev == lastMirrored) break;
-            fresh.addFirst(ev);
-        }
-        for (Event ev : fresh) EVENTS_LOG.log(levelFor(ev.severity()), "[t=" + ev.tick() + "] " + ev.kind() + ": " + ev.message());
-        if (!fresh.isEmpty()) lastMirrored = fresh.peekLast();
-    }
-
-    private static Level levelFor(EventSeverity s) {
-        return switch (s) {
-            case INFO -> Level.INFO;
-            case WARNING -> Level.WARNING;
-            case ERROR -> Level.SEVERE;
-        };
+        southStack.revalidate();
+        southStack.repaint();
+        menuBar.revalidate();
+        menuBar.repaint();
+        repaintMap.run();
     }
 }

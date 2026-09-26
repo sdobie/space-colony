@@ -1,45 +1,41 @@
 package spacecolony.debug;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import spacecolony.sim.Simulator;
+import java.util.EnumMap;
+import java.util.Map;
+import spacecolony.sim.PhaseObserver;
+import spacecolony.sim.SimPhase;
 
-/** Rolling window of per-phase simulator timings for the debug overlay (last 50 ticks). */
-public final class PhaseTimings implements Simulator.PhaseObserver {
-    public static final int WINDOW = 50;
+/** Rolling window of per-phase simulator timings for the overlay. EDT-only, like the engine. */
+public final class PhaseTimings implements PhaseObserver {
+    public record Stat(int samples, double meanNanos, long maxNanos) {}
 
-    private final Deque<long[]> samples = new ArrayDeque<>();
+    private final int window;
+    private final Map<SimPhase, long[]> rings = new EnumMap<>(SimPhase.class);
+    private final Map<SimPhase, Integer> counts = new EnumMap<>(SimPhase.class);
 
-    @Override public void onTick(long tick, long[] phaseNanos) {
-        samples.addLast(phaseNanos.clone());
-        while (samples.size() > WINDOW) samples.removeFirst();
+    public PhaseTimings(int window) {
+        this.window = window;
+        for (SimPhase p : SimPhase.values()) {
+            rings.put(p, new long[window]);
+            counts.put(p, 0);
+        }
     }
 
-    public int sampleCount() { return samples.size(); }
-
-    /** Mean nanos per phase over the window; zeros when empty. */
-    public long[] averageNanos() {
-        long[] sum = new long[Simulator.PHASE_NAMES.length];
-        for (long[] s : samples) for (int i = 0; i < sum.length; i++) sum[i] += s[i];
-        if (!samples.isEmpty()) for (int i = 0; i < sum.length; i++) sum[i] /= samples.size();
-        return sum;
+    @Override public void phaseDone(long tick, SimPhase phase, long nanos) {
+        int c = counts.get(phase);
+        rings.get(phase)[c % window] = nanos;
+        counts.put(phase, c + 1);
     }
 
-    /** Worst nanos per phase over the window; zeros when empty. */
-    public long[] maxNanos() {
-        long[] max = new long[Simulator.PHASE_NAMES.length];
-        for (long[] s : samples) for (int i = 0; i < max.length; i++) max[i] = Math.max(max[i], s[i]);
-        return max;
+    public Stat stat(SimPhase p) {
+        int n = Math.min(counts.get(p), window);
+        if (n == 0) return new Stat(0, 0, 0);
+        long[] ring = rings.get(p);
+        long sum = 0, max = 0;
+        for (int i = 0; i < n; i++) {
+            sum += ring[i];
+            max = Math.max(max, ring[i]);
+        }
+        return new Stat(n, (double) sum / n, max);
     }
-
-    /** Total nanos of the most recent tick, or 0 before any tick. */
-    public long lastTotalNanos() {
-        long[] last = samples.peekLast();
-        if (last == null) return 0;
-        long t = 0;
-        for (long v : last) t += v;
-        return t;
-    }
-
-    public void clear() { samples.clear(); }
 }

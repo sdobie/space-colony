@@ -28,6 +28,6 @@ public sealed interface EngineEvent
         public enum View { SYSTEM_MAP, BODY_VIEW }
     }
 
-    /** Debug mode toggled via --debug or Ctrl+D. */
+    /** Debug mode toggled (Ctrl+D, --debug, or Debug menu). */
     record DebugModeChanged(boolean enabled) implements EngineEvent {}
 }

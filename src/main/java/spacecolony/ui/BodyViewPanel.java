@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import spacecolony.debug.ObjectInspectorDialog;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Selection;
@@ -73,6 +74,10 @@ public class BodyViewPanel extends JPanel {
                 @Override public void mousePressed(MouseEvent e) {
                     Body b = currentBody();
                     if (b == null) return;
+                    if (e.isShiftDown() && engine.debugEnabled()) {
+                        ObjectInspectorDialog.inspect(SpherePanel.this, engine, b, "Body " + b.id);
+                        return;
+                    }
                     int size = Math.min(getWidth(), getHeight()) - 40;
                     if (size < 64) return;
                     int x0 = (getWidth() - size) / 2;

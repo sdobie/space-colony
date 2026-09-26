@@ -17,7 +17,7 @@ import spacecolony.engine.Selection;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.Site;
-import spacecolony.ui.debug.ObjectInspectorDialog;
+import spacecolony.debug.ObjectInspectorDialog;
 
 public class ColonyListPanel extends JPanel {
     private final Engine engine;
@@ -77,11 +77,20 @@ public class ColonyListPanel extends JPanel {
         l.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
         l.addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) {
-                if (e.isShiftDown() && engine.debugEnabled()) ObjectInspectorDialog.show(l, engine, sel);
+                if (e.isShiftDown() && engine.debugEnabled()) inspect(l, sel);
                 else engine.setSelection(sel);
             }
         });
         return l;
+    }
+
+    /** Debug Shift+click: open the inspector on the row's Site or Ship. */
+    private void inspect(Component from, Selection sel) {
+        Object target = sel.kind() == Selection.Kind.SITE ? engine.world().findSite(sel.id())
+                      : engine.world().findShip(sel.id());
+        if (target == null) return;
+        String kind = sel.kind() == Selection.Kind.SITE ? "Site " : "Ship ";
+        ObjectInspectorDialog.inspect(from, engine, target, kind + sel.id());
     }
 
     private static String stateGlyph(Ship s) {

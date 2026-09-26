@@ -26,4 +26,6 @@ public class MainViewPanel extends JPanel {
             }
         });
     }
+
+    public SystemMapPanel systemMap() { return systemMap; }
 }
