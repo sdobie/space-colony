@@ -2,6 +2,8 @@ package spacecolony.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -20,12 +22,17 @@ public class SpaceColonyFrame extends JFrame {
         this.engine = engine;
         this.gameLoop = new GameLoop(engine);
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        // Closing the window goes through FileMenu.quit so the game autosaves first.
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setPreferredSize(new Dimension(1280, 800));
         setLayout(new BorderLayout());
         getContentPane().setBackground(UiColors.BACKGROUND);
 
-        setJMenuBar(new FileMenu(this, engine));
+        FileMenu fileMenu = new FileMenu(this, engine);
+        setJMenuBar(fileMenu);
+        addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) { fileMenu.quit(false); }
+        });
 
         add(new TopBar(engine), BorderLayout.NORTH);
         ColonyListPanel colonyList = new ColonyListPanel(engine);
