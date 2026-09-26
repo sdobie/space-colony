@@ -26,9 +26,11 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JRootPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import spacecolony.engine.Engine;
+import spacecolony.save.SaveSlots;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
@@ -63,7 +65,14 @@ public class PlayTestDriver {
     public static void main(String[] args) throws Exception {
         out = Path.of(args.length > 0 ? args[0] : "build/playtest");
         Files.createDirectories(out);
-        Path saveFile = out.resolve("playtest.json");
+        // Point the slot dialogs at a scratch saves dir so the run never touches ~/.space-colony.
+        Path savesDir = out.resolve("saves");
+        Files.createDirectories(savesDir);
+        try (var old = Files.list(savesDir)) {
+            for (Path p : (Iterable<Path>) old::iterator) Files.deleteIfExists(p);
+        }
+        System.setProperty(SaveSlots.DIR_PROPERTY, savesDir.toString());
+        Path saveFile = savesDir.resolve("playtest.json");
 
         startResponderThread();
 
@@ -81,7 +90,7 @@ public class PlayTestDriver {
         step4_saveRoundTrip(saveFile);
         step5_schemaMismatch(saveFile);
         step6_malformedJson(saveFile);
-        step7_midTransit();
+        step7_midTransit(saveFile);
 
         System.out.println("\n================ PLAY-TEST REPORT ================");
         for (String r : report) System.out.println(r);
@@ -102,7 +111,7 @@ public class PlayTestDriver {
             }
         });
         boolean ok = mb.getMenuCount() == 1 && "File".equals(mb.getMenu(0).getText())
-            && items.equals(List.of("New Game", "Save…", "Load…", "<separator>", "Quit"));
+            && items.equals(List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Quit"));
         check(ok, "1. File menu present", "menu=" + mb.getMenu(0).getText() + " items=" + items);
     }
 
@@ -170,11 +179,11 @@ public class PlayTestDriver {
         int popBefore = site("site-earth-hub").population;
 
         expect(dlg -> {
-            JFileChooser ch = find(dlg, JFileChooser.class, c -> true);
-            ch.setSelectedFile(saveFile.toFile());
-            ch.approveSelection();
+            saveAs(dlg, "playtest");
+            shotQuiet(((JDialog) dlg).getRootPane(), "06a-save-as");
+            clickButton(dlg, "Save");
         });
-        runModal(() -> menuItem("Save…").doClick());
+        runModal(() -> menuItem("Save As…").doClick());
         waitFor(() -> Files.exists(saveFile), 10000);
         boolean saved = Files.exists(saveFile) && Files.size(saveFile) > 0;
 
@@ -190,11 +199,10 @@ public class PlayTestDriver {
         shot(frame.getRootPane(), "06-after-new");
 
         // File -> Load: pick the save back.
-        expect(dlg -> {
-            JFileChooser ch = find(dlg, JFileChooser.class, c -> true);
-            ch.setSelectedFile(saveFile.toFile());
-            ch.approveSelection();
-        });
+        expect(dlg -> selectSlotThen(dlg, "playtest", () -> {
+            shotQuiet(((JDialog) dlg).getRootPane(), "06b-load-slots");
+            clickButton(dlg, "Load");
+        }));
         runModal(() -> menuItem("Load…").doClick());
         waitFor(() -> world().tick == tickBefore, 10000);
         shot(frame.getRootPane(), "07-after-load");
@@ -228,7 +236,7 @@ public class PlayTestDriver {
             shotQuiet(((JDialog) dlg).getRootPane(), "08-schema-warning");
             clickButton(dlg, "OK");
         });
-        runModal(() -> menuItem("Load…").doClick());
+        runModal(() -> menuItem("Load from file…").doClick());
         Thread.sleep(600);
 
         boolean warned = msg[0] != null && msg[0].contains("schema v99");
@@ -253,7 +261,7 @@ public class PlayTestDriver {
             shotQuiet(((JDialog) dlg).getRootPane(), "09-malformed-error");
             clickButton(dlg, "OK");
         });
-        runModal(() -> menuItem("Load…").doClick());
+        runModal(() -> menuItem("Load from file…").doClick());
         Thread.sleep(600);
 
         boolean errored = msg[0] != null && msg[0].toLowerCase().contains("not valid json");
@@ -262,7 +270,7 @@ public class PlayTestDriver {
             "dialog=\"" + msg[0] + "\" tick=" + world().tick + "/" + tickBefore);
     }
 
-    static void step7_midTransit() throws Exception {
+    static void step7_midTransit(Path saveFile) throws Exception {
         // Seed a destination site and a fuelled hauler (a colonizer run would take
         // thousands of ticks); the dispatch itself goes through the real dialog.
         SwingUtilities.invokeAndWait(() -> {
@@ -293,24 +301,16 @@ public class PlayTestDriver {
         String dest = departed ? ship("h1").transit.destSiteId() : null;
         shot(frame.getRootPane(), "10-in-transit");
 
-        Path f = out.resolve("transit.json");
-        expect(dlg -> {
-            JFileChooser ch = find(dlg, JFileChooser.class, c -> true);
-            ch.setSelectedFile(f.toFile());
-            ch.approveSelection();
-        });
-        runModal(() -> menuItem("Save…").doClick());
+        Path f = saveFile.resolveSibling("transit.json");
+        expect(dlg -> { saveAs(dlg, "transit"); clickButton(dlg, "Save"); });
+        runModal(() -> menuItem("Save As…").doClick());
         waitFor(() -> Files.exists(f), 10000);
 
         expect(dlg -> clickButton(dlg, "OK"));
         expect(dlg -> { find(dlg, JTextField.class, c -> true).setText("5"); clickButton(dlg, "OK"); });
         runModal(() -> menuItem("New Game").doClick());
 
-        expect(dlg -> {
-            JFileChooser ch = find(dlg, JFileChooser.class, c -> true);
-            ch.setSelectedFile(f.toFile());
-            ch.approveSelection();
-        });
+        expect(dlg -> selectSlotThen(dlg, "transit", () -> clickButton(dlg, "Load")));
         runModal(() -> menuItem("Load…").doClick());
         waitFor(() -> world().findShip("h1") != null, 10000);
         shot(frame.getRootPane(), "11-transit-reloaded");
@@ -418,6 +418,39 @@ public class PlayTestDriver {
             if (kids[i] == lbl && kids[i + 1] instanceof JTextField tf) { tf.setText(value); return; }
         }
         throw new IllegalStateException("no field after " + labelText);
+    }
+
+    /** Save As dialog: type the slot name (the caller presses Save). */
+    static void saveAs(Container dlg, String name) {
+        find(dlg, JTextField.class, c -> true).setText(name);
+    }
+
+    /**
+     * Load dialog: once the slot table has loaded (it fills from a SwingWorker), selects the
+     * "slot" row named {@code name} and runs {@code then} (e.g. pressing Load). Responders run
+     * on the EDT, so waiting means re-checking on a Swing timer rather than blocking.
+     */
+    static void selectSlotThen(Container dlg, String name, Runnable then) {
+        JTable table = find(dlg, JTable.class, c -> true);
+        long deadline = System.currentTimeMillis() + 5000;
+        javax.swing.Timer poll = new javax.swing.Timer(50, null);
+        poll.addActionListener(e -> {
+            for (int i = 0; i < table.getRowCount(); i++) {
+                if (name.equals(table.getValueAt(i, 0)) && "slot".equals(table.getValueAt(i, 1))) {
+                    poll.stop();
+                    table.setRowSelectionInterval(i, i);
+                    then.run();
+                    return;
+                }
+            }
+            if (System.currentTimeMillis() > deadline) {
+                poll.stop();
+                System.out.println("  [responder error] no slot '" + name + "' in dialog");
+                clickButton(dlg, "Cancel");
+            }
+        });
+        poll.setInitialDelay(0);
+        poll.start();
     }
 
     static void clickButton(Container root, String text) {

@@ -3,6 +3,8 @@ package spacecolony.ui;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.lang.reflect.InvocationTargetException;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
@@ -15,12 +17,14 @@ import spacecolony.debug.DebugController;
 import spacecolony.debug.ExceptionLog;
 import spacecolony.engine.Engine;
 import spacecolony.engine.GameLoop;
+import spacecolony.save.SaveSlots;
 
 /** Top-level Swing window. Owns the engine + game loop and wires the 5-region layout. */
 public class SpaceColonyFrame extends JFrame {
     private final Engine engine;
     private final GameLoop gameLoop;
     private final DebugController debugController;
+    private final GameSession session;
 
     public SpaceColonyFrame(Engine engine) {
         this(engine, new ExceptionLog(20));
@@ -31,15 +35,33 @@ public class SpaceColonyFrame extends JFrame {
         this.engine = engine;
         this.gameLoop = new GameLoop(engine);
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        // The close box goes through GameSession.quit so it confirms and autosaves like File → Quit.
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setPreferredSize(new Dimension(1280, 800));
         setLayout(new BorderLayout());
         getContentPane().setBackground(UiColors.BACKGROUND);
 
-        FileMenu menuBar = new FileMenu(this, engine);
+        TopBar topBar = new TopBar(engine);
+        this.session = new GameSession(engine, SaveSlots.defaultDir(), new GameSession.Ui() {
+            @Override public boolean confirmQuit() {
+                return JOptionPane.showConfirmDialog(SpaceColonyFrame.this, "Quit Space Colony?",
+                    "Quit", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
+            }
+            @Override public boolean quitAnyway(String autosaveError) {
+                return JOptionPane.showConfirmDialog(SpaceColonyFrame.this,
+                    "Autosave failed: " + autosaveError + ". Quit anyway?", "Autosave Error",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
+            }
+            @Override public void savedToast(String label) { topBar.toast("Saved “" + label + "”"); }
+        }, System::exit);
+        addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) { session.quit(); }
+        });
+
+        FileMenu menuBar = new FileMenu(this, engine, session);
         setJMenuBar(menuBar);
 
-        add(new TopBar(engine), BorderLayout.NORTH);
+        add(topBar, BorderLayout.NORTH);
         ColonyListPanel colonyList = new ColonyListPanel(engine);
         colonyList.setPreferredSize(new Dimension(220, 0));
         add(colonyList, BorderLayout.WEST);
@@ -89,10 +111,11 @@ public class SpaceColonyFrame extends JFrame {
             Object[] options = { "Continue", "Quit" };
             int r = JOptionPane.showOptionDialog(this, msg, "Space Colony", JOptionPane.DEFAULT_OPTION,
                 JOptionPane.ERROR_MESSAGE, null, options, options[0]);
-            // TODO(save-slots): route Quit through GameSession.quit() so it autosaves.
-            if (r == 1) System.exit(0);
+            // Quit takes the normal quit path, so the game autosaves first.
+            if (r == 1) session.quit();
         };
         if (SwingUtilities.isEventDispatchThread()) show.run();
         else SwingUtilities.invokeAndWait(show);
     }
+    public GameSession session() { return session; }
 }
