@@ -18,7 +18,7 @@ public class Site {
     public final int siteBase;
     public int population;
     public int populationCap;
-    public double morale; // 0.0 .. 1.0
+    public double morale; // 0.0 .. TechEffects.moraleCeiling (1.0 base, up to 1.56 with life support)
     public final Map<Resource, Double> stockpile = new EnumMap<>(Resource.class);
     public final Map<Resource, Double> stockpileCap = new EnumMap<>(Resource.class);
     /** Last computed net production rate per day; refreshed each tick. */

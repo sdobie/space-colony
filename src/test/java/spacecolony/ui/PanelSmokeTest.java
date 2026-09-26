@@ -102,6 +102,25 @@ class PanelSmokeTest {
         });
     }
 
+    @Test
+    void techAndGoalsModalContents_paintWithoutCrashing() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            engine.world().tech.researched.add("ion-drives");
+            engine.world().tech.researched.add("life-support-i");
+            engine.world().tech.activeId = "fusion-drives";
+            JPanel techList = TechModal.buildList(engine, () -> {});
+            assertEquals(spacecolony.sim.TechCatalog.all().size(), techList.getComponentCount());
+            techList.setSize(540, 2000);
+            techList.doLayout();
+            paintToImage(techList, 540, 2000);
+            JPanel techHeader = TechModal.header(engine.world().tech);
+            techHeader.setSize(540, 30);
+            paintToImage(techHeader, 540, 30);
+            assertNotNull(GoalsModal.header(engine).getText());
+        });
+    }
+
     private static void paintToImage(JPanel panel, int w, int h) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics g = img.createGraphics();
