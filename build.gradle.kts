@@ -71,3 +71,11 @@ tasks.register<JavaExec>("play") {
     standardInput = System.`in`
     jvmArgs("-ea")
 }
+
+tasks.register<JavaExec>("debugPlayTest") {
+    group = "verification"
+    description = "Drive debug mode (Ctrl+D, overlay, step, inspector, log viewer) in the real window."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.DebugModeDriver"
+    jvmArgs("-ea")
+}

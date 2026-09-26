@@ -9,11 +9,13 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import spacecolony.engine.Engine;
 import spacecolony.engine.GameLoop;
+import spacecolony.ui.debug.DebugUi;
 
 /** Top-level Swing window. Owns the engine + game loop and wires the 5-region layout. */
 public class SpaceColonyFrame extends JFrame {
     private final Engine engine;
     private final GameLoop gameLoop;
+    private final DebugUi debugUi;
 
     public SpaceColonyFrame(Engine engine) {
         super("Space Colony");
@@ -25,7 +27,11 @@ public class SpaceColonyFrame extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(UiColors.BACKGROUND);
 
-        setJMenuBar(new FileMenu(this, engine));
+        this.debugUi = new DebugUi(engine);
+        FileMenu menuBar = new FileMenu(this, engine);
+        menuBar.add(debugUi.menu());
+        setJMenuBar(menuBar);
+        debugUi.installKeyBinding(getRootPane());
 
         add(new TopBar(engine), BorderLayout.NORTH);
         ColonyListPanel colonyList = new ColonyListPanel(engine);
@@ -35,7 +41,10 @@ public class SpaceColonyFrame extends JFrame {
         DetailPanel detail = new DetailPanel(engine);
         detail.setPreferredSize(new Dimension(280, 0));
         add(detail, BorderLayout.EAST);
-        add(new EventStripPanel(engine), BorderLayout.SOUTH);
+        JPanel south = new JPanel(new BorderLayout());
+        south.add(new EventStripPanel(engine), BorderLayout.CENTER);
+        south.add(debugUi.overlay(), BorderLayout.SOUTH);
+        add(south, BorderLayout.SOUTH);
 
         pack();
         setLocationRelativeTo(null);
@@ -54,4 +63,5 @@ public class SpaceColonyFrame extends JFrame {
 
     public Engine engine() { return engine; }
     public GameLoop gameLoop() { return gameLoop; }
+    public DebugUi debugUi() { return debugUi; }
 }

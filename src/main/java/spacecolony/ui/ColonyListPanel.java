@@ -17,6 +17,7 @@ import spacecolony.engine.Selection;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.Site;
+import spacecolony.ui.debug.ObjectInspectorDialog;
 
 public class ColonyListPanel extends JPanel {
     private final Engine engine;
@@ -75,7 +76,10 @@ public class ColonyListPanel extends JPanel {
         l.setBackground(sel.equals(engine.selection()) ? UiColors.SELECTION : UiColors.PANEL_BACKGROUND);
         l.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
         l.addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e) { engine.setSelection(sel); }
+            @Override public void mousePressed(MouseEvent e) {
+                if (e.isShiftDown() && engine.debugEnabled()) ObjectInspectorDialog.show(l, engine, sel);
+                else engine.setSelection(sel);
+            }
         });
         return l;
     }

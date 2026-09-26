@@ -14,6 +14,7 @@ import spacecolony.sim.Body;
 import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
+import spacecolony.ui.debug.ObjectInspectorDialog;
 
 public class SystemMapPanel extends JPanel {
     private final Engine engine;
@@ -42,7 +43,9 @@ public class SystemMapPanel extends JPanel {
                     double d = Math.hypot(x - e.getX(), y - e.getY());
                     if (d < bestDist) { bestDist = d; best = b; }
                 }
-                if (best != null) engine.setSelection(Selection.body(best.id));
+                if (best != null && e.isShiftDown() && engine.debugEnabled()) {
+                    ObjectInspectorDialog.show(SystemMapPanel.this, engine, Selection.body(best.id));
+                } else if (best != null) engine.setSelection(Selection.body(best.id));
                 else engine.setSelection(Selection.NONE);
             }
         });

@@ -39,6 +39,17 @@ public final class EventPhase {
         applyEvent(w, b, kind, rng);
     }
 
+    /**
+     * Debug-mode seam: force-roll {@code kind} on {@code b} right now. Uses its own RNG
+     * stream (step 60) so it never perturbs the draws {@link #run} makes for this tick.
+     */
+    public static void force(World w, Body b, EventKind kind) {
+        applyEvent(w, b, kind, DeterministicRng.forStep(w.seed, w.tick, 60L));
+    }
+
+    /** Event kinds {@link #run} can roll, and therefore the ones {@link #force} supports. */
+    public static EventKind[] randomKinds() { return RANDOM_KINDS.clone(); }
+
     private static void applyEvent(World w, Body b, EventKind k, Random rng) {
         switch (k) {
             case METEOR_STRIKE -> {
