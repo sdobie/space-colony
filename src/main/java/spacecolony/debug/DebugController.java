@@ -30,7 +30,7 @@ public final class DebugController {
     }
     private static final Logger LOG = Logger.getLogger(DebugController.class.getName());
 
-    public static final int MAX_RUN_TICKS = 100_000;
+    public static final int MAX_RUN_TICKS = 10_000;
 
     private final Engine engine;
     private final PhaseTimings timings = new PhaseTimings();
@@ -78,13 +78,13 @@ public final class DebugController {
         LOG.info(() -> "Ran " + n + " ticks in " + ms + " ms (now tick " + engine.world().tick + ")");
     }
 
-    /** Force-roll {@code kind} on the given body immediately. */
+    /** Force-roll {@code kind} on the given body immediately. Paused only. */
     public void triggerEvent(String bodyId, EventKind kind) {
         EdtGuard.assertEdt();
         Body b = engine.world().findBody(bodyId);
         if (b == null) throw new IllegalArgumentException("No body with id " + bodyId);
-        LOG.info(() -> "Forcing " + kind + " on " + b.name + " at tick " + engine.world().tick);
-        engine.applyDebugMutation(w -> EventPhase.force(w, b, kind));
+        engine.applyDebugEdit("trigger " + kind + " on " + b.id + " at tick " + engine.world().tick,
+            w -> EventPhase.force(w, b, kind));
     }
 
     /** The live sim object a selection points at, or null. */

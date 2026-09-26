@@ -68,12 +68,16 @@ public class Engine {
     }
 
     /**
-     * Debug-only direct mutation of the World (forced events, inspector edits). Bypasses the
-     * command queue, so it breaks determinism against a replay; then fires WorldChanged.
+     * Debug-only direct mutation of the World (forced events, inspector edits). The only path
+     * by which anything outside the simulator mutates World. Allowed only while paused so
+     * edits never interleave with ticks; logs {@code description} at INFO so a changed world
+     * can be traced to the edit that changed it. Fires WorldChanged afterwards.
      */
-    public void applyDebugMutation(Consumer<World> mutation) {
+    public void applyDebugEdit(String description, Consumer<World> edit) {
         EdtGuard.assertEdt();
-        mutation.accept(world);
+        if (!speed.isPaused()) throw new IllegalStateException("Pause the game before editing the world");
+        edit.accept(world);
+        LOG.info(() -> "Debug edit: " + description);
         fire(new EngineEvent.WorldChanged(world.tick));
     }
 

@@ -10,6 +10,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import spacecolony.sim.ResourceYieldSampler;
 
 /**
  * Reflects an object graph into a tree for the debug object inspector (spec §8). Every
@@ -92,6 +93,10 @@ public final class ObjectInspector {
             return new Node(name, declared, null, label(name, declared) + " = null", List.of(), null);
         }
         Class<?> c = v.getClass();
+        if (v instanceof ResourceYieldSampler) {
+            // Holds large yield grids that aren't useful as a tree.
+            return new Node(name, c, v, label(name, c) + " = <sampler>", List.of(), null);
+        }
         if (isLeaf(c)) {
             Class<?> type = declared.isPrimitive() ? declared : c;
             Setter s = isEditableType(type) ? setter : null;

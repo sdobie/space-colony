@@ -20,7 +20,7 @@ import spacecolony.engine.Selection;
 /**
  * Content of the object inspector: a reflected field tree of the selected body, site or
  * ship. Read-only until "Edit" is ticked; then a selected primitive/String/enum leaf can be
- * set and the change is re-injected through {@link Engine#applyDebugMutation}.
+ * set and the change is re-injected through {@link Engine#applyDebugEdit} (paused only).
  */
 public class ObjectInspectorPanel extends JPanel {
     private final Engine engine;
@@ -91,7 +91,8 @@ public class ObjectInspectorPanel extends JPanel {
         if (n == null || !editToggle.isSelected() || !n.isEditable()) return;
         String text = valueField.getText();
         try {
-            engine.applyDebugMutation(w -> ObjectInspector.set(n, text));
+            engine.applyDebugEdit("inspector: " + target.id() + " " + n.name() + " = " + text,
+                w -> ObjectInspector.set(n, text));
             status.setText("Set " + n.name() + " = " + text);
             TreePath path = tree.getSelectionPath();
             rebuild();

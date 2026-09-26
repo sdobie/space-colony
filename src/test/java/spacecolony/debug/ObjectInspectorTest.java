@@ -105,6 +105,9 @@ class ObjectInspectorTest {
         assertEquals(w.bodies.size(), root.child("bodies").children().size());
         assertTrue(root.child("tick").isEditable());
         assertFalse(root.child("seed").isEditable());
+        ObjectInspector.Node yields = root.child("bodies").child("[0]").child("resourceYields");
+        assertTrue(yields.children().isEmpty());
+        assertTrue(yields.toString().endsWith("<sampler>"));
     }
 
     @Test

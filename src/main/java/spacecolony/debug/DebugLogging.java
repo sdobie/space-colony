@@ -25,6 +25,8 @@ public final class DebugLogging {
         if (!installed) {
             BUFFER.setLevel(Level.ALL);
             ROOT_LOGGER.addHandler(BUFFER);
+            // Records go to the ring buffer (and the log viewer), not also to the JVM console.
+            ROOT_LOGGER.setUseParentHandlers(false);
             installed = true;
         }
         setLevel(level);

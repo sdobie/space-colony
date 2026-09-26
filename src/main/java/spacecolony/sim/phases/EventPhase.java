@@ -40,11 +40,12 @@ public final class EventPhase {
     }
 
     /**
-     * Debug-mode seam: force-roll {@code kind} on {@code b} right now. Uses its own RNG
-     * stream (step 60) so it never perturbs the draws {@link #run} makes for this tick.
+     * Debug-mode seam: force-roll {@code kind} on {@code b} right now. Uses the RNG stream
+     * reserved for debug (step 99), so it never perturbs the draws {@link #run} makes and a
+     * forced event is reproducible from the log line that records it.
      */
     public static void force(World w, Body b, EventKind kind) {
-        applyEvent(w, b, kind, DeterministicRng.forStep(w.seed, w.tick, 60L));
+        applyEvent(w, b, kind, DeterministicRng.forStep(w.seed, w.tick, 99L));
     }
 
     /** Event kinds {@link #run} can roll, and therefore the ones {@link #force} supports. */

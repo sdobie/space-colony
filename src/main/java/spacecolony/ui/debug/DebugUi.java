@@ -76,9 +76,15 @@ public final class DebugUi {
         overlay.revalidate();
     }
 
-    private static JMenuItem item(String label, Runnable r) {
+    private JMenuItem item(String label, Runnable r) {
         JMenuItem i = new JMenuItem(label);
-        i.addActionListener(e -> r.run());
+        i.addActionListener(e -> {
+            try {
+                r.run();
+            } catch (IllegalStateException | IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(overlay, ex.getMessage(), label, JOptionPane.WARNING_MESSAGE);
+            }
+        });
         return i;
     }
 }

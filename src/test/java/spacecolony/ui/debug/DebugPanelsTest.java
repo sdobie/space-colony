@@ -109,6 +109,22 @@ class DebugPanelsTest {
     }
 
     @Test
+    void inspector_refusesEditsWhileRunning() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            ObjectInspectorPanel p = new ObjectInspectorPanel(engine, Selection.site("site-earth-hub"));
+            select(p, "population");
+            p.editToggle().doClick();
+            engine.setSpeed(Speed.X1);
+            int before = engine.world().findSite("site-earth-hub").population;
+            p.valueField().setText("999");
+            p.setButton().doClick();
+            assertEquals(before, engine.world().findSite("site-earth-hub").population);
+            assertTrue(p.statusText().startsWith("Pause"), p.statusText());
+        });
+    }
+
+    @Test
     void inspector_handlesVanishedTarget() throws Exception {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));

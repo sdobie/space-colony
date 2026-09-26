@@ -71,6 +71,32 @@ class DebugControllerTest {
     }
 
     @Test
+    void worldEditsAreRefusedWhileRunning() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            DebugController dc = new DebugController(engine);
+            engine.setSpeed(Speed.X1);
+            int before = engine.world().recentEvents.size();
+            assertThrows(IllegalStateException.class, () -> dc.triggerEvent("earth", EventKind.SOLAR_FLARE));
+            assertThrows(IllegalStateException.class, () -> engine.applyDebugEdit("x", w -> w.credits = 1));
+            assertEquals(before, engine.world().recentEvents.size());
+            assertEquals(10_000, engine.world().credits);
+            dc.dispose();
+        });
+    }
+
+    @Test
+    void debugEditsAreLogged() throws Exception {
+        RingBufferHandler buf = DebugLogging.install(Level.INFO);
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            engine.applyDebugEdit("set credits to 5", w -> w.credits = 5);
+            assertEquals(5, engine.world().credits);
+            assertTrue(buf.snapshot().stream().anyMatch(r -> r.getMessage().equals("Debug edit: set credits to 5")));
+        });
+    }
+
+    @Test
     void worldEventsAreMirroredIntoTheLogOnce() throws Exception {
         RingBufferHandler buf = DebugLogging.install(Level.INFO);
         Edt.run(() -> {
