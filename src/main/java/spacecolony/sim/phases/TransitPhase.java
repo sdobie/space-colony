@@ -25,8 +25,10 @@ public final class TransitPhase {
                 s.state = ShipState.UNLOADING;
                 s.currentSiteId = s.transit.destSiteId();
                 // Keep s.transit for the destSiteId; we'll clear it when fully unloaded.
+                Site dest = w.findSite(s.currentSiteId);
+                String destName = dest != null ? dest.name : s.currentSiteId;
                 w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_ARRIVED,
-                    "Ship " + s.name + " arrived at " + s.currentSiteId, null, s.currentSiteId, s.id));
+                    "Ship " + s.name + " arrived at " + destName, null, s.currentSiteId, s.id));
             }
         }
     }
