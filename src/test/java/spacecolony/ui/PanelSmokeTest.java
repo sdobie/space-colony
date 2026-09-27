@@ -188,6 +188,32 @@ class PanelSmokeTest {
     }
 
     /** Text of every JLabel under {@code c}, one per line. */
+    /** Text of every JButton under {@code c}. */
+    static java.util.List<String> buttonTexts(java.awt.Component c) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (c instanceof javax.swing.AbstractButton b && b.getText() != null) out.add(b.getText());
+        if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) out.addAll(buttonTexts(child));
+        return out;
+    }
+
+    @Test
+    void detailPanel_orbitingColonizer_offersFoundColonyNotDispatch() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            spacecolony.sim.Ship c = new spacecolony.sim.Ship("c1", "Ark", spacecolony.sim.ShipClass.COLONIZER, null);
+            c.orbitingBodyId = "mars";
+            engine.world().ships.add(c);
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.ship("c1"));
+            p.setSize(280, 600);
+            paintToImage(p, 280, 600);
+            assertTrue(allText(p).contains("Orbiting Mars"), allText(p));
+            assertTrue(buttonTexts(p).contains("Found colony…"), buttonTexts(p).toString());
+            assertFalse(buttonTexts(p).contains("Dispatch..."));
+            assertEquals("Ark  · orbiting Mars", ColonyListPanel.shipRowText(engine.world(), c));
+        });
+    }
+
     static String allText(java.awt.Component c) {
         StringBuilder sb = new StringBuilder();
         if (c instanceof javax.swing.JLabel l && l.getText() != null) sb.append(l.getText()).append('\n');

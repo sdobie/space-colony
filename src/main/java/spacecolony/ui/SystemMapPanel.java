@@ -107,10 +107,10 @@ public class SystemMapPanel extends JPanel {
             if (ship.state != ShipState.IN_TRANSIT) continue;
             var t = ship.transit;
             var originSite = engine.world().findSite(t.originSiteId());
-            var destSite = engine.world().findSite(t.destSiteId());
-            if (originSite == null || destSite == null) continue;
+            String destBody = t.destBody(engine.world());
+            if (originSite == null || destBody == null) continue;
             double[] op = OrbitalGeometry.bodyPosition(engine.world(), originSite.bodyId, t.departureTick());
-            double[] dp = OrbitalGeometry.bodyPosition(engine.world(), destSite.bodyId, t.arrivalTick());
+            double[] dp = OrbitalGeometry.bodyPosition(engine.world(), destBody, t.arrivalTick());
             long now = engine.world().tick;
             double progress = (double)(now - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
             progress = Math.max(0, Math.min(1, progress));
@@ -118,6 +118,16 @@ public class SystemMapPanel extends JPanel {
             double sy = op[1] + (dp[1] - op[1]) * progress;
             int x = cx + (int) (sx * scale * zoom + offsetX);
             int y = cy + (int) (sy * scale * zoom + offsetY);
+            g2.setColor(UiColors.SHIP_DOT);
+            g2.fillRect(x - 2, y - 2, 4, 4);
+        }
+
+        // Colonizers waiting in orbit: a ship dot just up and right of the body.
+        for (Ship ship : engine.world().ships) {
+            if (ship.orbitingBodyId == null) continue;
+            double[] p = OrbitalGeometry.bodyPosition(engine.world(), ship.orbitingBodyId, engine.world().tick);
+            int x = cx + (int) (p[0] * scale * zoom + offsetX) + 6;
+            int y = cy + (int) (p[1] * scale * zoom + offsetY) - 6;
             g2.setColor(UiColors.SHIP_DOT);
             g2.fillRect(x - 2, y - 2, 4, 4);
         }
@@ -161,10 +171,10 @@ public class SystemMapPanel extends JPanel {
             if (ship.state != ShipState.IN_TRANSIT) continue;
             var t = ship.transit;
             var originSite = world.findSite(t.originSiteId());
-            var destSite = world.findSite(t.destSiteId());
-            if (originSite == null || destSite == null) continue;
+            String destBody = t.destBody(world);
+            if (originSite == null || destBody == null) continue;
             double[] op = OrbitalGeometry.bodyPosition(world, originSite.bodyId, t.departureTick());
-            double[] dp = OrbitalGeometry.bodyPosition(world, destSite.bodyId, t.arrivalTick());
+            double[] dp = OrbitalGeometry.bodyPosition(world, destBody, t.arrivalTick());
             double progress = (double) (world.tick - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
             progress = Math.max(0, Math.min(1, progress));
             int sx = cx + (int) ((op[0] + (dp[0] - op[0]) * progress) * scale * zoom + offsetX);
@@ -178,8 +188,11 @@ public class SystemMapPanel extends JPanel {
             g2.drawOval(dx - 4, dy - 4, 8, 8);
             double mass = 0;
             for (double v : t.cargoSnapshot().values()) mass += v;
-            double fuel = TransitPhase.fuelCost(world, ship.shipClass, mass,
-                t.originSiteId(), t.destSiteId(), t.departureTick(), t.arrivalTick());
+            double fuel = t.destSiteId() != null
+                ? TransitPhase.fuelCost(world, ship.shipClass, mass,
+                    t.originSiteId(), t.destSiteId(), t.departureTick(), t.arrivalTick())
+                : TransitPhase.fuelCostToBody(world, ship.shipClass, mass,
+                    t.originSiteId(), t.destBodyId(), t.departureTick(), t.arrivalTick());
             g2.drawString(String.format("t=%d  ≈%.1f fuel", t.arrivalTick(), fuel), dx + 6, dy - 6);
         }
     }

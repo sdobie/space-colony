@@ -146,13 +146,21 @@ public class DetailPanel extends JPanel {
         }
     }
 
+    static final String FOUND_COLONY_LABEL = "Found colony…";
+
     private void renderShip(Ship s) {
         if (s == null) { renderNone(); return; }
         addLabel(s.name + "  (" + s.shipClass + ")", UiColors.FOREGROUND);
-        addLabel("State: " + s.state, UiColors.FOREGROUND_DIM);
+        Body orbiting = s.orbitingBodyId == null ? null : engine.world().findBody(s.orbitingBodyId);
+        addLabel(orbiting != null ? "Orbiting " + orbiting.name : "State: " + s.state, UiColors.FOREGROUND_DIM);
         if (s.currentSiteId != null) addLabel("At: " + s.currentSiteId, UiColors.FOREGROUND_DIM);
         if (s.transit != null && s.state == ShipState.IN_TRANSIT) {
-            addLabel("→ " + s.transit.destSiteId() + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
+            String dest = s.transit.destSiteId();
+            if (dest == null) {
+                Body b = engine.world().findBody(s.transit.destBodyId());
+                dest = (b != null ? b.name : s.transit.destBodyId()) + " (unsettled)";
+            }
+            addLabel("→ " + dest + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
         }
         addLabel(String.format("Fuel: %.1f", s.fuel), UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {
@@ -162,7 +170,15 @@ public class DetailPanel extends JPanel {
                 if (v > 1e-6) addLabel("  " + r + ": " + String.format("%.0f", v), UiColors.FOREGROUND);
             }
         }
-        if (s.state == ShipState.IDLE) {
+        if (orbiting != null) {
+            // An orbiting colonizer can only found a colony here (or be retired).
+            JButton found = new JButton(FOUND_COLONY_LABEL);
+            found.addActionListener(e -> {
+                engine.setSelection(Selection.body(orbiting.id));
+                engine.setView(EngineEvent.ViewChanged.View.BODY_VIEW);
+            });
+            content.add(found);
+        } else if (s.state == ShipState.IDLE) {
             JButton dispatch = new JButton("Dispatch...");
             dispatch.addActionListener(e -> spacecolony.ui.dialogs.DispatchShipDialog.show(this, engine, s.id));
             content.add(dispatch);
