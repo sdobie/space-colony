@@ -30,6 +30,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import spacecolony.engine.Engine;
+import spacecolony.save.SaveFile;
 import spacecolony.save.SaveSlots;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
@@ -222,7 +223,7 @@ public class PlayTestDriver {
     static void step5_schemaMismatch(Path saveFile) throws Exception {
         String good = Files.readString(saveFile);
         Path bad = saveFile.resolveSibling("schema99.json");
-        Files.writeString(bad, good.replaceFirst("\"schemaVersion\": 1", "\"schemaVersion\": 99"));
+        Files.writeString(bad, good.replaceFirst("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 99"));
         long tickBefore = world().tick;
 
         String[] msg = new String[1];

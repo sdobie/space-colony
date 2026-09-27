@@ -18,7 +18,7 @@ class SaveFileSaveTest {
         assertTrue(Files.exists(file));
         String content = Files.readString(file);
         JsonValue.JsonObject root = (JsonValue.JsonObject) JsonReader.parse(content);
-        assertEquals(1L, ((JsonValue.JsonNumber) root.values().get("schemaVersion")).asLong());
+        assertEquals((long) SaveFile.SCHEMA_VERSION, ((JsonValue.JsonNumber) root.values().get("schemaVersion")).asLong());
         assertEquals(7L, ((JsonValue.JsonNumber) root.values().get("seed")).asLong());
     }
 

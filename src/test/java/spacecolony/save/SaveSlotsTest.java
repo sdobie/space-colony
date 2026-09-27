@@ -84,7 +84,7 @@ class SaveSlotsTest {
         SaveFile.save(WorldGenerator.generate(1L), s.slotPath("tmp"));
         String good = Files.readString(s.slotPath("tmp"));
         Files.delete(s.slotPath("tmp"));
-        Files.writeString(dir.resolve("old.json"), good.replace("\"schemaVersion\": 1", "\"schemaVersion\": 99"));
+        Files.writeString(dir.resolve("old.json"), good.replace("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 99"));
         Map<String, SlotInfo> byName = s.list().stream().collect(Collectors.toMap(SlotInfo::name, x -> x));
         assertEquals(SlotInfo.Status.UNREADABLE, byName.get("junk").status());
         assertEquals(SlotInfo.Status.UNREADABLE, byName.get("empty").status());
@@ -127,5 +127,14 @@ class SaveSlotsTest {
     @Test
     void list_missingDir_isEmpty(@TempDir Path dir) throws Exception {
         assertEquals(List.of(), new SaveSlots(dir.resolve("nope")).list());
+    }
+
+    @Test
+    void v1Save_listsAsOk(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("legacy.json"), SaveFileSchemaTest.v1Sample());
+        SlotInfo info = new SaveSlots(dir).list().get(0);
+        assertEquals(SlotInfo.Status.OK, info.status());
+        assertEquals(1, info.schemaVersion());
+        assertTrue(info.tick() > 0);
     }
 }
