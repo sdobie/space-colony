@@ -75,4 +75,14 @@ class PanelFormattingTest {
         assertEquals("250 / 800  ·  ETA 440 days", TechModal.progressText(250, 800, 1.25));
         assertEquals("250 / 800  ·  no labs", TechModal.progressText(250, 800, 0));
     }
+
+    @Test void goalProgressText() {
+        spacecolony.sim.World w = spacecolony.world.WorldGenerator.generate(1L);
+        assertEquals("100 / 1,000", GoalsModal.progressText(GoalCatalog.get("pop-1000"), w));
+        assertEquals("1 / 5 bodies", GoalsModal.progressText(GoalCatalog.get("five-bodies"), w));
+        assertEquals("0 / 10 ships", GoalsModal.progressText(GoalCatalog.get("fleet-10"), w));
+        assertEquals("not yet", GoalsModal.progressText(GoalCatalog.get("first-mars-colony"), w));
+        w.goals.achieved.add("pop-1000");
+        assertEquals("done", GoalsModal.progressText(GoalCatalog.get("pop-1000"), w));
+    }
 }

@@ -152,6 +152,13 @@ class PanelSmokeTest {
             techHeader.setSize(540, 30);
             paintToImage(techHeader, 540, 30);
             assertNotNull(GoalsModal.header(engine).getText());
+            JPanel goalList = GoalsModal.buildList(engine.world());
+            goalList.setSize(480, 1200);
+            goalList.doLayout();
+            paintToImage(goalList, 480, 1200);
+            String goalText = allText(goalList);
+            assertTrue(goalText.contains("Expansion") && goalText.contains("Population") && goalText.contains("Fleet"), goalText);
+            assertTrue(progressBarText(goalList).contains("1 / 5 bodies"), progressBarText(goalList));
         });
     }
 
