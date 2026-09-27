@@ -155,7 +155,8 @@ public final class TransitPhase {
         double speed = s.shipClass.speed();
         String originBody = bodyOfSite(w, s.transit.originSiteId());
         String destBody = s.transit.destBody(w);
-        if (originBody == null || destBody == null) return depart + 1;
+        // A hop between sites on one body takes a day and ignores the body's own orbital motion.
+        if (originBody == null || destBody == null || originBody.equals(destBody)) return depart + 1;
         double[] op = OrbitalGeometry.bodyPosition(w, originBody, depart);
         long t = depart + 1;
         for (int iter = 0; iter < 6; iter++) {
@@ -176,7 +177,8 @@ public final class TransitPhase {
 
     private static double distanceBetweenBodiesAtTicks(World w, String originBodyId, String destBodyId,
                                                        long t0, long t1) {
-        if (originBodyId == null || destBodyId == null) return 0.0;
+        // Same body: the sites travel together, so the trip is free (not the planet's day of orbit).
+        if (originBodyId == null || destBodyId == null || originBodyId.equals(destBodyId)) return 0.0;
         double[] op = OrbitalGeometry.bodyPosition(w, originBodyId, t0);
         double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, t1);
         double dx = dp[0] - op[0], dy = dp[1] - op[1];

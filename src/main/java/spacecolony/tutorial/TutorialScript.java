@@ -71,7 +71,7 @@ public final class TutorialScript {
                 List.of(T_BUILD_SHIP), "Select Earth Hub in the colony list first.",
                 c -> hasColonizer(c.world()) || settledBeyondEarth(c.world())),
             auto("dispatch", "Send it to Mars",
-                "<p>Select your colonizer in the colony list and click <b>Dispatch...</b>. Choose"
+                "<p>Select your colonizer in the colony list and click <b>Dispatch...</b>, then choose"
                 + " <b>Mars (unsettled)</b> and pack FOOD 40, WATER 40 and METAL 20: whatever it carries"
                 + " becomes the new colony's first stock.</p>"
                 + "<p>Fuel for the trip comes from Earth Hub's stockpile when the ship leaves.</p>",

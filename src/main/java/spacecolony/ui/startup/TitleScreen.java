@@ -123,8 +123,9 @@ public final class TitleScreen extends JFrame {
         focusDefault();
     }
 
-    JButton button(Action a) { return buttons.get(a); }
-    boolean bannerVisible() { return banner.isVisible(); }
+    // Public for the startup play-test driver.
+    public JButton button(Action a) { return buttons.get(a); }
+    public boolean bannerVisible() { return banner.isVisible(); }
 
     private void focusDefault() { buttons.get(defaultAction).requestFocusInWindow(); }
 

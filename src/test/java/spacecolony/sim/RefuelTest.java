@@ -76,4 +76,20 @@ class RefuelTest {
         assertEquals(100.0, h.cargo.get(Resource.FUEL), 1e-6);
         assertEquals(900.0 - 100.0 - tripCost(w, h), w.findSite(HUB).stockpile.get(Resource.FUEL), 1e-6);
     }
+
+    /** Two sites on Earth: no fuel, a one-day hop (the planet's own orbit used to count). */
+    @Test void sameBodyHop_costsNothing_andTakesOneDay() {
+        World w = world(0.0);
+        w.findBody("earth").sites.add(new Site("site-earth-2", "Earth 2", "earth", 0.5, 0.5, 100));
+        Simulator sim = new Simulator();
+        sim.enqueue(new DispatchShipCommand("h1", "site-earth-2", Map.of(Resource.METAL, 10.0)));
+        Ship h = departed(w, sim);
+        assertEquals(ShipState.IN_TRANSIT, h.state, "no SHIP_OUT_OF_FUEL abort");
+        assertEquals(0.0, TransitPhase.fuelCost(w, ShipClass.HAULER, h.cargoMass(), HUB, "site-earth-2",
+            h.transit.departureTick(), h.transit.arrivalTick()), 0.0);
+        assertEquals(h.transit.departureTick() + 1, h.transit.arrivalTick());
+        for (int i = 0; i < 3 && h.state == ShipState.IN_TRANSIT; i++) sim.advance(w);
+        assertEquals("site-earth-2", w.findShip("h1").currentSiteId);
+        assertTrue(w.recentEvents.stream().noneMatch(e -> e.kind() == EventKind.SHIP_OUT_OF_FUEL));
+    }
 }

@@ -14,7 +14,7 @@ import javax.swing.JWindow;
 import spacecolony.ui.UiColors;
 
 /** The startup splash (Plan 6 §3.3): title, version, and a status line with progress. */
-final class SplashWindow extends JWindow {
+public final class SplashWindow extends JWindow {
     static final int W = 640, H = 360;
 
     private final Content content;

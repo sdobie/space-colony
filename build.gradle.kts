@@ -72,7 +72,7 @@ tasks.register<JavaExec>("cacheCheck") {
 
 tasks.register<JavaExec>("play") {
     group = "application"
-    description = "Launch the Swing UI."
+    description = "Launch the game: splash, title screen, then a game (--seed N skips to a game)."
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "spacecolony.SpaceColonyApp"
     standardInput = System.`in`
@@ -88,4 +88,21 @@ tasks.register<JavaExec>("debugPlayTest") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass = "spacecolony.playtest.DebugModeDriver"
     jvmArgs("-ea")
+}
+
+/**
+ * Plan 6 startup play-test: splash, title, Options, the whole tutorial, Save As, Main Menu.
+ * Options and saves live under build/playtest/startup, wiped at the start of each run.
+ */
+tasks.register<JavaExec>("startupPlayTest") {
+    group = "verification"
+    description = "Drive the real app from launch through the tutorial and back to the title."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.StartupDriver"
+    jvmArgs("-ea")
+    val dir = layout.buildDirectory.dir("playtest/startup").get().asFile
+    systemProperty("spacecolony.savesDir", File(dir, "saves").absolutePath)
+    systemProperty("spacecolony.optionsFile", File(dir, "options.properties").absolutePath)
+    systemProperty("user.home", File(dir, "home").absolutePath)
+    doFirst { dir.deleteRecursively(); dir.mkdirs() }
 }
