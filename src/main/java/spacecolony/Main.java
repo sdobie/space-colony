@@ -3,8 +3,17 @@ package spacecolony;
 import spacecolony.sim.*;
 import spacecolony.world.WorldGenerator;
 
+/**
+ * Headless sim runner: {@code ./gradlew run --args="--seed N --ticks N"} prints a summary.
+ * Debug mode lives in the Swing UI, so {@code --debug} hands off to {@link SpaceColonyApp}.
+ */
 public class Main {
     public static void main(String[] args) {
+        if (java.util.Arrays.asList(args).contains("--debug")) {
+            System.out.println("--debug starts the Swing UI (same as ./gradlew play --args=\"--debug\")");
+            SpaceColonyApp.main(args);
+            return;
+        }
         long seed = 42L;
         long ticks = 365L; // simulate one year
         for (int i = 0; i < args.length; i++) {

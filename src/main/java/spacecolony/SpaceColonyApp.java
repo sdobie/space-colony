@@ -12,7 +12,7 @@ import spacecolony.world.WorldGenerator;
 
 /**
  * Swing entry point. Use `./gradlew play --args="--seed N"` to launch. Add {@code --debug}
- * to start in debug mode and {@code --log-level=DEBUG|INFO|WARN} to set logging verbosity.
+ * (or use {@code ./gradlew play -Pdebug}) to start in debug mode and {@code --log-level=DEBUG|INFO|WARN} to set logging verbosity.
  */
 public class SpaceColonyApp {
     public static void main(String[] args) {
