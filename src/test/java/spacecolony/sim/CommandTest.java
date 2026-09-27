@@ -101,4 +101,25 @@ class CommandTest {
         assertTrue(w.recentEvents.stream()
             .anyMatch(e -> e.kind() == EventKind.COMMAND_REJECTED));
     }
+
+    @Test
+    void queueResearch_missingPrereq_isRejected() {
+        World w = WorldGenerator.generate(1L);
+        Simulator sim = new Simulator();
+        sim.enqueue(new QueueResearchCommand("fusion-drives"));
+        sim.advance(w);
+        assertNull(w.tech.activeId);
+        assertTrue(w.recentEvents.stream().anyMatch(e ->
+            e.kind() == EventKind.COMMAND_REJECTED && e.message().contains("Ion Drives")));
+    }
+
+    @Test
+    void queueResearch_prereqMet_isAccepted() {
+        World w = WorldGenerator.generate(1L);
+        w.tech.researched.add("ion-drives");
+        Simulator sim = new Simulator();
+        sim.enqueue(new QueueResearchCommand("fusion-drives"));
+        sim.advance(w);
+        assertEquals("fusion-drives", w.tech.activeId);
+    }
 }

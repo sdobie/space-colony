@@ -19,12 +19,7 @@ public final class ResearchPhase {
         if (w.tech.activeId == null) return;
         Tech t = TechCatalog.get(w.tech.activeId);
         if (t == null) { w.tech.activeId = null; return; }
-        double points = 0;
-        for (Body b : w.bodies) for (Site s : b.sites)
-            for (Building bd : s.buildings)
-                if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB)
-                    points += bd.level * 1.0 * TechEffects.researchLabMultiplier(w.tech);
-        w.tech.accumulatedPoints += points;
+        w.tech.accumulatedPoints += pointsPerTick(w);
         if (w.tech.accumulatedPoints >= t.researchCost()) {
             w.tech.researched.add(t.id());
             w.tech.activeId = null;
@@ -32,5 +27,15 @@ public final class ResearchPhase {
             w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.RESEARCH_COMPLETED,
                 "Researched " + t.name(), null, null, null));
         }
+    }
+
+    /** Research points all enabled labs produce per tick. The tech modal shows the same number. */
+    public static double pointsPerTick(World w) {
+        double points = 0;
+        for (Body b : w.bodies) for (Site s : b.sites)
+            for (Building bd : s.buildings)
+                if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB)
+                    points += bd.level * 1.0 * TechEffects.researchLabMultiplier(w.tech);
+        return points;
     }
 }

@@ -17,11 +17,13 @@ import spacecolony.engine.Selection;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
+import spacecolony.sim.TechState;
 
 public class DetailPanel extends JPanel {
     private final Engine engine;
@@ -89,23 +91,47 @@ public class DetailPanel extends JPanel {
     private void renderSite(Site s) {
         if (s == null) { renderNone(); return; }
         addLabel(s.name, UiColors.FOREGROUND);
-        addLabel("Body: " + s.bodyId + "  ·  pop " + s.population + "/" + s.populationCap, UiColors.FOREGROUND_DIM);
-        addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(engine.world().tech)), moraleColor(s.morale));
+        TechState tech = engine.world().tech;
+        // Use the breakdown's cap rather than s.populationCap so the line always adds up;
+        // the two are equal after any tick.
+        PopCapBreakdown cap = PopCapBreakdown.of(s, tech);
+        addLabel("Body: " + s.bodyId + "  ·  pop " + s.population + "/" + cap.cap(), UiColors.FOREGROUND_DIM);
+        addLabel(capBreakdown(cap), UiColors.FOREGROUND_DIM)
+            .setToolTipText("Pop cap = (site base + 100 per enabled habitat level) × colony management techs");
+        addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(tech)), moraleColor(s.morale));
         content.add(Box.createVerticalStrut(6));
         addLabel("Stockpile:", UiColors.FOREGROUND_DIM);
         JPanel stockGrid = new JPanel(new GridLayout(0, 2, 6, 2));
         stockGrid.setOpaque(false);
+        stockGrid.setAlignmentX(LEFT_ALIGNMENT);
         for (Resource r : Resource.values()) {
             if (!r.isStockpileable()) continue;
             stockGrid.add(rowLabel(r.name(), UiColors.FOREGROUND_DIM));
             stockGrid.add(rowLabel(String.format("%.0f", s.stockpile.getOrDefault(r, 0.0)), UiColors.FOREGROUND));
         }
+        stockGrid.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stockGrid.getPreferredSize().height));
         content.add(stockGrid);
+        content.add(Box.createVerticalStrut(6));
+        addLabel("Net / day:", UiColors.FOREGROUND_DIM);
+        JPanel rateGrid = new JPanel(new GridLayout(0, 2, 6, 2));
+        rateGrid.setOpaque(false);
+        rateGrid.setAlignmentX(LEFT_ALIGNMENT);
+        for (Resource r : Resource.values()) {
+            double rate = s.productionRateCache.getOrDefault(r, 0.0);
+            if (Math.abs(rate) <= 1e-6) continue;
+            rateGrid.add(rowLabel(r.name(), UiColors.FOREGROUND_DIM));
+            rateGrid.add(rowLabel(String.format("%+.1f", rate), rate < 0 ? UiColors.ERROR : UiColors.FOREGROUND));
+        }
+        if (rateGrid.getComponentCount() == 0) addLabel("  (idle)", UiColors.FOREGROUND_DIM);
+        else {
+            rateGrid.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, rateGrid.getPreferredSize().height));
+            content.add(rateGrid);
+        }
         content.add(Box.createVerticalStrut(6));
         addLabel("Buildings:", UiColors.FOREGROUND_DIM);
         for (Building b : s.buildings) {
             String enabled = b.enabled ? "" : "  (disabled)";
-            addLabel("  " + b.type + " L" + b.level + enabled,
+            addLabel("  " + b.type + " L" + b.level + techNote(b.type, tech) + enabled,
                 b.enabled ? UiColors.FOREGROUND : UiColors.WARNING);
         }
         content.add(Box.createVerticalStrut(8));
@@ -149,6 +175,37 @@ public class DetailPanel extends JPanel {
         return ceiling > 1.0 + 1e-9 ? line + String.format("  (life support +%.0f%%)", (ceiling - 1.0) * 100.0) : line;
     }
 
+    /** "  base 200 + habitats 100 × 1.56" (the colony-mgmt multiplier); omitted at 1.0. */
+    static String capBreakdown(PopCapBreakdown c) {
+        return "  base " + c.siteBase() + " + habitats " + c.habitatBoost()
+            + (Math.abs(c.techMultiplier() - 1.0) > 1e-9 ? String.format(" × %.2f", c.techMultiplier()) : "");
+    }
+
+    /** Tech multipliers that currently apply to a building type, e.g. "  food ×1.30 · water ×0.70"; "" when none. */
+    static String techNote(BuildingType type, TechState t) {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        switch (type) {
+            case MINE -> {
+                addMultiplier(parts, "ore", TechEffects.mineOreMultiplier(t));
+                addMultiplier(parts, "silicate", TechEffects.mineSilicateMultiplier(t));
+            }
+            case FARM -> {
+                addMultiplier(parts, "food", TechEffects.farmFoodMultiplier(t));
+                addMultiplier(parts, "water", TechEffects.farmWaterDemandMultiplier(t));
+            }
+            case POWER_PLANT  -> addMultiplier(parts, null, TechEffects.powerPlantMultiplier(t));
+            case REFINERY     -> addMultiplier(parts, null, TechEffects.refineryMultiplier(t));
+            case RESEARCH_LAB -> addMultiplier(parts, null, TechEffects.researchLabMultiplier(t));
+            default -> {}
+        }
+        return parts.isEmpty() ? "" : "  " + String.join(" · ", parts);
+    }
+
+    private static void addMultiplier(java.util.List<String> parts, String what, double m) {
+        if (Math.abs(m - 1.0) <= 1e-9) return;
+        parts.add((what == null ? "" : what + " ") + String.format("×%.2f", m));
+    }
+
     // Growth needs morale > 0.7 and decline starts below 0.3 (ProductionPhase).
     private static java.awt.Color moraleColor(double morale) {
         if (morale < 0.3) return UiColors.ERROR;
@@ -156,11 +213,12 @@ public class DetailPanel extends JPanel {
         return UiColors.FOREGROUND_DIM;
     }
 
-    private void addLabel(String text, java.awt.Color fg) {
+    private JLabel addLabel(String text, java.awt.Color fg) {
         JLabel l = new JLabel(text);
         l.setForeground(fg);
         l.setAlignmentX(LEFT_ALIGNMENT);
         content.add(l);
+        return l;
     }
 
     private JLabel rowLabel(String text, java.awt.Color fg) {

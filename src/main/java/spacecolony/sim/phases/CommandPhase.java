@@ -1,6 +1,7 @@
 package spacecolony.sim.phases;
 
 import java.util.Deque;
+import java.util.List;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
@@ -12,6 +13,8 @@ import spacecolony.sim.Ship;
 import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
+import spacecolony.sim.Tech;
+import spacecolony.sim.TechAvailability;
 import spacecolony.sim.TechCatalog;
 import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
@@ -79,8 +82,14 @@ public final class CommandPhase {
     }
 
     private static void applyQueueResearch(World w, QueueResearchCommand qr) {
-        if (TechCatalog.get(qr.techId()) == null) throw new CommandRejectedException("Unknown tech: " + qr.techId());
+        Tech t = TechCatalog.get(qr.techId());
+        if (t == null) throw new CommandRejectedException("Unknown tech: " + qr.techId());
         if (w.tech.researched.contains(qr.techId())) throw new CommandRejectedException("Already researched: " + qr.techId());
+        List<String> missing = TechAvailability.missingPrereqs(w.tech, t);
+        if (!missing.isEmpty()) {
+            List<String> names = missing.stream().map(id -> TechCatalog.get(id).name()).toList();
+            throw new CommandRejectedException("Missing prerequisites for " + t.name() + ": " + String.join(", ", names));
+        }
         // Preserve any accumulated points from goal rewards or a previously queued tech
         // (a player switching research mid-stream gets to carry their progress forward).
         w.tech.activeId = qr.techId();
