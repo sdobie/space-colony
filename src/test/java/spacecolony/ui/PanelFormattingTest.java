@@ -4,8 +4,11 @@ import org.junit.jupiter.api.Test;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
+import spacecolony.sim.BuildingType;
 import spacecolony.sim.GoalCatalog;
+import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.TechEffects;
+import spacecolony.sim.TechState;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PanelFormattingTest {
@@ -48,5 +51,21 @@ class PanelFormattingTest {
         assertEquals("Y1 D12  Meteor strike on Mars", EventStripPanel.format(meteor));
         Event rejected = Event.warning(0, EventKind.COMMAND_REJECTED, "No such site: x");
         assertEquals("Y0 D1  Command rejected: No such site: x", EventStripPanel.format(rejected));
+    }
+
+    @Test void capBreakdown_omitsMultiplierAtOne() {
+        assertEquals("  base 200 + habitats 100", DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.0, 300)));
+        assertEquals("  base 200 + habitats 100 × 1.56 (colony mgmt)",
+            DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.56, 468)));
+    }
+
+    @Test void techNote_listsOnlyChangedMultipliers() {
+        TechState t = new TechState();
+        assertEquals("", DetailPanel.techNote(BuildingType.MINE, t));
+        t.researched.add("basic-mining");
+        t.researched.add("hydroponics");
+        assertEquals("  ore ×1.10", DetailPanel.techNote(BuildingType.MINE, t));
+        assertEquals("  food ×1.30 · water ×0.70", DetailPanel.techNote(BuildingType.FARM, t));
+        assertEquals("", DetailPanel.techNote(BuildingType.SHIPYARD, t));
     }
 }

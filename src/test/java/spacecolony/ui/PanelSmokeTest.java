@@ -92,6 +92,22 @@ class PanelSmokeTest {
     }
 
     @Test
+    void detailPanel_siteShowsCapBreakdownAndNetRates() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            engine.world().tech.researched.add("colony-mgmt-i");
+            engine.tick();
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.site("site-earth-hub"));
+            p.setSize(280, 600);
+            paintToImage(p, 280, 600);
+            String text = allText(p);
+            assertTrue(text.contains("× 1.20 (colony mgmt)"), text);
+            assertTrue(text.contains("Net / day:"), text);
+        });
+    }
+
+    @Test
     void bodyViewPanel_paintsWithoutCrashing() throws Exception {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
@@ -130,6 +146,14 @@ class PanelSmokeTest {
             paintToImage(techHeader, 540, 30);
             assertNotNull(GoalsModal.header(engine).getText());
         });
+    }
+
+    /** Text of every JLabel under {@code c}, one per line. */
+    static String allText(java.awt.Component c) {
+        StringBuilder sb = new StringBuilder();
+        if (c instanceof javax.swing.JLabel l && l.getText() != null) sb.append(l.getText()).append('\n');
+        if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) sb.append(allText(child));
+        return sb.toString();
     }
 
     private static void paintToImage(JPanel panel, int w, int h) {
