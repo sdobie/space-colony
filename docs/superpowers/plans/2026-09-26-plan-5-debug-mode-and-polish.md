@@ -127,7 +127,7 @@ Every task ends with `./gradlew test` green and a commit. Commit messages follow
 
 ### Task 0: Branch
 
-- [ ] **Step 1: Create the branch from latest `main`**
+- [x] **Step 1: Create the branch from latest `main`**
 
 ```bash
 cd /Users/steve/projects/space-colony
@@ -149,7 +149,7 @@ Expected: 183 tests pass.
 - Modify: `src/main/java/spacecolony/sim/phases/CommandPhase.java`
 - Modify: `src/test/java/spacecolony/sim/CommandTest.java`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```java
 package spacecolony.sim;
@@ -211,11 +211,11 @@ Append to `CommandTest`:
     }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 `./gradlew test --tests 'spacecolony.sim.TechAvailabilityTest' --tests 'spacecolony.sim.CommandTest'`. Expected: the first fails to compile. After a stub, `queueResearch_missingPrereq_isRejected` fails.
 
-- [ ] **Step 3: Implement `TechAvailability`**
+- [x] **Step 3: Implement `TechAvailability`**
 
 ```java
 package spacecolony.sim;
@@ -247,7 +247,7 @@ public final class TechAvailability {
 }
 ```
 
-- [ ] **Step 4: Enforce in `CommandPhase.applyQueueResearch`**
+- [x] **Step 4: Enforce in `CommandPhase.applyQueueResearch`**
 
 Replace the method body's first line with a lookup and add the prereq check after the "already researched" check:
 
@@ -269,7 +269,7 @@ Replace the method body's first line with a lookup and add the prereq check afte
 
 Add imports for `Tech`, `TechAvailability` and `java.util.List`.
 
-- [ ] **Step 5: Run the full suite, then commit**
+- [x] **Step 5: Run the full suite, then commit**
 
 Some existing tests may queue a tech with prereqs on a fresh world. Grep `QueueResearchCommand(` in `src/test`. Any test that queues `fusion-drives`, `hydroponics`, `research-ii`, `auto-mining`, `colony-mgmt-ii`, `life-support-ii` or `antimatter` must first add the prereq to `w.tech.researched`. That's a test fixture fix, not a behaviour change.
 
@@ -287,7 +287,7 @@ git add -A && git commit -m "fix(sim): reject research whose prerequisites are n
 - Modify: `src/main/java/spacecolony/sim/Goal.java`, `src/main/java/spacecolony/sim/GoalCatalog.java`
 - Create: `src/test/java/spacecolony/sim/GoalProgressTest.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 package spacecolony.sim;
@@ -330,7 +330,7 @@ class GoalProgressTest {
 }
 ```
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
 package spacecolony.sim;
@@ -381,11 +381,11 @@ Each `add(new Goal(...))` passes its category and progress, following design §3
 
 For the binary goals, declare the predicate once in a local variable so it isn't duplicated.
 
-- [ ] **Step 3: Fix call sites**
+- [x] **Step 3: Fix call sites**
 
 `GoalsModal` doesn't construct `Goal`s, so no change is needed there (Task 26 uses the new fields). Grep `new Goal(` in `src/test` and update any fixtures.
 
-- [ ] **Step 4: Test and commit**
+- [x] **Step 4: Test and commit**
 
 ```bash
 ./gradlew test
@@ -401,7 +401,7 @@ git add -A && git commit -m "feat(sim): goal categories and display progress"
 - Modify: `src/main/java/spacecolony/sim/phases/ProductionPhase.java`
 - Create: `src/test/java/spacecolony/sim/PopCapBreakdownTest.java`
 
-- [ ] **Step 1: Failing test (Plan 4 design §5.2 sample table)**
+- [x] **Step 1: Failing test (Plan 4 design §5.2 sample table)**
 
 ```java
 package spacecolony.sim;
@@ -425,8 +425,8 @@ class PopCapBreakdownTest {
     @Test void l1l1_noTech()      { assertEquals(400,  PopCapBreakdown.of(site(200, 1, 1), tech()).cap()); }
     @Test void l1_mgmtI()         { assertEquals(360,  PopCapBreakdown.of(site(200, 1), tech("colony-mgmt-i")).cap()); }
     @Test void l1_bothMgmt()      { assertEquals(468,  PopCapBreakdown.of(site(200, 1), tech("colony-mgmt-i", "colony-mgmt-ii")).cap()); }
-    @Test void l1l2l1_bothMgmt()  { assertEquals(1248, PopCapBreakdown.of(site(200, 1, 2, 1), tech("colony-mgmt-i", "colony-mgmt-ii")).cap()); }
-    @Test void colonizer_l1l2l1() { assertEquals(936,  PopCapBreakdown.of(site(100, 1, 2, 1), tech("colony-mgmt-i", "colony-mgmt-ii")).cap()); }
+    @Test void l1l2l1_bothMgmt()  { assertEquals(936,  PopCapBreakdown.of(site(200, 1, 2, 1), tech("colony-mgmt-i", "colony-mgmt-ii")).cap()); }
+    @Test void colonizer_l1l2l1() { assertEquals(780,  PopCapBreakdown.of(site(100, 1, 2, 1), tech("colony-mgmt-i", "colony-mgmt-ii")).cap()); }
 
     @Test
     void components_areExposed() {
@@ -441,7 +441,7 @@ class PopCapBreakdownTest {
 }
 ```
 
-- [ ] **Step 2: Implement and delegate**
+- [x] **Step 2: Implement and delegate**
 
 ```java
 package spacecolony.sim;
@@ -461,7 +461,7 @@ public record PopCapBreakdown(int siteBase, int habitatBoost, double techMultipl
 
 In `ProductionPhase`, replace the body of `recomputeCap` with `s.populationCap = PopCapBreakdown.of(s, tech).cap();` and keep its doc comment pointing at `PopCapBreakdown`.
 
-- [ ] **Step 3: Test and commit.** `HabitatCapTest` must pass unchanged.
+- [x] **Step 3: Test and commit.** `HabitatCapTest` must pass unchanged.
 
 ```bash
 ./gradlew test
@@ -477,7 +477,7 @@ git add -A && git commit -m "refactor(sim): extract PopCapBreakdown as the singl
 - Create: `src/test/java/spacecolony/sim/TransitFuelCostTest.java`
 - Modify: `src/test/java/spacecolony/sim/ResearchTest.java`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `TransitFuelCostTest`: build a HAULER at Earth Hub, give it 100 fuel, and plant a Mars site the same way `TransitMathTest` does (copy its fixture helper). Dispatch with a small METAL manifest, then advance until `state == IN_TRANSIT`, recording `fuelBefore` just before the departure tick. Assert:
 
@@ -507,7 +507,7 @@ Append to `ResearchTest`:
     }
 ```
 
-- [ ] **Step 2: Implement `fuelCost`**
+- [x] **Step 2: Implement `fuelCost`**
 
 In `TransitPhase`, add:
 
@@ -533,7 +533,7 @@ Replace the inline `dist` + `cost` lines in `loadingAndUnloading` with:
 
 `FUEL_K` (0.5) is already a private constant in `TransitPhase`. `CommandPhase` has its own copy for the dispatch-time estimate; leave that one alone.
 
-- [ ] **Step 3: Implement `pointsPerTick`**
+- [x] **Step 3: Implement `pointsPerTick`**
 
 Move the lab loop out of `ResearchPhase.run` into:
 
@@ -551,7 +551,7 @@ Move the lab loop out of `ResearchPhase.run` into:
 
 `run` then does `w.tech.accumulatedPoints += pointsPerTick(w);`. Hoisting the multiplier out of the loop changes floating-point results only if the sum is reassociated. `bd.level * 1.0 * m` summed over labs equals `Σ(level × m)` term for term, so keep the per-term multiplication as shown and `DeterminismTest` stays byte-identical.
 
-- [ ] **Step 4: Test and commit**
+- [x] **Step 4: Test and commit**
 
 ```bash
 ./gradlew test
@@ -567,7 +567,7 @@ git add -A && git commit -m "refactor(sim): expose TransitPhase.fuelCost and Res
 - Modify: `src/main/java/spacecolony/sim/Simulator.java`
 - Create: `src/test/java/spacecolony/sim/SimulatorPhaseObserverTest.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 package spacecolony.sim;
@@ -616,7 +616,7 @@ class SimulatorPhaseObserverTest {
 
 (`observer_doesNotChangeOutcome` uses `SaveFile.toJson` from Task 6. Implement Task 6 before this task.)
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
 package spacecolony.sim;
@@ -671,7 +671,7 @@ public interface PhaseObserver { void phaseDone(long tick, SimPhase phase, long 
 
 The un-instrumented branch is kept verbatim so the no-debug path doesn't allocate a lambda per phase per tick. Update the class Javadoc's phase list to name `SimPhase`.
 
-- [ ] **Step 3: Test and commit**
+- [x] **Step 3: Test and commit**
 
 ```bash
 ./gradlew test
@@ -686,7 +686,7 @@ git add -A && git commit -m "feat(sim): optional PhaseObserver timing hook and q
 - Modify: `src/main/java/spacecolony/save/SaveFile.java`
 - Create: `src/test/java/spacecolony/save/SaveFileJsonTest.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 package spacecolony.save;
@@ -720,7 +720,7 @@ class SaveFileJsonTest {
 
 Check the writer's exact spacing (`"schemaVersion": 1`) against `JsonWriterTest` before relying on the `replace`.
 
-- [ ] **Step 2: Implement.** In `SaveFile`:
+- [x] **Step 2: Implement.** In `SaveFile`:
 
 ```java
     /** Serialise {@code w} to the schema-v1 envelope (same text {@link #save} writes). */
@@ -732,7 +732,7 @@ Check the writer's exact spacing (`"schemaVersion": 1`) against `JsonWriterTest`
 
 `save` becomes `String json = toJson(w);` followed by the existing atomic write. `load` becomes `return fromJson(Files.readString(file));`.
 
-- [ ] **Step 3: Test and commit**
+- [x] **Step 3: Test and commit**
 
 ```bash
 ./gradlew test
@@ -745,7 +745,7 @@ git add -A && git commit -m "refactor(save): string-level toJson/fromJson for sn
 
 **Files:** `src/main/java/spacecolony/sim/phases/EventPhase.java`, `src/test/java/spacecolony/sim/EventTechEffectsTest.java`
 
-- [ ] **Step 1:** Rename `applyForTest` → `applyForced`. New Javadoc:
+- [x] **Step 1:** Rename `applyForTest` → `applyForced`. New Javadoc:
 
 ```java
     /**
@@ -759,7 +759,7 @@ git add -A && git commit -m "refactor(save): string-level toJson/fromJson for sn
     public static final long DEBUG_STEP_ID = 99L;
 ```
 
-- [ ] **Step 2:** Update both call sites in `EventTechEffectsTest`. `./gradlew test`. Commit: `refactor(sim): rename EventPhase test seam to applyForced for debug use`.
+- [x] **Step 2:** Update both call sites in `EventTechEffectsTest`. `./gradlew test`. Commit: `refactor(sim): rename EventPhase test seam to applyForced for debug use`.
 
 ---
 
@@ -769,7 +769,7 @@ git add -A && git commit -m "refactor(save): string-level toJson/fromJson for sn
 - Modify: `src/main/java/spacecolony/engine/Engine.java`, `src/main/java/spacecolony/engine/EngineEvent.java`
 - Create: `src/test/java/spacecolony/engine/EngineDebugTest.java`
 
-- [ ] **Step 1: Failing tests** (all inside `Edt.run`)
+- [x] **Step 1: Failing tests** (all inside `Edt.run`)
 
 ```java
     @Test void debugToggle_firesOncePerChange() throws Exception {
@@ -841,7 +841,7 @@ git add -A && git commit -m "refactor(save): string-level toJson/fromJson for sn
     }
 ```
 
-- [ ] **Step 2: Implement.** In `EngineEvent`, add `EngineEvent.DebugModeChanged` to `permits` and:
+- [x] **Step 2: Implement.** In `EngineEvent`, add `EngineEvent.DebugModeChanged` to `permits` and:
 
 ```java
     /** Debug mode toggled (Ctrl+D, --debug, or Debug menu). */
@@ -904,7 +904,7 @@ In `Engine`:
 
 `tick()` records `tickTimes[tickCount++ % tickTimes.length] = System.nanoTime();` before firing. Logging for these methods arrives in Task 10.
 
-- [ ] **Step 3: Test and commit**
+- [x] **Step 3: Test and commit**
 
 ```bash
 ./gradlew test
@@ -919,7 +919,7 @@ git add -A && git commit -m "feat(engine): debug mode flag, step, advanceSilentl
 - Create: `src/main/java/spacecolony/debug/RingBufferHandler.java`, `src/main/java/spacecolony/debug/DebugLogging.java`
 - Create: `src/test/java/spacecolony/debug/RingBufferHandlerTest.java`, `src/test/java/spacecolony/debug/DebugLoggingTest.java`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```java
 class RingBufferHandlerTest {
@@ -981,7 +981,7 @@ class DebugLoggingTest {
 }
 ```
 
-- [ ] **Step 2: Implement `RingBufferHandler`**
+- [x] **Step 2: Implement `RingBufferHandler`**
 
 ```java
 package spacecolony.debug;
@@ -1009,7 +1009,7 @@ public final class RingBufferHandler extends Handler {
 }
 ```
 
-- [ ] **Step 3: Implement `DebugLogging`**
+- [x] **Step 3: Implement `DebugLogging`**
 
 ```java
 package spacecolony.debug;
@@ -1074,7 +1074,7 @@ public final class DebugLogging {
 
 Set the one-line format in `SpaceColonyApp` (Task 12) via `System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %3$s: %5$s%6$s%n")` **before** the first `SimpleFormatter` is created.
 
-- [ ] **Step 4: Test and commit**
+- [x] **Step 4: Test and commit**
 
 ```bash
 ./gradlew test
@@ -1089,7 +1089,7 @@ git add -A && git commit -m "feat(debug): JUL ring buffer + rotating file loggin
 - Modify: `src/main/java/spacecolony/engine/Engine.java`
 - Create: `src/test/java/spacecolony/engine/EngineLoggingTest.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 class EngineLoggingTest {
@@ -1120,7 +1120,7 @@ class EngineLoggingTest {
 }
 ```
 
-- [ ] **Step 2: Implement.** Add loggers to `Engine`:
+- [x] **Step 2: Implement.** Add loggers to `Engine`:
 
 ```java
     private static final Logger LOG = Logger.getLogger("spacecolony.engine");
@@ -1134,7 +1134,7 @@ class EngineLoggingTest {
 - `enqueue`: `LOG.fine("Enqueue " + c)`. Commands are records, so `toString` is readable.
 - `applyDebugEdit`: `DEBUG.info("Debug edit at tick " + world.tick + ": " + description)`.
 
-- [ ] **Step 3: Test and commit.** `feat(engine): bridge sim events and engine actions to java.util.logging`.
+- [x] **Step 3: Test and commit.** `feat(engine): bridge sim events and engine actions to java.util.logging`.
 
 ---
 
@@ -1144,7 +1144,7 @@ class EngineLoggingTest {
 - Create: `src/main/java/spacecolony/debug/ExceptionLog.java`, `src/main/java/spacecolony/debug/CrashHandler.java`
 - Create: `src/test/java/spacecolony/debug/CrashHandlerTest.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 class CrashHandlerTest {
@@ -1181,7 +1181,7 @@ class CrashHandlerTest {
 
 (`waitUntil` is a tiny polling helper in the test class with a 5 s deadline.)
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
 package spacecolony.debug;
@@ -1244,7 +1244,7 @@ public final class CrashHandler implements Thread.UncaughtExceptionHandler {
 
 The production `Reporter` is built in Task 12: an `invokeAndWait`-safe dialog on the EDT with Continue/Quit, where Quit calls `GameSession.quit()`.
 
-- [ ] **Step 3: Test and commit.** `feat(debug): uncaught-exception handler with single-dialog reporting`.
+- [x] **Step 3: Test and commit.** `feat(debug): uncaught-exception handler with single-dialog reporting`.
 
 ---
 
@@ -1255,7 +1255,7 @@ The production `Reporter` is built in Task 12: an `invokeAndWait`-safe dialog on
 - Create: `src/main/java/spacecolony/debug/DebugController.java`, `src/main/java/spacecolony/debug/PhaseTimings.java`
 - Create: `src/test/java/spacecolony/debug/PhaseTimingsTest.java`, `src/test/java/spacecolony/ui/DebugControllerTest.java`
 
-- [ ] **Step 1: `PhaseTimings` (test first)**
+- [x] **Step 1: `PhaseTimings` (test first)**
 
 ```java
 class PhaseTimingsTest {
@@ -1274,7 +1274,7 @@ class PhaseTimingsTest {
 
 `PhaseTimings implements PhaseObserver` holds a `long[50]` ring per phase (an `EnumMap<SimPhase, long[]>` plus counts) and has `record Stat(int samples, double meanNanos, long maxNanos)`. It's EDT-only, like the engine.
 
-- [ ] **Step 2: `SpaceColonyApp` argument parsing**
+- [x] **Step 2: `SpaceColonyApp` argument parsing**
 
 ```java
         long seed = 42L;
@@ -1300,7 +1300,7 @@ Then, inside `invokeLater`: build `Engine`, then `SpaceColonyFrame(engine, excep
 
 `frame::showCrashDialog` runs the dialog on the EDT and blocks the caller until it closes. On the EDT it calls the dialog directly (modal, so it pumps events). Off the EDT it uses `invokeAndWait`. Its options are Continue (return) and Quit. Until Task 21 lands, Quit calls `System.exit(0)`; Task 21 switches it to `session.quit()` so it autosaves.
 
-- [ ] **Step 3: `DebugController`**
+- [x] **Step 3: `DebugController`**
 
 ```java
 package spacecolony.debug;
@@ -1326,13 +1326,13 @@ public final class DebugController {
 
 For now the overlay and menu are empty placeholders (`new JPanel()`, `new JMenu("Debug")`). Tasks 13–14 fill them.
 
-- [ ] **Step 4: Frame wiring.** `SpaceColonyFrame(Engine, ExceptionLog)`:
+- [x] **Step 4: Frame wiring.** `SpaceColonyFrame(Engine, ExceptionLog)`:
   - SOUTH becomes a `southStack` panel (`BoxLayout.Y_AXIS`) holding the `EventStripPanel`.
   - Construct `DebugController` after the menu bar and panels, passing `mainView::repaint` (the center `MainViewPanel`).
   - Expose `debugController()` for tests and the play-test driver.
   - Keep the one-argument constructor delegating with a fresh `ExceptionLog(20)`, so existing tests compile.
 
-- [ ] **Step 5: `DebugControllerTest`** (EDT, no `setVisible`)
+- [x] **Step 5: `DebugControllerTest`** (EDT, no `setVisible`)
 
 ```java
     @Test void toggle_mountsAndUnmountsOverlayAndMenu() throws Exception {
@@ -1352,7 +1352,7 @@ For now the overlay and menu are empty placeholders (`new JPanel()`, `new JMenu(
 
 This test lives in `src/test/java/spacecolony/ui/` because it builds `SpaceColonyFrame`, and `debug` must not import `ui`, in tests too.
 
-- [ ] **Step 6: Test and commit.** `feat(debug): --debug/--log-level flags, Ctrl+D toggle, DebugController lifecycle`.
+- [x] **Step 6: Test and commit.** `feat(debug): --debug/--log-level flags, Ctrl+D toggle, DebugController lifecycle`.
 
 ---
 
@@ -1361,7 +1361,7 @@ This test lives in `src/test/java/spacecolony/ui/` because it builds `SpaceColon
 **Files:**
 - Create: `src/main/java/spacecolony/debug/DebugOverlayPanel.java`, `src/main/java/spacecolony/debug/DebugActions.java`
 
-- [ ] **Step 1: `DebugActions`.** One `javax.swing.Action` per control, shared by the overlay buttons and the Debug menu (Task 14). Each asserts EDT in `actionPerformed`.
+- [x] **Step 1: `DebugActions`.** One `javax.swing.Action` per control, shared by the overlay buttons and the Debug menu (Task 14). Each asserts EDT in `actionPerformed`.
 
 | Action | Enabled when | Does |
 |---|---|---|
@@ -1377,7 +1377,7 @@ This test lives in `src/test/java/spacecolony/ui/` because it builds `SpaceColon
 
 The speed-dependent `enabled` states update from an engine listener on `SpeedChanged`. Debug dir: `~/.space-colony/debug/`. Timestamp format `yyyyMMdd-HHmmss`.
 
-- [ ] **Step 2: `DebugOverlayPanel` layout** (`BorderLayout`, monospaced 11pt, preferred height 150)
+- [x] **Step 2: `DebugOverlayPanel` layout** (`BorderLayout`, monospaced 11pt, preferred height 150)
   - NORTH: status line `JLabel`, formatted as `tick 1234 · 15.9 t/s · X16 · queue 0 · rng(seed=42, tick=1234) · <status message>`.
   - CENTER: `JTable` (non-editable `AbstractTableModel`) with columns Phase, Mean µs, Max µs, and 8 rows from `PhaseTimings`.
   - EAST: vertical button column for Step, Run N…, Trigger…, Dump, Determinism, Inspector, Logs.
@@ -1385,9 +1385,9 @@ The speed-dependent `enabled` states update from an engine listener on `SpeedCha
 - Refresh on `WorldChanged`/`WorldReplaced`, and on a 500 ms `javax.swing.Timer` that runs only while the overlay is displayable (start in `addNotify`, stop in `removeNotify`), so the paused state and new exceptions show without ticks.
 - `setStatus(String)` sets the trailing status message. It is cleared after 10 s.
 
-- [ ] **Step 3: Smoke test** in `PanelSmokeTest`: construct `DebugController` via the frame with debug on, then find the `DebugOverlayPanel` in the south stack, size it 900×150, and `paintToImage` it.
+- [x] **Step 3: Smoke test** in `PanelSmokeTest`: construct `DebugController` via the frame with debug on, then find the `DebugOverlayPanel` in the south stack, size it 900×150, and `paintToImage` it.
 
-- [ ] **Step 4: Test and commit.** `feat(debug): overlay with status, phase timings, exceptions banner, sim controls`.
+- [x] **Step 4: Test and commit.** `feat(debug): overlay with status, phase timings, exceptions banner, sim controls`.
 
 ---
 
@@ -1395,7 +1395,7 @@ The speed-dependent `enabled` states update from an engine listener on `SpeedCha
 
 **Files:** Create `src/main/java/spacecolony/debug/DebugMenu.java`; modify `DebugController`.
 
-- [ ] **Step 1:** `DebugMenu extends JMenu("Debug")` built from `DebugActions`:
+- [x] **Step 1:** `DebugMenu extends JMenu("Debug")` built from `DebugActions`:
   - Step (`F10`), Run N… (`Ctrl+R`), Trigger event…, then a separator.
   - Dump world, Determinism check, then a separator.
   - Inspector (`Ctrl+I`), Log viewer (`Ctrl+L`).
@@ -1403,8 +1403,8 @@ The speed-dependent `enabled` states update from an engine listener on `SpeedCha
   - A "Map overlays" `JCheckBoxMenuItem`, a separator, and "Throw test exception".
 
   Accelerators exist only while the menu is mounted, so they're only live in debug mode. None clash, because the game has no other shortcuts; `Ctrl+S` is taken by Save in Task 22.
-- [ ] **Step 2:** `DebugController` mounts this in place of the placeholder. Extend `DebugControllerTest` to assert the menu has the Log level submenu.
-- [ ] **Step 3:** Test and commit. `feat(debug): Debug menu with accelerators and log-level control`.
+- [x] **Step 2:** `DebugController` mounts this in place of the placeholder. Extend `DebugControllerTest` to assert the menu has the Log level submenu.
+- [x] **Step 3:** Test and commit. `feat(debug): Debug menu with accelerators and log-level control`.
 
 ---
 
@@ -1412,7 +1412,7 @@ The speed-dependent `enabled` states update from an engine listener on `SpeedCha
 
 **Files:** Create `src/main/java/spacecolony/debug/TriggerEventDialog.java`.
 
-- [ ] **Step 1:** Modal dialog with two combos:
+- [x] **Step 1:** Modal dialog with two combos:
   - Body: bodies with sites first, then the rest, labelled `name (id)`.
   - Kind: `METEOR_STRIKE`, `SOLAR_FLARE`, `EQUIPMENT_FAILURE`, `DISEASE_OUTBREAK`.
 
@@ -1425,8 +1425,8 @@ engine.applyDebugEdit("trigger " + kind + " on " + bodyId,
              DeterministicRng.forStep(w.seed, w.tick, EventPhase.DEBUG_STEP_ID)));
 ```
 
-- [ ] **Step 2: Headless test** in `EngineDebugTest`. This exercises the same lambda the dialog uses without showing the dialog: while paused, apply a `DISEASE_OUTBREAK` on Earth via `applyDebugEdit`; Earth Hub population drops and the newest event is `DISEASE_OUTBREAK`.
-- [ ] **Step 3:** Commit. `feat(debug): trigger-event dialog`.
+- [x] **Step 2: Headless test** in `EngineDebugTest`. This exercises the same lambda the dialog uses without showing the dialog: while paused, apply a `DISEASE_OUTBREAK` on Earth via `applyDebugEdit`; Earth Hub population drops and the newest event is `DISEASE_OUTBREAK`.
+- [x] **Step 3:** Commit. `feat(debug): trigger-event dialog`.
 
 ---
 
@@ -1436,7 +1436,7 @@ engine.applyDebugEdit("trigger " + kind + " on " + bodyId,
 - Create: `src/main/java/spacecolony/debug/DeterminismCheck.java`
 - Create: `src/test/java/spacecolony/debug/DeterminismCheckTest.java`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```java
 class DeterminismCheckTest {
@@ -1469,7 +1469,7 @@ static Result run(String snapshot, int ticks, BiConsumer<Integer, World> perturb
 public record Result(boolean match, int ticks, long millis, String firstDiff) {}
 ```
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
     static Result run(String s0, int ticks, BiConsumer<Integer, World> perturb) throws IncompatibleSaveException {
@@ -1493,7 +1493,7 @@ public record Result(boolean match, int ticks, long millis, String firstDiff) {}
 
 `run(World, int)` is `run(SaveFile.toJson(live), ticks, (i, w) -> {})`. The live world must only be read on the EDT, so the `determinism` action takes the snapshot on the EDT, then runs the string overload in the worker, and `done()` reports `"Determinism OK (1000 ticks, 312 ms)"` or `"Determinism MISMATCH: line 212: …"` to the overlay status and the log (INFO/SEVERE).
 
-- [ ] **Step 3:** Wire the `determinism` action. Test and commit. `feat(debug): determinism check on restored copies`.
+- [x] **Step 3:** Wire the `determinism` action. Test and commit. `feat(debug): determinism check on restored copies`.
 
 ---
 
@@ -1504,7 +1504,7 @@ public record Result(boolean match, int ticks, long millis, String firstDiff) {}
 - Create: `src/test/java/spacecolony/debug/ObjectTreeModelTest.java`
 - Modify: `src/main/java/spacecolony/ui/SystemMapPanel.java`, `ColonyListPanel.java`, `BodyViewPanel.java`
 
-- [ ] **Step 1: Failing model tests**
+- [x] **Step 1: Failing model tests**
 
 ```java
 class ObjectTreeModelTest {
@@ -1555,7 +1555,7 @@ class ObjectTreeModelTest {
 }
 ```
 
-- [ ] **Step 2: Implement `ObjectTreeModel implements TreeModel`**
+- [x] **Step 2: Implement `ObjectTreeModel implements TreeModel`**
 
 `Node` holds a label, the value, an optional `Field` plus owner (for field nodes), a path from the root (a list of labels, used to keep expansion across refreshes) and lazily computed children.
 
@@ -1572,19 +1572,19 @@ class ObjectTreeModelTest {
 - `setValue(Node, String text)`: parses by field type (`Integer.parseInt`, `Double.parseDouble`, `Long.parseLong`, `Boolean.parseBoolean`; enums via `Enum.valueOf`; `String` as-is) and calls `field.set(owner, v)`. It throws `IllegalArgumentException` when the node isn't editable.
 - `refresh()` drops cached children and fires `treeStructureChanged` on the root.
 
-- [ ] **Step 3: `ObjectInspectorDialog`** (non-modal `JDialog`, 520×640)
+- [x] **Step 3: `ObjectInspectorDialog`** (non-modal `JDialog`, 520×640)
   - `JTree` over the model, with a custom renderer showing `label: value` in monospace. Expand the root on open.
   - An "Edit" `JToggleButton` in the toolbar. When it's on and the engine is paused, double-clicking an editable leaf opens an inline editor: a `JComboBox` of constants for enums, otherwise a `JTextField`. On commit it runs `engine.applyDebugEdit("inspector: " + node.pathString() + " = " + text, w -> model.setValue(node, text))`. A parse failure shows a `JOptionPane` error and nothing changes. While running, the toggle is disabled with the tooltip "Pause to edit".
   - A listener on `WorldChanged` calls `model.refresh()` and re-expands the saved expanded paths (matched by label paths). A `WorldReplaced` listener disposes the dialog. Remove the listener in `dispose()`.
   - `static void inspect(Component parent, Engine engine, Object target, String title)`.
 
-- [ ] **Step 4: Shift+click wiring (ui)** — each branch runs only when `engine.debugEnabled() && e.isShiftDown()`:
+- [x] **Step 4: Shift+click wiring (ui)** — each branch runs only when `engine.debugEnabled() && e.isShiftDown()`:
   - `SystemMapPanel.mousePressed`: after hit-testing, if a body was hit, `ObjectInspectorDialog.inspect(this, engine, best, "Body " + best.id)` and return without changing the selection.
   - `ColonyListPanel` row listener: inspect the `Site` or `Ship` the row refers to.
   - `BodyViewPanel.SpherePanel.mousePressed`: inspect `currentBody()` instead of opening `PlaceSiteDialog`.
   - The `inspector` action inspects the current selection (`findBody`/`findSite`/`findShip`), or `engine.world()` when there's no selection.
 
-- [ ] **Step 5: Smoke test.** Construct `ObjectInspectorDialog` on the Earth Hub (don't `setVisible`) and paint its tree to an image. Test and commit. `feat(debug): reflective object inspector with paused-only field edits`.
+- [x] **Step 5: Smoke test.** Construct `ObjectInspectorDialog` on the Earth Hub (don't `setVisible`) and paint its tree to an image. Test and commit. `feat(debug): reflective object inspector with paused-only field edits`.
 
 ---
 
@@ -1592,7 +1592,7 @@ class ObjectTreeModelTest {
 
 **Files:** Create `src/main/java/spacecolony/debug/LogViewerDialog.java`.
 
-- [ ] **Step 1:** Non-modal `JDialog` (900×520) with a `JTabbedPane`:
+- [x] **Step 1:** Non-modal `JDialog` (900×520) with a `JTabbedPane`:
   - **Log tab.** `JTable` over `ring.snapshot()` with columns Time (`HH:mm:ss.SSS`), Level, Logger (drop the `spacecolony.` prefix), and Message (`record.getMessage()` formatted with `new SimpleFormatter().formatMessage(r)`).
     - Toolbar: min-level combo (ALL, FINE, INFO, WARNING, SEVERE), logger-prefix text field, "Follow" checkbox (default on), Copy, Save….
     - A `JTextArea` in a split pane below shows the selected record's thrown stack (`StringWriter` + `printStackTrace`).
@@ -1600,8 +1600,8 @@ class ObjectTreeModelTest {
   - **Events tab.** `JTable` over `engine.world().recentEvents` with columns Date (`Y%d D%d`), Severity, Kind and Message, a severity combo and a kind combo. It refreshes on `WorldChanged`/`WorldReplaced`.
   - **Copy:** the visible rows of the active tab as tab-separated text go to the system clipboard.
   - **Save…:** `JFileChooser`, then write the same text with `Files.writeString`, off-EDT in a `SwingWorker`.
-- [ ] **Step 2:** `static void show(Component parent, Engine engine, Level initialMinLevel)`. The exceptions banner's Details button passes `Level.SEVERE`.
-- [ ] **Step 3:** Smoke test: build with a ring holding 3 records (one with a thrown exception), select row 3, and paint. Commit. `feat(debug): log viewer with level/logger filters and event tab`.
+- [x] **Step 2:** `static void show(Component parent, Engine engine, Level initialMinLevel)`. The exceptions banner's Details button passes `Level.SEVERE`.
+- [x] **Step 3:** Smoke test: build with a ring holding 3 records (one with a thrown exception), select row 3, and paint. Commit. `feat(debug): log viewer with level/logger filters and event tab`.
 
 ---
 
@@ -1611,7 +1611,7 @@ class ObjectTreeModelTest {
 - Create: `src/main/java/spacecolony/debug/YieldSummary.java`, `src/test/java/spacecolony/debug/YieldSummaryTest.java`
 - Modify: `src/main/java/spacecolony/ui/SystemMapPanel.java`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```java
 class YieldSummaryTest {
@@ -1629,14 +1629,14 @@ class YieldSummaryTest {
 }
 ```
 
-- [ ] **Step 2: Implement.** `YieldSummary` caches by body id. `top(Body, k)` samples `b.resourceYields.sample(r, lat, lon)` on an 8×16 grid (lat from −π/2+π/16 in π/8 steps, lon from −π+π/16 in π/8 steps) for each stockpileable resource. It sorts by mean descending, keeps `k`, and returns an unmodifiable list, which it caches. If `resourceYields` is null, it returns an empty list. `Entry(Resource resource, double mean)`. `format(List<Entry>)` gives `ORE .62 · ICE .41 · SIL .30`, using three-letter abbreviations from `resource.name().substring(0, 3)`.
+- [x] **Step 2: Implement.** `YieldSummary` caches by body id. `top(Body, k)` samples `b.resourceYields.sample(r, lat, lon)` on an 8×16 grid (lat from −π/2+π/16 in π/8 steps, lon from −π+π/16 in π/8 steps) for each stockpileable resource. It sorts by mean descending, keeps `k`, and returns an unmodifiable list, which it caches. If `resourceYields` is null, it returns an empty list. `Entry(Resource resource, double mean)`. `format(List<Entry>)` gives `ORE .62 · ICE .41 · SIL .30`, using three-letter abbreviations from `resource.name().substring(0, 3)`.
 
-- [ ] **Step 3: `SystemMapPanel` overlays.** The panel gets a `DebugController` reference through a setter (`setDebug(DebugController)`, called by the frame after construction), because the controller is built after the panels. In `paintComponent`, after the existing layers, if `debug != null && debug.mapOverlaysOn()`:
+- [x] **Step 3: `SystemMapPanel` overlays.** The panel gets a `DebugController` reference through a setter (`setDebug(DebugController)`, called by the frame after construction), because the controller is built after the panels. In `paintComponent`, after the existing layers, if `debug != null && debug.mapOverlaysOn()`:
   - **Orbit labels:** for top-level bodies, draw `b.orbit.period() + " d"` at `(cx + r·cos45°, cy − r·sin45°)` in `ORBIT_LINE` brightened. For moons, draw `period d` at `(x + 6, y + 14)` next to the moon.
   - **Transit prediction:** for each `IN_TRANSIT` ship, compute its current point as today, then `dp` at `arrivalTick` (already computed). Draw a dashed line (`BasicStroke` with dash `{4, 4}`) from the ship to `dp`, and a hollow 8 px circle at `dp`. Label it at `dp + (6, −6)` with `String.format("t=%d  ≈%.1f fuel", arrival, TransitPhase.fuelCost(world, ship.shipClass, snapshotMass, origin, dest, departure, arrival))`.
   - **Yields:** under each body label (`y + 16`), draw `YieldSummary.format(yields.top(b, 3))` in `FOREGROUND_DIM` at 10 pt. The panel owns one `YieldSummary`, cleared on `WorldReplaced`.
 
-- [ ] **Step 4:** Smoke test: debug on, a ship forced `IN_TRANSIT` (copy the fixture from `TransitMathTest`), and paint 900×700. Commit. `feat(ui): debug map overlays for orbits, transit predictions, yield summaries`.
+- [x] **Step 4:** Smoke test: debug on, a ship forced `IN_TRANSIT` (copy the fixture from `TransitMathTest`), and paint 900×700. Commit. `feat(ui): debug map overlays for orbits, transit predictions, yield summaries`.
 
 ---
 
@@ -1646,7 +1646,7 @@ class YieldSummaryTest {
 - Create: `src/main/java/spacecolony/save/SaveSlots.java`, `src/main/java/spacecolony/save/SlotInfo.java`
 - Create: `src/test/java/spacecolony/save/SaveSlotsTest.java`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```java
 class SaveSlotsTest {
@@ -1709,7 +1709,7 @@ class SaveSlotsTest {
 }
 ```
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
 package spacecolony.save;
@@ -1730,7 +1730,7 @@ public record SlotInfo(String name, Path path, boolean autosave, Instant modifie
   - Unreadable files are logged at FINE to `spacecolony.save`.
 - `delete(name, autosave)`: `Files.deleteIfExists` on the resolved path. It only resolves names that pass validation, or the literal `_autosave`.
 
-- [ ] **Step 3:** Test and commit. `feat(save): named save slots with listing, validation, delete`.
+- [x] **Step 3:** Test and commit. `feat(save): named save slots with listing, validation, delete`.
 
 ---
 
@@ -1740,7 +1740,7 @@ public record SlotInfo(String name, Path path, boolean autosave, Instant modifie
 - Create: `src/main/java/spacecolony/ui/GameSession.java`, `src/test/java/spacecolony/ui/GameSessionTest.java`
 - Modify: `src/main/java/spacecolony/ui/SpaceColonyFrame.java`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```java
 class GameSessionTest {
@@ -1791,7 +1791,7 @@ class GameSessionTest {
 }
 ```
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```java
 package spacecolony.ui;
@@ -1836,13 +1836,13 @@ public final class GameSession {
 
 `quit()` leaves the game paused when cancelled. That matches Plan 4's New Game ("leave paused; player presses 1×").
 
-- [ ] **Step 3: Frame wiring**
+- [x] **Step 3: Frame wiring**
   - `setDefaultCloseOperation(DO_NOTHING_ON_CLOSE)`.
   - `addWindowListener(new WindowAdapter() { windowClosing → session.quit() })`.
   - `session = new GameSession(engine, SaveSlots.defaultDir(), swingUi, System::exit)`. `swingUi` uses `JOptionPane` for `confirmQuit`/`quitAnyway` and forwards `savedToast` to `TopBar` (Task 23).
   - Expose `session()`. The crash dialog's Quit calls `session.quit()`.
   - Tests construct the frame but never close it, so `System::exit` is never reached in tests.
-- [ ] **Step 4:** Test and commit. `feat(ui): GameSession tracks current slot and autosaves on quit`.
+- [x] **Step 4:** Test and commit. `feat(ui): GameSession tracks current slot and autosaves on quit`.
 
 ---
 
@@ -1852,7 +1852,7 @@ public final class GameSession {
 - Create: `src/main/java/spacecolony/ui/SaveSlotDialog.java`
 - Modify: `src/main/java/spacecolony/ui/FileMenu.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`, `src/test/java/spacecolony/playtest/PlayTestDriver.java`
 
-- [ ] **Step 1: `FileMenu(JFrame, Engine, GameSession)`.** Replace the two-argument constructor. `PanelSmokeTest` passes a session built on a `@TempDir` `SaveSlots` with a no-op `Ui` and exit. Items:
+- [x] **Step 1: `FileMenu(JFrame, Engine, GameSession)`.** Replace the two-argument constructor. `PanelSmokeTest` passes a session built on a `@TempDir` `SaveSlots` with a no-op `Ui` and exit. Items:
 
 | Item | Accelerator | Behaviour |
 |---|---|---|
@@ -1865,19 +1865,19 @@ public final class GameSession {
 
 Every action keeps Plan 4's pause/restore-speed and `EdtGuard.assertEdt()`. Worker `done()` bodies route an unexpected `ExecutionException` to `CrashHandler.reportIfInstalled`. Expected exceptions keep their dialogs.
 
-- [ ] **Step 2: `SaveSlotDialog`** (modal)
+- [x] **Step 2: `SaveSlotDialog`** (modal)
   - Shared: a `JTable` with columns Name, Kind ("slot"/"autosave"), Saved (`yyyy-MM-dd HH:mm`), Game date (`Y%d D%d` from tick, or "(unreadable)"/"(schema N)"), Credits. It's loaded via `SwingWorker<List<SlotInfo>>` from `slots.list()` and shows "Loading…" until then.
   - `saveAs`: the table shows only `OK` non-autosave slots, plus a name field below. Row selection copies the name into the field. `validateName` runs on each keystroke (`DocumentListener`) and the message shows in red under the field, with Save disabled while invalid. If the name exists, a "Overwrite “name”?" confirm appears. Returns the trimmed name.
   - `load`: all slots. Load is enabled only for `OK` rows, and double-click on an `OK` row loads. Delete (enabled for any row) asks "Delete “name” (autosave)?", then calls `slots.delete`, then reloads the table. Returns the `SlotInfo`.
   - Both have Cancel, which returns null.
-- [ ] **Step 3: Tests**
+- [x] **Step 3: Tests**
   - `PanelSmokeTest.fileMenu_buildsWithoutCrashing` now expects 7 components: New/Save/Save As/Load/Load from file/separator/Quit.
   - Add `saveSlotDialog_buildsWithoutCrashing`: construct the dialog's content panel via a package-private factory `SaveSlotDialog.contentForTest(slots, Mode.LOAD)` over a temp dir with one save, wait for the worker (`Edt.run` twice), and paint it.
-- [ ] **Step 4: `PlayTestDriver`**
+- [x] **Step 4: `PlayTestDriver`**
   - The menu-items assertion becomes `List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Quit")`.
   - Steps that drove the Save/Load `JFileChooser`: the save-and-reload round-trip (step 4) and mid-transit round-trip (step 9) now drive `SaveSlotDialog`. Find the dialog, set the name field, and click Save. For Load, select the row by name and click Load.
   - Steps 7–8 (hand-edited schema/garbage files) keep the chooser via "Load from file…".
-- [ ] **Step 5:** Test and commit. `feat(ui): save slots dialog and slot-aware File menu`.
+- [x] **Step 5:** Test and commit. `feat(ui): save slots dialog and slot-aware File menu`.
 
 ---
 
@@ -1885,9 +1885,9 @@ Every action keeps Plan 4's pause/restore-speed and `EdtGuard.assertEdt()`. Work
 
 **Files:** `src/main/java/spacecolony/ui/TopBar.java`, `src/main/java/spacecolony/ui/SpaceColonyFrame.java`
 
-- [ ] **Step 1:** Add a `statusLabel` to the left flow (after credits) in `UiColors.INFO`. Add `public void toast(String text)`: set the text and (re)start a 3 s one-shot `Timer` that clears it.
-- [ ] **Step 2:** `GameSession.Ui.savedToast(label)` in the frame calls `topBar.toast("Saved “" + label + "”")`. `FileMenu` calls `session.savedToast(name)` on successful saves. `quit()` doesn't toast, because the app is exiting.
-- [ ] **Step 3:** Smoke: `topBar.toast("x")` then paint. Commit. `feat(ui): transient save confirmation in top bar`.
+- [x] **Step 1:** Add a `statusLabel` to the left flow (after credits) in `UiColors.INFO`. Add `public void toast(String text)`: set the text and (re)start a 3 s one-shot `Timer` that clears it.
+- [x] **Step 2:** `GameSession.Ui.savedToast(label)` in the frame calls `topBar.toast("Saved “" + label + "”")`. `FileMenu` calls `session.savedToast(name)` on successful saves. `quit()` doesn't toast, because the app is exiting.
+- [x] **Step 3:** Smoke: `topBar.toast("x")` then paint. Commit. `feat(ui): transient save confirmation in top bar`.
 
 ---
 
@@ -1897,7 +1897,7 @@ PR #5 already added the morale line (`DetailPanel.moraleLine`, e.g. `Morale: 1.1
 
 **Files:** `src/main/java/spacecolony/ui/DetailPanel.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`, `src/test/java/spacecolony/ui/PanelFormattingTest.java`
 
-- [ ] **Step 1: Failing formatting tests** (append to `PanelFormattingTest`, which already covers `moraleLine`)
+- [x] **Step 1: Failing formatting tests** (append to `PanelFormattingTest`, which already covers `moraleLine`)
 
 ```java
     @Test void capBreakdown_omitsMultiplierAtOne() {
@@ -1917,7 +1917,7 @@ PR #5 already added the morale line (`DetailPanel.moraleLine`, e.g. `Morale: 1.1
     }
 ```
 
-- [ ] **Step 2: Population + breakdown.** Change the pop line to use `PopCapBreakdown.of(s, w.tech).cap()` and add a dim line under it with the package-private `capBreakdown`:
+- [x] **Step 2: Population + breakdown.** Change the pop line to use `PopCapBreakdown.of(s, w.tech).cap()` and add a dim line under it with the package-private `capBreakdown`:
 
 ```java
     static String capBreakdown(PopCapBreakdown c) {
@@ -1928,18 +1928,18 @@ PR #5 already added the morale line (`DetailPanel.moraleLine`, e.g. `Morale: 1.1
 
 Use `cap.cap()` rather than `s.populationCap` so the breakdown always adds up. They're equal after any tick.
 
-- [ ] **Step 3: Net rate grid.** After the stockpile grid, add a "Net / day:" header, then a 2-column grid for each resource with `|rate| > 1e-6` from `s.productionRateCache`, formatted `%+.1f`, in `UiColors.ERROR` when negative. If none, show a dim `(idle)`.
+- [x] **Step 3: Net rate grid.** After the stockpile grid, add a "Net / day:" header, then a 2-column grid for each resource with `|rate| > 1e-6` from `s.productionRateCache`, formatted `%+.1f`, in `UiColors.ERROR` when negative. If none, show a dim `(idle)`.
 
-- [ ] **Step 4: Building multipliers.** Add package-private `static String techNote(BuildingType, TechState)`:
+- [x] **Step 4: Building multipliers.** Add package-private `static String techNote(BuildingType, TechState)`:
   - MINE: ore via `mineOreMultiplier`, silicate via `mineSilicateMultiplier`.
   - FARM: food via `farmFoodMultiplier`, water via `farmWaterDemandMultiplier`.
   - POWER_PLANT, REFINERY, RESEARCH_LAB: the bare multiplier.
 
   Each part is formatted `what ×%.2f` (bare `×%.2f` when there's no label), skipping values within 1e-9 of 1.0. Parts are joined with ` · ` and prefixed with two spaces, or the result is `""` when nothing changed. Building rows become `"  " + b.type + " L" + b.level + techNote(b.type, w.tech) + enabled`.
 
-- [ ] **Step 5: Smoke test.** Select the Earth Hub with `colony-mgmt-i` researched, paint, and assert the collected label text contains `× 1.20 (colony mgmt)` and `Net / day:`. `allText(Component)` is a small recursive helper in the test.
+- [x] **Step 5: Smoke test.** Select the Earth Hub with `colony-mgmt-i` researched, paint, and assert the collected label text contains `× 1.20 (colony mgmt)` and `Net / day:`. `allText(Component)` is a small recursive helper in the test.
 
-- [ ] **Step 6:** Commit. `feat(ui): detail panel shows pop-cap breakdown, net rates, per-building tech multipliers`.
+- [x] **Step 6:** Commit. `feat(ui): detail panel shows pop-cap breakdown, net rates, per-building tech multipliers`.
 
 ---
 
@@ -1949,12 +1949,12 @@ PR #5 rebuilt `TechModal` as `header(TechState)` + `buildList(Engine, Runnable)`
 
 **Files:** `src/main/java/spacecolony/ui/TechModal.java`, `src/test/java/spacecolony/ui/PanelSmokeTest.java`
 
-- [ ] **Step 1: Shared prereq logic.** Replace `TechModal`'s private `missingPrereqs` with `TechAvailability.missingPrereqs` (Task 1) mapped to names, so the UI and `CommandPhase` use one rule.
-- [ ] **Step 2: Research rate in the header.** `header` takes the `World` (or the `TechState` plus a rate) and appends `String.format("  ·  %.1f pts/day", ResearchPhase.pointsPerTick(w))`, or "  ·  no research labs" when 0. Update any `PanelFormattingTest`/smoke call sites of `header(...)`.
-- [ ] **Step 3: Tiers.** In `buildList`, group `TechCatalog.all()` by `TechAvailability.tier` (catalog order within a tier) and insert a "Tier N" header label before each group.
-- [ ] **Step 4: Progress bar + ETA on the active row.** Under the title line of the active tech, add a `JProgressBar(0, (int) cost)` at `(int) accumulatedPoints`, labelled `"%d / %d  ·  ETA %d days"`. ETA is `ceil((cost − pts) / rate)`, or `"no labs"` when the rate is 0.
-- [ ] **Step 5: Live refresh.** `show` builds its content through a `rebuild()` that replaces the NORTH header and the scroll view. An engine listener (`WorldChanged`/`WorldReplaced` → `rebuild()`) is added on show and removed in `windowClosed` (`setDefaultCloseOperation(DISPOSE_ON_CLOSE)`). The dialog stays modal. The Swing timer keeps ticking underneath, so the bar moves.
-- [ ] **Step 6: Smoke test.** With `ion-drives` researched, `fusion-drives` active and a RESEARCH_LAB on the Earth Hub, build `buildList` and assert the collected text contains "Tier 2", "ETA" and "needs Fusion Drives" (antimatter). Commit. `feat(ui): tech modal tiers, research rate, progress bar with ETA, live refresh`.
+- [x] **Step 1: Shared prereq logic.** Replace `TechModal`'s private `missingPrereqs` with `TechAvailability.missingPrereqs` (Task 1) mapped to names, so the UI and `CommandPhase` use one rule.
+- [x] **Step 2: Research rate in the header.** `header` takes the `World` (or the `TechState` plus a rate) and appends `String.format("  ·  %.1f pts/day", ResearchPhase.pointsPerTick(w))`, or "  ·  no research labs" when 0. Update any `PanelFormattingTest`/smoke call sites of `header(...)`.
+- [x] **Step 3: Tiers.** In `buildList`, group `TechCatalog.all()` by `TechAvailability.tier` (catalog order within a tier) and insert a "Tier N" header label before each group.
+- [x] **Step 4: Progress bar + ETA on the active row.** Under the title line of the active tech, add a `JProgressBar(0, (int) cost)` at `(int) accumulatedPoints`, labelled `"%d / %d  ·  ETA %d days"`. ETA is `ceil((cost − pts) / rate)`, or `"no labs"` when the rate is 0.
+- [x] **Step 5: Live refresh.** `show` builds its content through a `rebuild()` that replaces the NORTH header and the scroll view. An engine listener (`WorldChanged`/`WorldReplaced` → `rebuild()`) is added on show and removed in `windowClosed` (`setDefaultCloseOperation(DISPOSE_ON_CLOSE)`). The dialog stays modal. The Swing timer keeps ticking underneath, so the bar moves.
+- [x] **Step 6: Smoke test.** With `ion-drives` researched, `fusion-drives` active and a RESEARCH_LAB on the Earth Hub, build `buildList` and assert the collected text contains "Tier 2", "ETA" and "needs Fusion Drives" (antimatter). Commit. `feat(ui): tech modal tiers, research rate, progress bar with ETA, live refresh`.
 
 ---
 
@@ -1964,9 +1964,9 @@ PR #5 added the `header(Engine)` summary ("n / 8 achieved · earned …") and `r
 
 **Files:** `src/main/java/spacecolony/ui/GoalsModal.java`
 
-- [ ] **Step 1:** Same live-refresh structure as Task 25 (a `rebuild()` that replaces the header and list). Group by `GoalCategory` in enum order, with a header per category.
-- [ ] **Step 2:** Each row keeps its current line (`✓/○ name  —  rewardText(g)`) and dim description, and adds a `JProgressBar(0, 1000)` at `(int) (g.displayProgress(w) * 1000)` labelled by a package-private `progressText(Goal, World)`. Achieved goals read "done". `pop-*` goals read `"%,d / %,d"` total pop against the target, `fleet-10` reads `n / 10 ships`, `five-bodies` reads `n / 5 bodies`, and the other goals read `not yet`. An unknown goal id falls back to a percentage.
-- [ ] **Step 3:** Add `progressText` cases to `PanelFormattingTest`. On a fresh world, `pop-1000` gives `100 / 1,000` and `five-bodies` gives `1 / 5 bodies`. Commit. `feat(ui): goals grouped by category with progress bars and live refresh`.
+- [x] **Step 1:** Same live-refresh structure as Task 25 (a `rebuild()` that replaces the header and list). Group by `GoalCategory` in enum order, with a header per category.
+- [x] **Step 2:** Each row keeps its current line (`✓/○ name  —  rewardText(g)`) and dim description, and adds a `JProgressBar(0, 1000)` at `(int) (g.displayProgress(w) * 1000)` labelled by a package-private `progressText(Goal, World)`. Achieved goals read "done". `pop-*` goals read `"%,d / %,d"` total pop against the target, `fleet-10` reads `n / 10 ships`, `five-bodies` reads `n / 5 bodies`, and the other goals read `not yet`. An unknown goal id falls back to a percentage.
+- [x] **Step 3:** Add `progressText` cases to `PanelFormattingTest`. On a fresh world, `pop-1000` gives `100 / 1,000` and `five-bodies` gives `1 / 5 bodies`. Commit. `feat(ui): goals grouped by category with progress bars and live refresh`.
 
 ---
 
@@ -1976,8 +1976,8 @@ PR #5 added game dates (`EventStripPanel.format`: `Y0 D12  Meteor strike on Mars
 
 **Files:** `src/main/java/spacecolony/ui/EventStripPanel.java`
 
-- [ ] **Step 1: Filters.** Add an EAST panel of three `JToggleButton`s (INFO, WARN, ERROR), all selected. Toggling calls `refresh()`, which skips events whose severity toggle is off and still shows up to `VISIBLE_EVENTS` matching rows. The empty-state text becomes "No matching events." when filters hide everything.
-- [ ] **Step 2: Click to select.** Resolve a target, preferring ship, then site, then body:
+- [x] **Step 1: Filters.** Add an EAST panel of three `JToggleButton`s (INFO, WARN, ERROR), all selected. Toggling calls `refresh()`, which skips events whose severity toggle is off and still shows up to `VISIBLE_EVENTS` matching rows. The empty-state text becomes "No matching events." when filters hide everything.
+- [x] **Step 2: Click to select.** Resolve a target, preferring ship, then site, then body:
 
 ```java
 Selection target = ev.shipId() != null && w.findShip(ev.shipId()) != null ? Selection.ship(ev.shipId())
@@ -1987,14 +1987,14 @@ Selection target = ev.shipId() != null && w.findShip(ev.shipId()) != null ? Sele
 ```
 
 If there is a target, set a hand cursor and add a `MouseAdapter` that calls `engine.setSelection(target)`. The tooltip becomes `prettyKind(kind) + " at tick " + tick + " · click to select"`.
-- [ ] **Step 3: Smoke test.** Emit one WARNING with a `bodyId` and one INFO, then turn off INFO and assert one row is shown. Dispatch a `MOUSE_PRESSED` on the row and assert `engine.selection()` is the body. Commit. `feat(ui): event strip severity filters and click-to-select`.
+- [x] **Step 3: Smoke test.** Emit one WARNING with a `bodyId` and one INFO, then turn off INFO and assert one row is shown. Dispatch a `MOUSE_PRESSED` on the row and assert `engine.selection()` is the body. Commit. `feat(ui): event strip severity filters and click-to-select`.
 
 ---
 
 ### Task 28: Verification, play-test, PR
 
-- [ ] **Step 1: Full suite.** `./gradlew test`. Expected: about 235 tests pass (183 carried over plus about 52 new).
-- [ ] **Step 2: Layering checks**
+- [x] **Step 1: Full suite.** `./gradlew test`. Expected: about 235 tests pass (183 carried over plus about 52 new).
+- [x] **Step 2: Layering checks**
 
 ```bash
 # sim/world/save stay Swing-free
@@ -2007,7 +2007,7 @@ grep -rl "import spacecolony.ui" src/main/java/spacecolony/debug
 
 Expected: no output from any of the three.
 
-- [ ] **Step 3: Headless main.** `./gradlew run --args="--seed 1 --ticks 1000"` still prints the summary.
+- [x] **Step 3: Headless main.** `./gradlew run --args="--seed 1 --ticks 1000"` still prints the summary.
 - [ ] **Step 4: Scripted play-test.** Extend `PlayTestDriver` with the debug steps from design §7.5:
   - Ctrl+D shows the overlay.
   - Step → +1 tick.
@@ -2018,8 +2018,8 @@ Expected: no output from any of the three.
 
   Run `./gradlew playTest` on a desktop session and check the screenshots in `build/playtest`.
 - [ ] **Step 5: Manual checklist.** Walk design §7.7 steps 1–15 by hand and tick them in the PR description.
-- [ ] **Step 6: Docs.** Mark this plan's steps `[x]`. In the game-design spec, change §9's "auto-save on quit" bullet to note the `_autosave.json` naming as built, and resolve §15's open question on debug shortcuts: Ctrl+D; F10, Ctrl+R, Ctrl+I and Ctrl+L in debug only; Ctrl+S/Ctrl+Shift+S/Ctrl+O/Ctrl+Q for File.
-- [ ] **Step 7: PR**
+- [x] **Step 6: Docs.** Mark this plan's steps `[x]`. In the game-design spec, change §9's "auto-save on quit" bullet to note the `_autosave.json` naming as built, and resolve §15's open question on debug shortcuts: Ctrl+D; F10, Ctrl+R, Ctrl+I and Ctrl+L in debug only; Ctrl+S/Ctrl+Shift+S/Ctrl+O/Ctrl+Q for File.
+- [x] **Step 7: PR**
 
 ```bash
 git push -u origin plan-5/debug-mode-and-polish

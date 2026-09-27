@@ -311,7 +311,7 @@ Global handler on the EDT and any worker thread captures uncaught exceptions, lo
 ## 9. Save / load
 
 - One JSON file per save in `~/.space-colony/saves/<slot-name>.json`.
-- Auto-save on quit writes `<slot-name>.autosave.json` (or `_autosave.json` for unnamed/new games).
+- Auto-save on quit writes `<slot-name>.autosave.json` (or `_autosave.json` for unnamed/new games). Built this way in Plan 5 (`SaveSlots`, `GameSession.quit`); there is no timed autosave.
 - Multiple named save slots; menu lists all slots with timestamps and lets the player save / load / delete.
 - Format: `World` serialized via a small hand-rolled JSON writer (no external dep). Plain-data classes with primitive collections; cycles avoided by using IDs (e.g., `bodyId` instead of `Body` reference inside `Site`).
 - Schema version field at the top of every save. Loader rejects unknown versions with a clear error dialog and does not auto-overwrite a corrupt file.
@@ -414,5 +414,5 @@ These are best resolved when writing the plan, not here:
 - Final tech tree contents, prerequisites, and costs.
 - Specific goal definitions and reward values.
 - JSON save schema details (field naming convention).
-- Debug-mode keyboard shortcut conflicts with main game shortcuts.
+- ~~Debug-mode keyboard shortcut conflicts with main game shortcuts.~~ Resolved in Plan 5: Ctrl+D toggles debug mode; F10 (step), Ctrl+R (run N), Ctrl+I (inspector) and Ctrl+L (log viewer) are live only in debug mode; File uses the platform menu key with S, Shift+S, O and Q.
 - Whether `ResourceMap` is a flat array or a `double[][]` and the resolution.
