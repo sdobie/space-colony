@@ -112,7 +112,7 @@ public class PlayTestDriver {
             }
         });
         boolean ok = mb.getMenuCount() == 1 && "File".equals(mb.getMenu(0).getText())
-            && items.equals(List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Quit"));
+            && items.equals(List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Options…", "<separator>", "Quit"));
         check(ok, "1. File menu present", "menu=" + mb.getMenu(0).getText() + " items=" + items);
     }
 
@@ -193,7 +193,7 @@ public class PlayTestDriver {
         expect(dlg -> {
             JTextField f = find(dlg, JTextField.class, c -> true);
             f.setText("999");
-            clickButton(dlg, "OK");
+            clickButton(dlg, "Start");
         });
         runModal(() -> menuItem("New Game").doClick());
         long tickAfterNew = world().tick;
@@ -309,7 +309,7 @@ public class PlayTestDriver {
         waitFor(() -> Files.exists(f), 10000);
 
         expect(dlg -> clickButton(dlg, "OK"));
-        expect(dlg -> { find(dlg, JTextField.class, c -> true).setText("5"); clickButton(dlg, "OK"); });
+        expect(dlg -> { find(dlg, JTextField.class, c -> true).setText("5"); clickButton(dlg, "Start"); });
         runModal(() -> menuItem("New Game").doClick());
 
         expect(dlg -> selectSlotThen(dlg, "transit", () -> clickButton(dlg, "Load")));
