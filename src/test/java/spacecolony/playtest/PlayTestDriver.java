@@ -271,16 +271,17 @@ public class PlayTestDriver {
     }
 
     static void step7_midTransit(Path saveFile) throws Exception {
-        // Seed a destination site and a fuelled hauler (a colonizer run would take
+        // Seed a destination site and a hauler (a colonizer run would take
         // thousands of ticks); the dispatch itself goes through the real dialog.
         SwingUtilities.invokeAndWait(() -> {
             World w = engine.world();
             Site mars = new Site("site-mars-1", "Mars 1", "mars", 0.0, 0.0, 100);
             w.findBody("mars").sites.add(mars);
             Ship h = new Ship("h1", "H1", ShipClass.HAULER, "site-earth-hub");
-            h.fuel = 1_000_000.0;
             w.ships.add(h);
             w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
+            // The hauler draws its trip fuel from the hub at departure (Plan 6 §6.1).
+            w.findSite("site-earth-hub").stockpile.put(Resource.FUEL, 1_000.0);
         });
 
         expect(dlg -> {

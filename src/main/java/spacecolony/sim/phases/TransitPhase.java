@@ -1,5 +1,6 @@
 package spacecolony.sim.phases;
 
+import spacecolony.sim.Body;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
@@ -22,7 +23,17 @@ public final class TransitPhase {
 
     public static void advanceTransits(World w) {
         for (Ship s : w.ships) {
-            if (s.state == ShipState.IN_TRANSIT && w.tick >= s.transit.arrivalTick()) {
+            if (s.state == ShipState.IN_TRANSIT && w.tick >= s.transit.arrivalTick()
+                    && s.transit.destBodyId() != null) {
+                // A colonizer's trip to a body: wait in orbit with the cargo aboard.
+                s.state = ShipState.IDLE;
+                s.orbitingBodyId = s.transit.destBodyId();
+                s.transit = null;
+                Body b = w.findBody(s.orbitingBodyId);
+                String bodyName = b != null ? b.name : s.orbitingBodyId;
+                w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_ARRIVED,
+                    "Colonizer " + s.name + " is orbiting " + bodyName, s.orbitingBodyId, null, s.id));
+            } else if (s.state == ShipState.IN_TRANSIT && w.tick >= s.transit.arrivalTick()) {
                 s.state = ShipState.UNLOADING;
                 s.currentSiteId = s.transit.destSiteId();
                 // Keep s.transit for the destSiteId; we'll clear it when fully unloaded.
@@ -59,8 +70,18 @@ public final class TransitPhase {
                     // Compute transit and depart.
                     long depart = w.tick;
                     long arrival = computeArrivalTick(w, s, depart);
-                    double cost = fuelCost(w, s.shipClass, s.cargoMass(),
-                        s.transit.originSiteId(), s.transit.destSiteId(), depart, arrival);
+                    double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(),
+                        origin.bodyId, s.transit.destBody(w), depart, arrival);
+                    if (s.fuel < cost) {
+                        // Draw this trip's shortfall from the origin's FUEL stock (after the
+                        // manifest loaded, so shipped FUEL is taken first).
+                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
+                        double draw = Math.min(cost - s.fuel, have);
+                        if (draw > 0) {
+                            origin.stockpile.merge(Resource.FUEL, -draw, Double::sum);
+                            s.fuel += draw;
+                        }
+                    }
                     if (s.fuel < cost) {
                         w.emit(new Event(w.tick, EventSeverity.WARNING, EventKind.SHIP_OUT_OF_FUEL,
                             "Ship " + s.name + " aborted: insufficient fuel", null, null, s.id));
@@ -78,11 +99,13 @@ public final class TransitPhase {
                     }
                     s.fuel -= cost;
                     s.transit = new Transit(s.transit.originSiteId(), s.transit.destSiteId(),
-                                            depart, arrival, Transit.snapshot(s.cargo));
+                                            s.transit.destBodyId(), depart, arrival,
+                                            Transit.snapshot(s.cargo));
                     s.currentSiteId = null;
                     s.state = ShipState.IN_TRANSIT;
                     w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_DEPARTED,
-                        "Ship " + s.name + " departed for " + s.transit.destSiteId(),
+                        "Ship " + s.name + " departed for "
+                            + (s.transit.destSiteId() != null ? s.transit.destSiteId() : s.transit.destBodyId()),
                         null, null, s.id));
                 }
             } else if (s.state == ShipState.UNLOADING) {
@@ -112,19 +135,31 @@ public final class TransitPhase {
      */
     public static double fuelCost(World w, ShipClass c, double cargoMass,
                                   String originSiteId, String destSiteId, long t0, long t1) {
-        double dist = distanceBetweenSitesAtTicks(w, originSiteId, destSiteId, t0, t1);
+        return fuelCostBetweenBodies(w, c, cargoMass, bodyOfSite(w, originSiteId),
+                                     bodyOfSite(w, destSiteId), t0, t1);
+    }
+
+    /** As {@link #fuelCost}, for a trip to a body that may have no site. */
+    public static double fuelCostToBody(World w, ShipClass c, double cargoMass,
+                                        String originSiteId, String destBodyId, long t0, long t1) {
+        return fuelCostBetweenBodies(w, c, cargoMass, bodyOfSite(w, originSiteId), destBodyId, t0, t1);
+    }
+
+    private static double fuelCostBetweenBodies(World w, ShipClass c, double cargoMass,
+                                                String originBodyId, String destBodyId, long t0, long t1) {
+        double dist = distanceBetweenBodiesAtTicks(w, originBodyId, destBodyId, t0, t1);
         return FUEL_K * (c.dryMass() + cargoMass) * dist * TechEffects.fuelCostMultiplier(w.tech);
     }
 
     private static long computeArrivalTick(World w, Ship s, long depart) {
         double speed = s.shipClass.speed();
-        Site origin = w.findSite(s.transit.originSiteId());
-        Site dest = w.findSite(s.transit.destSiteId());
-        if (origin == null || dest == null) return depart + 1;
-        double[] op = OrbitalGeometry.bodyPosition(w, origin.bodyId, depart);
+        String originBody = bodyOfSite(w, s.transit.originSiteId());
+        String destBody = s.transit.destBody(w);
+        if (originBody == null || destBody == null) return depart + 1;
+        double[] op = OrbitalGeometry.bodyPosition(w, originBody, depart);
         long t = depart + 1;
         for (int iter = 0; iter < 6; iter++) {
-            double[] dp = OrbitalGeometry.bodyPosition(w, dest.bodyId, t);
+            double[] dp = OrbitalGeometry.bodyPosition(w, destBody, t);
             double dx = dp[0] - op[0], dy = dp[1] - op[1];
             double dist = Math.sqrt(dx * dx + dy * dy);
             long newT = depart + (long) Math.ceil(dist / speed);
@@ -134,12 +169,16 @@ public final class TransitPhase {
         return t;
     }
 
-    private static double distanceBetweenSitesAtTicks(World w, String originId, String destId, long t0, long t1) {
-        Site origin = w.findSite(originId);
-        Site dest = w.findSite(destId);
-        if (origin == null || dest == null) return 0.0;
-        double[] op = OrbitalGeometry.bodyPosition(w, origin.bodyId, t0);
-        double[] dp = OrbitalGeometry.bodyPosition(w, dest.bodyId, t1);
+    private static String bodyOfSite(World w, String siteId) {
+        Site s = siteId == null ? null : w.findSite(siteId);
+        return s == null ? null : s.bodyId;
+    }
+
+    private static double distanceBetweenBodiesAtTicks(World w, String originBodyId, String destBodyId,
+                                                       long t0, long t1) {
+        if (originBodyId == null || destBodyId == null) return 0.0;
+        double[] op = OrbitalGeometry.bodyPosition(w, originBodyId, t0);
+        double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, t1);
         double dx = dp[0] - op[0], dy = dp[1] - op[1];
         return Math.sqrt(dx * dx + dy * dy);
     }

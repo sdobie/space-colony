@@ -8,8 +8,13 @@ public class Ship {
     public String name;
     public final ShipClass shipClass;
     public ShipState state;
-    /** Site ID when state in {IDLE, LOADING, UNLOADING}; null when IN_TRANSIT. */
+    /**
+     * Site ID when state in {IDLE, LOADING, UNLOADING}; null when IN_TRANSIT, or when IDLE in
+     * orbit of {@link #orbitingBodyId}.
+     */
     public String currentSiteId;
+    /** Body a colonizer is waiting at after a trip to a body with no site; null otherwise. */
+    public String orbitingBodyId;
     /**
      * Non-null when state in {LOADING, IN_TRANSIT, UNLOADING}.
      * - In LOADING: holds destSiteId and the cargo manifest target; arrivalTick is
