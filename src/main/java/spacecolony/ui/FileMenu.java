@@ -7,6 +7,9 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JFileChooser;
@@ -18,6 +21,7 @@ import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import spacecolony.debug.CrashHandler;
 import spacecolony.engine.EdtGuard;
 import spacecolony.engine.Engine;
 import spacecolony.engine.Speed;
@@ -35,6 +39,7 @@ import spacecolony.world.WorldGenerator;
  * {@link GameSession#quit}, which autosaves.
  */
 public final class FileMenu extends JMenuBar {
+    private static final Logger LOG = Logger.getLogger("spacecolony.save");
     private final JFrame owner;
     private final Engine engine;
     private final GameSession session;
@@ -137,13 +142,17 @@ public final class FileMenu extends JMenuBar {
             }
             @Override protected void done() {
                 EdtGuard.assertEdt();
-                if (ioErr != null) {
-                    JOptionPane.showMessageDialog(owner,
-                        "Could not save: " + ioErr.getMessage(),
-                        "Save Error", JOptionPane.ERROR_MESSAGE);
-                } else {
-                    session.onSavedAs(name);
-                    session.savedToast(name);
+                if (!unexpectedFailure(this)) {
+                    if (ioErr != null) {
+                        LOG.log(Level.WARNING, "Save to " + target + " failed", ioErr);
+                        JOptionPane.showMessageDialog(owner,
+                            "Could not save: " + ioErr.getMessage(),
+                            "Save Error", JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        LOG.info("Saved to " + target);
+                        session.onSavedAs(name);
+                        session.savedToast(name);
+                    }
                 }
                 engine.setSpeed(prior);
             }
@@ -186,6 +195,7 @@ public final class FileMenu extends JMenuBar {
             }
             @Override protected void done() {
                 EdtGuard.assertEdt();
+                if (err != null) LOG.log(Level.WARNING, "Load from " + file + " failed", err);
                 if (err instanceof IncompatibleSaveException inc) {
                     JOptionPane.showMessageDialog(owner,
                         "This save was written with schema v" + inc.fileSchemaVersion
@@ -204,11 +214,28 @@ public final class FileMenu extends JMenuBar {
                     try {
                         engine.reset(get());
                         session.onLoaded(file);
-                    } catch (Exception ignore) { /* covered by err branch above */ }
+                        LOG.info("Loaded " + file);
+                    } catch (InterruptedException | ExecutionException ex) {
+                        CrashHandler.reportIfInstalled(ex.getCause() == null ? ex : ex.getCause());
+                    }
                 }
                 engine.setSpeed(prior);
             }
         }.execute();
+    }
+
+    /**
+     * Routes an exception the worker didn't expect (it escaped doInBackground) to the crash
+     * handler, since a SwingWorker's Future would otherwise swallow it. True if one did.
+     */
+    private static boolean unexpectedFailure(SwingWorker<?, ?> w) {
+        try {
+            w.get();
+            return false;
+        } catch (InterruptedException | ExecutionException ex) {
+            CrashHandler.reportIfInstalled(ex.getCause() == null ? ex : ex.getCause());
+            return true;
+        }
     }
 
     private final class QuitAction extends AbstractAction {

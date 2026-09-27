@@ -31,7 +31,7 @@ class EventTechEffectsTest {
         Site s = w.findSite("site-earth-hub");
         s.population = 1000; // large so /10 dominates the rounding
         int before = s.population;
-        EventPhase.applyForTest(w, w.findBody("earth"), EventKind.DISEASE_OUTBREAK, new Random(7L));
+        EventPhase.applyForced(w, w.findBody("earth"), EventKind.DISEASE_OUTBREAK, new Random(7L));
         return before - s.population;
     }
 
@@ -41,7 +41,7 @@ class EventTechEffectsTest {
         Site s = w.findSite("site-earth-hub");
         s.population = 1000;
         s.morale = 1.0;
-        EventPhase.applyForTest(w, w.findBody("earth"), EventKind.DISEASE_OUTBREAK, new Random(7L));
+        EventPhase.applyForced(w, w.findBody("earth"), EventKind.DISEASE_OUTBREAK, new Random(7L));
         return 1.0 - s.morale;
     }
 }

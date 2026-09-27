@@ -6,7 +6,8 @@ public sealed interface EngineEvent
             EngineEvent.WorldReplaced,
             EngineEvent.SelectionChanged,
             EngineEvent.SpeedChanged,
-            EngineEvent.ViewChanged {
+            EngineEvent.ViewChanged,
+            EngineEvent.DebugModeChanged {
 
     /** Emitted after each successful tick advance. */
     record WorldChanged(long tick) implements EngineEvent {}
@@ -26,4 +27,7 @@ public sealed interface EngineEvent
     record ViewChanged(View view) implements EngineEvent {
         public enum View { SYSTEM_MAP, BODY_VIEW }
     }
+
+    /** Debug mode toggled (Ctrl+D, --debug, or Debug menu). */
+    record DebugModeChanged(boolean enabled) implements EngineEvent {}
 }

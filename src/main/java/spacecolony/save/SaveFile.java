@@ -32,10 +32,13 @@ public final class SaveFile {
 
     // ===== SAVE =====
 
+    /** Serialise {@code w} to the schema-v1 envelope (same text {@link #save} writes). */
+    public static String toJson(World w) { return JsonWriter.write(buildEnvelope(w)); }
+
     public static void save(World w, Path file) throws IOException {
         Path parent = file.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
-        String json = JsonWriter.write(buildEnvelope(w));
+        String json = toJson(w);
         Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             Files.writeString(tmp, json);
@@ -174,7 +177,11 @@ public final class SaveFile {
     // ===== LOAD =====
 
     public static World load(Path file) throws IOException, IncompatibleSaveException {
-        String text = Files.readString(file);
+        return fromJson(Files.readString(file));
+    }
+
+    /** Parse a schema-v1 envelope. Throws {@link JsonParseException} on malformed text. */
+    public static World fromJson(String text) throws IncompatibleSaveException {
         JsonValue.JsonObject root = (JsonValue.JsonObject) JsonReader.parse(text);
         int version = (int) ((JsonValue.JsonNumber) root.values().get("schemaVersion")).asLong();
         if (version != SCHEMA_VERSION) throw new IncompatibleSaveException(version, SCHEMA_VERSION);

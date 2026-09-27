@@ -6,6 +6,7 @@ import spacecolony.sim.EventSeverity;
 import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
+import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
@@ -58,9 +59,8 @@ public final class TransitPhase {
                     // Compute transit and depart.
                     long depart = w.tick;
                     long arrival = computeArrivalTick(w, s, depart);
-                    double dist = distanceBetweenSitesAtTicks(w, s.transit.originSiteId(), s.transit.destSiteId(), depart, arrival);
-                    double cost = FUEL_K * (s.shipClass.dryMass() + s.cargoMass()) * dist
-                                * TechEffects.fuelCostMultiplier(w.tech);
+                    double cost = fuelCost(w, s.shipClass, s.cargoMass(),
+                        s.transit.originSiteId(), s.transit.destSiteId(), depart, arrival);
                     if (s.fuel < cost) {
                         w.emit(new Event(w.tick, EventSeverity.WARNING, EventKind.SHIP_OUT_OF_FUEL,
                             "Ship " + s.name + " aborted: insufficient fuel", null, null, s.id));
@@ -103,6 +103,17 @@ public final class TransitPhase {
                 }
             }
         }
+    }
+
+    /**
+     * Fuel a ship of class {@code c} carrying {@code cargoMass} burns flying from the origin
+     * site's body at {@code t0} to the destination site's body at {@code t1}, under the
+     * world's current tech. Used at departure and (as an estimate) by the debug map overlay.
+     */
+    public static double fuelCost(World w, ShipClass c, double cargoMass,
+                                  String originSiteId, String destSiteId, long t0, long t1) {
+        double dist = distanceBetweenSitesAtTicks(w, originSiteId, destSiteId, t0, t1);
+        return FUEL_K * (c.dryMass() + cargoMass) * dist * TechEffects.fuelCostMultiplier(w.tech);
     }
 
     private static long computeArrivalTick(World w, Ship s, long depart) {
