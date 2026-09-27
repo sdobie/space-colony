@@ -86,13 +86,14 @@ public class TechModal {
             active = String.format("Researching %s: %d / %d pts",
                 t.name(), (int) tech.accumulatedPoints, t.researchCost());
         }
-        JLabel left = new JLabel(active + "  ·  " + tech.researched.size() + "/" + TechCatalog.all().size() + " researched"
-            + rateText(ResearchPhase.pointsPerTick(w)));
-        left.setForeground(UiColors.FOREGROUND);
-        JLabel right = new JLabel(String.format("Morale ceiling %.2f", TechEffects.moraleCeiling(tech)));
-        right.setForeground(UiColors.FOREGROUND_DIM);
-        p.add(left, BorderLayout.WEST);
-        p.add(right, BorderLayout.EAST);
+        JLabel top = new JLabel(active);
+        top.setForeground(UiColors.FOREGROUND);
+        JLabel bottom = new JLabel(tech.researched.size() + "/" + TechCatalog.all().size() + " researched"
+            + rateText(ResearchPhase.pointsPerTick(w))
+            + String.format("  ·  Morale ceiling %.2f", TechEffects.moraleCeiling(tech)));
+        bottom.setForeground(UiColors.FOREGROUND_DIM);
+        p.add(top, BorderLayout.NORTH);
+        p.add(bottom, BorderLayout.SOUTH);
         return p;
     }
 

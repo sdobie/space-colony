@@ -54,11 +54,20 @@ public class EventStripPanel extends JPanel {
         toggles.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 8));
         for (EventSeverity sev : EventSeverity.values()) {
             JToggleButton b = new JToggleButton(sev == EventSeverity.WARNING ? "WARN" : sev.name(), true);
-            b.setForeground(colorFor(sev));
+            // Flat buttons drawn in the strip's colours: lit in the severity colour when on, dim when off.
+            b.setContentAreaFilled(false);
             b.setFocusable(false);
             b.setMargin(new Insets(0, 6, 0, 6));
-            b.setToolTipText("Show " + sev.name().toLowerCase(java.util.Locale.ROOT) + " events");
-            b.addActionListener(e -> refresh());
+            b.setToolTipText("Show or hide " + sev.name().toLowerCase(java.util.Locale.ROOT) + " events");
+            Runnable style = () -> {
+                Color c = b.isSelected() ? colorFor(sev) : UiColors.FOREGROUND_DIM;
+                b.setForeground(c);
+                b.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(b.isSelected() ? c : UiColors.PANEL_BORDER),
+                    BorderFactory.createEmptyBorder(1, 8, 1, 8)));
+            };
+            style.run();
+            b.addActionListener(e -> { style.run(); refresh(); });
             filters.put(sev, b);
             toggles.add(b);
         }

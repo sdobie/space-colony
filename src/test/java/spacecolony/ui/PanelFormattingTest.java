@@ -55,7 +55,7 @@ class PanelFormattingTest {
 
     @Test void capBreakdown_omitsMultiplierAtOne() {
         assertEquals("  base 200 + habitats 100", DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.0, 300)));
-        assertEquals("  base 200 + habitats 100 × 1.56 (colony mgmt)",
+        assertEquals("  base 200 + habitats 100 × 1.56",
             DetailPanel.capBreakdown(new PopCapBreakdown(200, 100, 1.56, 468)));
     }
 

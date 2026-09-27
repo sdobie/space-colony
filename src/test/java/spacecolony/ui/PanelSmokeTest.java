@@ -102,7 +102,7 @@ class PanelSmokeTest {
             p.setSize(280, 600);
             paintToImage(p, 280, 600);
             String text = allText(p);
-            assertTrue(text.contains("× 1.20 (colony mgmt)"), text);
+            assertTrue(text.contains("base 200 + habitats 100 × 1.20"), text);
             assertTrue(text.contains("Net / day:"), text);
         });
     }
