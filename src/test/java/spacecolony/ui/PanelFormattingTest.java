@@ -68,4 +68,11 @@ class PanelFormattingTest {
         assertEquals("  food ×1.30 · water ×0.70", DetailPanel.techNote(BuildingType.FARM, t));
         assertEquals("", DetailPanel.techNote(BuildingType.SHIPYARD, t));
     }
+
+    @Test void techRateAndEta() {
+        assertEquals("  ·  1.3 pts/day", TechModal.rateText(1.25));
+        assertEquals("  ·  no research labs", TechModal.rateText(0));
+        assertEquals("250 / 800  ·  ETA 440 days", TechModal.progressText(250, 800, 1.25));
+        assertEquals("250 / 800  ·  no labs", TechModal.progressText(250, 800, 0));
+    }
 }

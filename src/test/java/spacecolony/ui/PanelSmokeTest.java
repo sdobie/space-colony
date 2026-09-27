@@ -136,12 +136,19 @@ class PanelSmokeTest {
             engine.world().tech.researched.add("ion-drives");
             engine.world().tech.researched.add("life-support-i");
             engine.world().tech.activeId = "fusion-drives";
+            engine.world().findSite("site-earth-hub").buildings.add(
+                new spacecolony.sim.Building(spacecolony.sim.BuildingType.RESEARCH_LAB, 1));
             JPanel techList = TechModal.buildList(engine, () -> {});
-            assertEquals(spacecolony.sim.TechCatalog.all().size(), techList.getComponentCount());
+            assertEquals(spacecolony.sim.TechCatalog.all().size() + 3, techList.getComponentCount(),
+                "one row per tech plus Tier 0-2 headers");
+            String text = allText(techList);
+            assertTrue(text.contains("Tier 2"), text);
+            assertTrue(text.contains("needs Fusion Drives"), text);
+            assertTrue(progressBarText(techList).contains("ETA"), progressBarText(techList));
             techList.setSize(540, 2000);
             techList.doLayout();
             paintToImage(techList, 540, 2000);
-            JPanel techHeader = TechModal.header(engine.world().tech);
+            JPanel techHeader = TechModal.header(engine.world());
             techHeader.setSize(540, 30);
             paintToImage(techHeader, 540, 30);
             assertNotNull(GoalsModal.header(engine).getText());
@@ -153,6 +160,14 @@ class PanelSmokeTest {
         StringBuilder sb = new StringBuilder();
         if (c instanceof javax.swing.JLabel l && l.getText() != null) sb.append(l.getText()).append('\n');
         if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) sb.append(allText(child));
+        return sb.toString();
+    }
+
+    /** Strings painted on every JProgressBar under {@code c}. */
+    static String progressBarText(java.awt.Component c) {
+        StringBuilder sb = new StringBuilder();
+        if (c instanceof javax.swing.JProgressBar b && b.getString() != null) sb.append(b.getString()).append('\n');
+        if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) sb.append(progressBarText(child));
         return sb.toString();
     }
 
