@@ -70,6 +70,9 @@ tasks.register<JavaExec>("play") {
     mainClass = "spacecolony.SpaceColonyApp"
     standardInput = System.`in`
     jvmArgs("-ea")
+    // `./gradlew play --debug` sets Gradle's own log level and never reaches the app, so
+    // `-Pdebug` is the Gradle-side spelling of the app's --debug flag.
+    if (project.hasProperty("debug")) args("--debug")
 }
 
 tasks.register<JavaExec>("debugPlayTest") {
