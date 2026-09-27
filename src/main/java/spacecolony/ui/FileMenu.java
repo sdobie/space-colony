@@ -25,8 +25,6 @@ import spacecolony.debug.CrashHandler;
 import spacecolony.engine.EdtGuard;
 import spacecolony.engine.Engine;
 import spacecolony.engine.Speed;
-import spacecolony.save.IncompatibleSaveException;
-import spacecolony.save.JsonParseException;
 import spacecolony.save.SaveFile;
 import spacecolony.save.SlotInfo;
 import spacecolony.sim.World;
@@ -187,41 +185,10 @@ public final class FileMenu extends JMenuBar {
 
     /** Loads in a worker with Plan 4's error dialogs; on success swaps the world in. */
     private void loadFrom(Path file, Speed prior) {
-        new SwingWorker<World, Void>() {
-            Exception err;
-            @Override protected World doInBackground() {
-                try { return SaveFile.load(file); }
-                catch (Exception ex) { err = ex; return null; }
-            }
-            @Override protected void done() {
-                EdtGuard.assertEdt();
-                if (err != null) LOG.log(Level.WARNING, "Load from " + file + " failed", err);
-                if (err instanceof IncompatibleSaveException inc) {
-                    JOptionPane.showMessageDialog(owner,
-                        "This save was written with schema v" + inc.fileSchemaVersion
-                            + "; the current game uses v" + inc.currentSchemaVersion
-                            + ". Cannot load this save.",
-                        "Incompatible Save", JOptionPane.WARNING_MESSAGE);
-                } else if (err instanceof JsonParseException jpe) {
-                    JOptionPane.showMessageDialog(owner,
-                        "Save file is not valid JSON: " + jpe.getMessage(),
-                        "Load Error", JOptionPane.ERROR_MESSAGE);
-                } else if (err != null) {
-                    JOptionPane.showMessageDialog(owner,
-                        "Could not load: " + err.getMessage(),
-                        "Load Error", JOptionPane.ERROR_MESSAGE);
-                } else {
-                    try {
-                        engine.reset(get());
-                        session.onLoaded(file);
-                        LOG.info("Loaded " + file);
-                    } catch (InterruptedException | ExecutionException ex) {
-                        CrashHandler.reportIfInstalled(ex.getCause() == null ? ex : ex.getCause());
-                    }
-                }
-                engine.setSpeed(prior);
-            }
-        }.execute();
+        SaveLoading.load(owner, file, world -> {
+            engine.reset(world);
+            session.onLoaded(file);
+        }, () -> engine.setSpeed(prior));
     }
 
     /**

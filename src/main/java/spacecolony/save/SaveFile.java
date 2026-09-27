@@ -35,13 +35,20 @@ public final class SaveFile {
 
     // ===== SAVE =====
 
-    /** Serialise {@code w} to the schema-v1 envelope (same text {@link #save} writes). */
+    /** Serialise {@code w} to the current envelope (same text {@link #save} writes). */
     public static String toJson(World w) { return JsonWriter.write(buildEnvelope(w)); }
 
     public static void save(World w, Path file) throws IOException {
+        writeJson(toJson(w), file);
+    }
+
+    /**
+     * The atomic-write half of {@link #save}: writes {@code json} beside {@code file} and moves
+     * it into place. Lets a caller snapshot on the EDT and write on a worker.
+     */
+    public static void writeJson(String json, Path file) throws IOException {
         Path parent = file.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
-        String json = toJson(w);
         Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             Files.writeString(tmp, json);
