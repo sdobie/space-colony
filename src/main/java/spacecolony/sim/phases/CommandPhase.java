@@ -78,6 +78,14 @@ public final class CommandPhase {
         Ship s = w.findShip(rs.shipId());
         if (s == null) throw new CommandRejectedException("No such ship: " + rs.shipId());
         if (s.state == ShipState.IN_TRANSIT) throw new CommandRejectedException("Cannot retire ship in transit");
+        // A LOADING or UNLOADING ship is docked with cargo aboard; hand it to the site it's
+        // docked at rather than scrapping it with the hull.
+        Site dock = w.findSite(s.currentSiteId);
+        if (dock != null) {
+            for (var entry : s.cargo.entrySet()) {
+                if (entry.getValue() > 0) dock.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
+            }
+        }
         w.ships.remove(s);
     }
 

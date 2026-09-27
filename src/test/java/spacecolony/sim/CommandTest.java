@@ -52,6 +52,43 @@ class CommandTest {
     }
 
     @Test
+    void retireShipCommand_whileLoading_returnsCargoToDock() {
+        World w = WorldGenerator.generate(1L);
+        Site hub = w.findSite("site-earth-hub");
+        Ship s = new Ship("loader", "Loader", ShipClass.HAULER, "site-earth-hub");
+        s.state = ShipState.LOADING;
+        s.transit = new Transit("site-earth-hub", "site-earth-hub", 0, Transit.PENDING_ARRIVAL_TICK,
+            java.util.Map.of(Resource.METAL, 50.0));
+        s.cargo.put(Resource.METAL, 25.0);
+        w.ships.add(s);
+        double metalBefore = hub.stockpile.get(Resource.METAL);
+        Simulator sim = new Simulator();
+        sim.enqueue(new RetireShipCommand("loader"));
+        sim.advance(w);
+        assertNull(w.findShip("loader"));
+        assertEquals(metalBefore + 25.0 + hub.productionRateCache.get(Resource.METAL),
+            hub.stockpile.get(Resource.METAL), 1e-9);
+    }
+
+    @Test
+    void retireShipCommand_whileUnloading_returnsCargoToDestination() {
+        World w = WorldGenerator.generate(1L);
+        Site hub = w.findSite("site-earth-hub");
+        Ship s = new Ship("unloader", "Unloader", ShipClass.HAULER, "site-earth-hub");
+        s.state = ShipState.UNLOADING;
+        s.transit = new Transit("site-earth-hub", "site-earth-hub", 0, 1, java.util.Map.of(Resource.ORE, 80.0));
+        s.cargo.put(Resource.ORE, 80.0);
+        w.ships.add(s);
+        double oreBefore = hub.stockpile.get(Resource.ORE);
+        Simulator sim = new Simulator();
+        sim.enqueue(new RetireShipCommand("unloader"));
+        sim.advance(w);
+        assertNull(w.findShip("unloader"));
+        assertEquals(oreBefore + 80.0 + hub.productionRateCache.get(Resource.ORE),
+            hub.stockpile.get(Resource.ORE), 1e-9);
+    }
+
+    @Test
     void queueResearchCommand_setsActiveTech() {
         World w = WorldGenerator.generate(1L);
         Simulator sim = new Simulator();
