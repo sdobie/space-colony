@@ -26,6 +26,7 @@ import spacecolony.sim.commands.Command;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.QueueResearchCommand;
 import spacecolony.sim.commands.RetireShipCommand;
+import spacecolony.sim.commands.SetRandomEventsCommand;
 
 public final class CommandPhase {
     private CommandPhase() {}
@@ -56,6 +57,7 @@ public final class CommandPhase {
             case QueueResearchCommand qr -> applyQueueResearch(w, qr);
             case BuildSiteCommand bsc    -> applyBuildSite(w, bsc);
             case DispatchShipCommand ds  -> applyDispatchShip(w, ds);
+            case SetRandomEventsCommand re -> w.randomEventsEnabled = re.enabled();
         }
     }
 

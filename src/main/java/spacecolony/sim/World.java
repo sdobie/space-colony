@@ -20,6 +20,11 @@ public class World {
     public final Deque<Event> recentEvents = new ArrayDeque<>();
     public static final int MAX_RECENT_EVENTS = 200;
     public long credits;
+    /**
+     * When false, {@code EventPhase.run} rolls no random events. Set at creation (the tutorial
+     * world) or by {@code SetRandomEventsCommand}; forced events ignore it.
+     */
+    public boolean randomEventsEnabled = true;
 
     public World(long seed) {
         this.seed = seed;

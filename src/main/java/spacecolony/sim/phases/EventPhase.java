@@ -24,6 +24,7 @@ public final class EventPhase {
 
     public static void run(World w) {
         Random rng = DeterministicRng.forStep(w.seed, w.tick, 6L);
+        if (!w.randomEventsEnabled) return;
         for (Body b : w.bodies) {
             if (rng.nextDouble() < EVENT_BASE_RATE) {
                 EventKind k = RANDOM_KINDS[rng.nextInt(RANDOM_KINDS.length)];
