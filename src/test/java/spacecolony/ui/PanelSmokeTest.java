@@ -130,6 +130,31 @@ class PanelSmokeTest {
     }
 
     @Test
+    void eventStrip_filtersBySeverity_andClickSelects() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            EventStripPanel p = new EventStripPanel(engine);
+            engine.world().emit(new spacecolony.sim.Event(1, spacecolony.sim.EventSeverity.WARNING,
+                spacecolony.sim.EventKind.METEOR_STRIKE, "Meteor strike on Mars", "mars", null, null));
+            engine.world().emit(spacecolony.sim.Event.info(1, spacecolony.sim.EventKind.RESEARCH_COMPLETED, "Researched X"));
+            engine.tick();
+            int before = p.rows().size();
+            p.filter(spacecolony.sim.EventSeverity.INFO).doClick();
+            java.util.List<javax.swing.JLabel> rows = p.rows();
+            assertTrue(rows.size() < before);
+            assertTrue(rows.stream().allMatch(l -> !l.getText().contains("Researched X")));
+            javax.swing.JLabel meteor = rows.stream().filter(l -> l.getText().contains("Meteor strike on Mars"))
+                .findFirst().orElseThrow();
+            meteor.dispatchEvent(new java.awt.event.MouseEvent(meteor, java.awt.event.MouseEvent.MOUSE_PRESSED,
+                System.currentTimeMillis(), 0, 1, 1, 1, false));
+            assertEquals(Selection.body("mars"), engine.selection());
+            p.filter(spacecolony.sim.EventSeverity.WARNING).doClick();
+            p.filter(spacecolony.sim.EventSeverity.ERROR).doClick();
+            assertEquals("No matching events.", p.rows().get(0).getText());
+        });
+    }
+
+    @Test
     void techAndGoalsModalContents_paintWithoutCrashing() throws Exception {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
