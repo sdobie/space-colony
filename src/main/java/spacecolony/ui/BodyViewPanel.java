@@ -29,11 +29,15 @@ public class BodyViewPanel extends JPanel {
     private final SpherePanel sphere;
     private final Map<String, BufferedImage> flatCache = new HashMap<>();
 
+    /** Component name the tutorial highlights (Plan 6 §5.4). */
+    public static final String TARGET_SPHERE = "bodyview.sphere";
+
     public BodyViewPanel(Engine engine) {
         this.engine = engine;
         setLayout(new BorderLayout());
         setBackground(UiColors.STARFIELD_BG);
         this.sphere = new SpherePanel();
+        sphere.setName(TARGET_SPHERE);
 
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
         top.setOpaque(false);

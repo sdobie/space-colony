@@ -22,8 +22,16 @@ public class TopBar extends JPanel {
     private final JButton x4Btn = speedButton("4×", Speed.X4);
     private final JButton x16Btn = speedButton("16×", Speed.X16);
 
+    // Component names the tutorial highlights (Plan 6 §5.4).
+    public static final String TARGET_X1 = "topbar.speed.x1";
+    public static final String TARGET_X16 = "topbar.speed.x16";
+    public static final String TARGET_TECH = "topbar.tech";
+    public static final String TARGET_GOALS = "topbar.goals";
+
     public TopBar(Engine engine) {
         this.engine = engine;
+        x1Btn.setName(TARGET_X1);
+        x16Btn.setName(TARGET_X16);
         setLayout(new BorderLayout());
         setBackground(UiColors.PANEL_BACKGROUND);
         setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UiColors.PANEL_BORDER));
@@ -47,8 +55,12 @@ public class TopBar extends JPanel {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
         right.setOpaque(false);
-        right.add(menuButton("Tech",  () -> TechModal.show(this, engine)));
-        right.add(menuButton("Goals", () -> GoalsModal.show(this, engine)));
+        JButton tech = menuButton("Tech",  () -> TechModal.show(this, engine));
+        tech.setName(TARGET_TECH);
+        JButton goals = menuButton("Goals", () -> GoalsModal.show(this, engine));
+        goals.setName(TARGET_GOALS);
+        right.add(tech);
+        right.add(goals);
 
         add(left,   BorderLayout.WEST);
         add(center, BorderLayout.CENTER);

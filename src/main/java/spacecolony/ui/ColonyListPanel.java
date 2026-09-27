@@ -28,6 +28,7 @@ public class ColonyListPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(UiColors.PANEL_BACKGROUND);
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, UiColors.PANEL_BORDER));
+        setName(TARGET);
         list.setOpaque(false);
         JScrollPane scroll = new JScrollPane(list,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -43,6 +44,9 @@ public class ColonyListPanel extends JPanel {
         });
         refresh();
     }
+
+    /** Component name the tutorial highlights (Plan 6 §5.4). */
+    public static final String TARGET = "colonylist";
 
     private void refresh() {
         list.removeAll();

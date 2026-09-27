@@ -32,6 +32,7 @@ public class DetailPanel extends JPanel {
 
     public DetailPanel(Engine engine) {
         this.engine = engine;
+        setName(TARGET);
         setLayout(new BorderLayout());
         setBackground(UiColors.PANEL_BACKGROUND);
         setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, UiColors.PANEL_BORDER));
@@ -136,17 +137,25 @@ public class DetailPanel extends JPanel {
         }
         content.add(Box.createVerticalStrut(8));
         JButton build = new JButton("Build building...");
+        build.setName(TARGET_BUILD_BUILDING);
         build.addActionListener(e -> spacecolony.ui.dialogs.BuildBuildingDialog.show(this, engine, s.id));
         content.add(build);
         boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.enabled);
         if (hasShipyard) {
             JButton ship = new JButton("Build ship...");
+            ship.setName(TARGET_BUILD_SHIP);
             ship.addActionListener(e -> spacecolony.ui.dialogs.BuildShipDialog.show(this, engine, s.id));
             content.add(ship);
         }
     }
 
     static final String FOUND_COLONY_LABEL = "Found colony…";
+    // Component names the tutorial highlights (Plan 6 §5.4).
+    public static final String TARGET = "detail";
+    public static final String TARGET_BUILD_BUILDING = "detail.buildBuilding";
+    public static final String TARGET_BUILD_SHIP = "detail.buildShip";
+    public static final String TARGET_DISPATCH = "detail.dispatch";
+    public static final String TARGET_FOUND_COLONY = "detail.foundColony";
 
     private void renderShip(Ship s) {
         if (s == null) { renderNone(); return; }
@@ -173,6 +182,7 @@ public class DetailPanel extends JPanel {
         if (orbiting != null) {
             // An orbiting colonizer can only found a colony here (or be retired).
             JButton found = new JButton(FOUND_COLONY_LABEL);
+            found.setName(TARGET_FOUND_COLONY);
             found.addActionListener(e -> {
                 engine.setSelection(Selection.body(orbiting.id));
                 engine.setView(EngineEvent.ViewChanged.View.BODY_VIEW);
@@ -180,6 +190,7 @@ public class DetailPanel extends JPanel {
             content.add(found);
         } else if (s.state == ShipState.IDLE) {
             JButton dispatch = new JButton("Dispatch...");
+            dispatch.setName(TARGET_DISPATCH);
             dispatch.addActionListener(e -> spacecolony.ui.dialogs.DispatchShipDialog.show(this, engine, s.id));
             content.add(dispatch);
         }

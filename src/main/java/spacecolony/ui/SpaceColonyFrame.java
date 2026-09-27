@@ -34,6 +34,7 @@ public class SpaceColonyFrame extends JFrame {
     private final Hooks hooks;
     private final TopBar topBar;
     private final AutosaveTimer autosave;
+    private final MainViewPanel mainView;
     private static final String TITLE = "Space Colony";
 
     /**
@@ -99,7 +100,7 @@ public class SpaceColonyFrame extends JFrame {
         ColonyListPanel colonyList = new ColonyListPanel(engine);
         colonyList.setPreferredSize(new Dimension(220, 0));
         add(colonyList, BorderLayout.WEST);
-        MainViewPanel mainView = new MainViewPanel(engine);
+        this.mainView = new MainViewPanel(engine);
         add(mainView, BorderLayout.CENTER);
         DetailPanel detail = new DetailPanel(engine);
         detail.setPreferredSize(new Dimension(280, 0));
@@ -146,6 +147,8 @@ public class SpaceColonyFrame extends JFrame {
     }
 
     public TopBar topBar() { return topBar; }
+    /** The centre region (system map or body view); the tutorial card sits in its lower left. */
+    public java.awt.Component centerView() { return mainView; }
     AutosaveTimer autosaveTimer() { return autosave; }
     public Engine engine() { return engine; }
     public GameLoop gameLoop() { return gameLoop; }

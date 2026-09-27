@@ -6,43 +6,41 @@ import javax.swing.SwingUtilities;
 import spacecolony.debug.CrashHandler;
 import spacecolony.debug.DebugLogging;
 import spacecolony.debug.ExceptionLog;
-import spacecolony.engine.Engine;
-import spacecolony.ui.SpaceColonyFrame;
-import spacecolony.world.WorldGenerator;
+import spacecolony.options.Options;
+import spacecolony.options.OptionsStore;
+import spacecolony.save.SaveSlots;
+import spacecolony.ui.startup.AppController;
 
 /**
- * Swing entry point. Use `./gradlew play --args="--seed N"` to launch. Add {@code --debug}
- * (or use {@code ./gradlew play -Pdebug}) to start in debug mode and {@code --log-level=DEBUG|INFO|WARN} to set logging verbosity.
+ * Swing entry point: {@code ./gradlew play} shows the splash, then the title screen.
+ * {@code --seed N} skips both and starts that seed directly; {@code --skip-intro} skips only the
+ * splash. {@code --debug} (or {@code ./gradlew play -Pdebug}) starts games in debug mode, and
+ * {@code --log-level=DEBUG|INFO|WARN} sets logging verbosity. Both override the options file
+ * ({@code ~/.space-colony/options.properties}).
  */
 public class SpaceColonyApp {
-    public static void main(String[] args) {
-        long seed = 42L;
-        boolean debug = false;
-        Level level = Level.INFO;
-        String badLevel = null;
-        for (int i = 0; i < args.length; i++) {
-            String a = args[i];
-            if (a.equals("--seed") && i + 1 < args.length) seed = Long.parseLong(args[++i]);
-            else if (a.equals("--debug")) debug = true;
-            else if (a.startsWith("--log-level=")) {
-                Level l = DebugLogging.parseLevel(a.substring("--log-level=".length()));
-                if (l != null) level = l; else badLevel = a;
-            }
+    public static void main(String[] argv) {
+        LaunchArgs args = LaunchArgs.parse(argv);
+        OptionsStore store = OptionsStore.defaultFile();
+        Options options = store.load();
+        // Swing reads the scale once, when the toolkit starts, so this must precede any AWT use.
+        if (options.uiScalePercent() != 0 && System.getProperty("sun.java2d.uiScale") == null) {
+            System.setProperty("sun.java2d.uiScale", Double.toString(options.uiScalePercent() / 100.0));
         }
+        Level level = args.logLevel() != null ? args.logLevel() : options.logLevel();
+
         // Logging and the crash handler go in before any UI so a crash before Ctrl+D is captured.
         System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tF %1$tT %4$s %3$s: %5$s%6$s%n");
         DebugLogging.install(level, DebugLogging.defaultLogDir());
-        if (badLevel != null) Logger.getLogger("spacecolony").warning("Ignoring " + badLevel + "; using INFO");
+        if (args.badLevel() != null) {
+            Logger.getLogger("spacecolony").warning("Ignoring " + args.badLevel() + "; using " + level);
+        }
         ExceptionLog exceptions = new ExceptionLog(20);
 
-        final long finalSeed = seed;
-        final boolean finalDebug = debug;
         SwingUtilities.invokeLater(() -> {
-            Engine engine = new Engine(WorldGenerator.generate(finalSeed));
-            SpaceColonyFrame frame = new SpaceColonyFrame(engine, exceptions);
-            CrashHandler.install(new CrashHandler(exceptions, engine::debugEnabled, frame::showCrashDialog));
-            engine.setDebugEnabled(finalDebug);
-            frame.setVisible(true);
+            AppController app = new AppController(options, store, SaveSlots.defaultDir(), exceptions, args);
+            CrashHandler.install(new CrashHandler(exceptions, app::debugOn, app::report));
+            app.start();
         });
     }
 }
