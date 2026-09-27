@@ -3,6 +3,8 @@ plugins {
     java
 }
 
+version = "0.6.0"
+
 repositories {
     mavenCentral()
 }
@@ -21,6 +23,11 @@ dependencies {
 
 application {
     mainClass = "spacecolony.Main"
+}
+
+tasks.named<ProcessResources>("processResources") {
+    inputs.property("version", project.version)
+    filesMatching("spacecolony/version.properties") { expand("version" to project.version) }
 }
 
 tasks.named<Test>("test") {
