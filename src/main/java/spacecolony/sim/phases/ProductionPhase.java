@@ -5,6 +5,7 @@ import spacecolony.sim.BodyType;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.OrbitalGeometry;
+import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
 import spacecolony.sim.ResourceYieldSampler;
 import spacecolony.sim.Site;
@@ -130,14 +131,9 @@ public final class ProductionPhase {
         s.productionRateCache.merge(r, amount, Double::sum);
     }
 
-    /** populationCap = round((siteBase + sum(enabled HABITAT level * 100)) * popCapMultiplier). */
+    /** Cap formula lives in {@link PopCapBreakdown} so the detail panel shows the same numbers. */
     private static void recomputeCap(Site s, TechState tech) {
-        int boost = 0;
-        for (Building b : s.buildings) {
-            if (b.enabled && b.type == BuildingType.HABITAT) boost += b.level * 100;
-        }
-        s.populationCap = (int) Math.round(
-            (s.siteBase + boost) * TechEffects.popCapMultiplier(tech));
+        s.populationCap = PopCapBreakdown.of(s, tech).cap();
     }
 
     private static void updateMorale(Site s, TechState tech) {

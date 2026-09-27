@@ -311,7 +311,7 @@ finalCap     = round(rawCap × TechEffects.popCapMultiplier(world.tech))
 | HABITAT L2 | – | – | 400 | 300 |
 | HABITAT L1 | ✓ | – | 360 | 240 |
 | HABITAT L1 | ✓ | ✓ | 468 | 312 |
-| HABITAT L1 + L2 + L1 | ✓ | ✓ | 1248 | 936 |
+| HABITAT L1 + L2 + L1 | ✓ | ✓ | 936 | 780 |
 
 ### 5.3 `siteBase` field on `Site`
 
