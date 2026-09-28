@@ -32,7 +32,7 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
         DayReport after = SiteEconomy.run(w, b, s, plus, new EnumMap<>(s.stockpile));
         BuildingOutcome added = after.outcome(plus.size() - 1);
         return new BuildForecast(type, before, after,
-            facts(w, s, type, before, after), warnings(s, type, before, after, added));
+            facts(w, s, type, before, after), warnings(w, s, type, before, after, added));
     }
 
     /** The next day at this colony as it stands; shown when {@code Site.lastDay} is null. */
@@ -73,7 +73,7 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
         return out;
     }
 
-    private static List<String> warnings(Site s, BuildingType type, DayReport before, DayReport after,
+    private static List<String> warnings(World w, Site s, BuildingType type, DayReport before, DayReport after,
                                          BuildingOutcome added) {
         List<String> out = new ArrayList<>();
         BuildingSpec spec = BuildingCatalog.get(type);
@@ -81,7 +81,9 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
         if (added.limit() == Limit.NO_YIELD) {
             out.add("No " + added.limitResource() + " in the ground here, so it would dig almost nothing.");
         } else if (added.limit() == Limit.LOW_YIELD) {
-            out.add("Poor " + added.limitResource() + " here, so output is low.");
+            Body b = w.findBody(s.bodyId);
+            double y = b.resourceYields == null ? 0.0 : b.resourceYields.sample(added.limitResource(), s.lat, s.lon);
+            out.add(String.format("Poor %s here: %.0f%% of a rich site.", added.limitResource(), y * 100));
         }
         // Inputs.
         List<Resource> warned = new ArrayList<>();
