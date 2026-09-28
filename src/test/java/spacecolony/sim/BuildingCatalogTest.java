@@ -30,6 +30,8 @@ class BuildingCatalogTest {
         assertTrue(farm.contains(new Rate(Resource.BIOMASS, 0.5, Kind.INPUT)));
         assertTrue(farm.contains(new Rate(Resource.WATER, 0.3, Kind.INPUT)));
         assertTrue(farm.contains(new Rate(Resource.FOOD, 1.5, Kind.OUTPUT)));
+        assertTrue(farm.contains(new Rate(Resource.BIOMASS, 0.3, Kind.OUTPUT)));
+        assertTrue(farm.contains(new Rate(Resource.BIOMASS, 2.5, Kind.YIELD_OUTPUT)));
         var mine = BuildingCatalog.get(BuildingType.MINE).rates();
         assertTrue(mine.contains(new Rate(Resource.ORE, 2.0, Kind.YIELD_OUTPUT)));
         assertTrue(mine.contains(new Rate(Resource.SILICATE, 1.0, Kind.YIELD_OUTPUT)));
