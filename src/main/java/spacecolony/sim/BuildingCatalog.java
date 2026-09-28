@@ -19,6 +19,8 @@ public final class BuildingCatalog {
     public static final double POWER_PLANT_OUTPUT = 10.0;
     public static final double MINE_ORE = 2.0;
     public static final double MINE_SILICATE = 1.0;
+    /** Ice dug where the ground holds it (richest on icy bodies); refineries turn it into water. */
+    public static final double MINE_ICE = 2.0;
     /** Gas-giant atmospheric fuel, once Atmospheric Mining is researched. */
     public static final double MINE_GAS_FUEL = 2.0;
     public static final double FARM_BIOMASS = 0.5;
@@ -44,11 +46,12 @@ public final class BuildingCatalog {
                 new Rate(Resource.WATER, FARM_WATER, Kind.INPUT),
                 new Rate(Resource.FOOD, FARM_FOOD, Kind.OUTPUT)));
         add(BuildingType.MINE, "Mine",
-            "Digs ore and silicate; output depends on what's in the ground here. At a gas giant,"
+            "Digs ore, silicate and ice; output depends on what's in the ground here. At a gas giant,"
                 + " with Atmospheric Mining, it also pulls fuel from the air.",
             POWER_DRAW, List.of(
                 new Rate(Resource.ORE, MINE_ORE, Kind.YIELD_OUTPUT),
-                new Rate(Resource.SILICATE, MINE_SILICATE, Kind.YIELD_OUTPUT)));
+                new Rate(Resource.SILICATE, MINE_SILICATE, Kind.YIELD_OUTPUT),
+                new Rate(Resource.ICE, MINE_ICE, Kind.YIELD_OUTPUT)));
         add(BuildingType.REFINERY, "Refinery",
             "Turns ore into metal and ice into water.",
             POWER_DRAW, List.of(

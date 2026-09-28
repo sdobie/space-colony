@@ -68,6 +68,23 @@ class SiteEconomyTest {
     }
 
     @Test
+    void mineDigsIceWhereTheGroundHoldsIt() {
+        DayReport d = new TestWorlds(1.0, BodyType.ICE_BODY, Map.of(Resource.ICE, 0.7, Resource.ORE, 0.1))
+            .with(POWER_PLANT, MINE).runOnCopy();
+        assertEquals(1.4, d.net(Resource.ICE), 1e-9);
+        assertEquals(0.2, d.net(Resource.ORE), 1e-9);
+        assertNull(d.outcome(1).limit(), "judged by its ice, not its poor ore");
+    }
+
+    @Test
+    void mineIceFeedsTheRefinery() {
+        DayReport d = TestWorlds.at1Au(Map.of(Resource.ICE, 0.5)).with(POWER_PLANT, POWER_PLANT, MINE, REFINERY).runOnCopy();
+        // The mine's 1.0 ICE lands before the refinery runs, which turns it into 0.9 WATER.
+        assertEquals(0.9, d.net(Resource.WATER), 1e-9);
+        assertEquals(0.0, d.net(Resource.ICE), 1e-9);
+    }
+
+    @Test
     void gasGiantMineNeedsTheTech() {
         TestWorlds t = new TestWorlds(5.0, BodyType.GAS_GIANT, Map.of(Resource.FUEL, 0.8))
             .with(POWER_PLANT, POWER_PLANT, MINE);

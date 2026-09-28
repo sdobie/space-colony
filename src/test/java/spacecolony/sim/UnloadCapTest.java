@@ -15,10 +15,16 @@ class UnloadCapTest {
         return s;
     }
 
+    /** The starting world minus the hub's mine, so nothing there makes or uses ICE and the numbers are exact. */
+    private static World hubWithoutIce() {
+        World w = WorldGenerator.generate(1L);
+        w.findSite("site-earth-hub").buildings.removeIf(b -> b.type == BuildingType.MINE);
+        return w;
+    }
+
     @Test
     void unloading_stopsAtCap_andKeepsTheRestAboard() {
-        // Nothing at the starting hub produces or consumes ICE, so the numbers are exact.
-        World w = WorldGenerator.generate(1L);
+        World w = hubWithoutIce();
         Site hub = w.findSite("site-earth-hub");
         double cap = hub.stockpileCap.get(Resource.ICE);
         hub.stockpile.put(Resource.ICE, cap - 5.0);
@@ -33,7 +39,7 @@ class UnloadCapTest {
 
     @Test
     void unloading_resumesOnceThereIsRoom() {
-        World w = WorldGenerator.generate(1L);
+        World w = hubWithoutIce();
         Site hub = w.findSite("site-earth-hub");
         double cap = hub.stockpileCap.get(Resource.ICE);
         hub.stockpile.put(Resource.ICE, cap);

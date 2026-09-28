@@ -92,6 +92,10 @@ public final class SiteEconomy {
                               * siMult;
                     produce(stock, report, src, Resource.SILICATE, si,
                         bd.level * BuildingCatalog.MINE_SILICATE * sy * siMult);
+                    // Ice, where the ground holds it (spec: mines yield ORE / SILICATE / ICE by body).
+                    double iy = yields.sample(Resource.ICE, s.lat, s.lon);
+                    double ice = bd.level * BuildingCatalog.MINE_ICE * iy * powerFactor;
+                    if (iy > 0) produce(stock, report, src, Resource.ICE, ice, bd.level * BuildingCatalog.MINE_ICE * iy);
                     // Atmospheric mining: gas-giant MINE buildings extract FUEL when the tech is researched.
                     boolean gasGiant = b.type == BodyType.GAS_GIANT;
                     boolean fuelTech = TechEffects.gasGiantFuelEnabled(w.tech);
@@ -100,10 +104,12 @@ public final class SiteEconomy {
                         double fuel = bd.level * BuildingCatalog.MINE_GAS_FUEL * fy * powerFactor;
                         produce(stock, report, src, Resource.FUEL, fuel, bd.level * BuildingCatalog.MINE_GAS_FUEL * fy);
                     }
-                    // A fuel-mining gas-giant mine is judged by its fuel yield, any other by its ore.
+                    // A fuel-mining gas-giant mine is judged by its fuel yield, an ice mine by its ice,
+                    // any other by its ore.
                     boolean fuelMine = gasGiant && fuelTech;
-                    double mainYield = fuelMine ? fy : y;
-                    Resource mainRes = fuelMine ? Resource.FUEL : Resource.ORE;
+                    boolean iceMine = !fuelMine && iy > y;
+                    double mainYield = fuelMine ? fy : iceMine ? iy : y;
+                    Resource mainRes = fuelMine ? Resource.FUEL : iceMine ? Resource.ICE : Resource.ORE;
                     Limit limit = null;
                     Resource limitRes = null;
                     if (powerFactor < 1.0) limit = Limit.BROWNOUT;
