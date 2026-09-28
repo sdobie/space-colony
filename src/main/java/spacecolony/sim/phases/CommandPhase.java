@@ -88,6 +88,8 @@ public final class CommandPhase {
             for (var entry : s.cargo.entrySet()) {
                 if (entry.getValue() > 0) dock.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
             }
+            // Its tank drains back into the dock's FUEL too.
+            if (s.fuel > 1e-9) dock.stockpile.merge(Resource.FUEL, s.fuel, Double::sum);
         }
         w.ships.remove(s);
     }
@@ -124,6 +126,8 @@ public final class CommandPhase {
         for (var e : colonizer.cargo.entrySet()) {
             if (e.getValue() > 1e-9) s.stockpile.merge(e.getKey(), e.getValue(), Double::sum);
         }
+        // So does whatever fuel is left in its tank.
+        if (colonizer.fuel > 1e-9) s.stockpile.merge(Resource.FUEL, colonizer.fuel, Double::sum);
         w.ships.remove(colonizer); // colonizer is consumed
     }
 

@@ -116,6 +116,16 @@ class ColonizeTest {
         assertTrue(w.goals.achieved.contains("first-mars-colony"));
     }
 
+    /** Play-tester: the colonizer's leftover tank fuel vanished with the hull. */
+    @Test void foundColonyFromOrbit_keepsLeftoverTankFuel() {
+        Simulator sim = new Simulator();
+        World w = orbitingMars(sim);
+        w.findShip("c1").fuel = 12.5;
+        sim.enqueue(new BuildSiteCommand("site-mars-a", "Ares", "mars", 0.3, 1.2, "c1"));
+        sim.advance(w);
+        assertEquals(12.5, w.findSite("site-mars-a").stockpile.getOrDefault(Resource.FUEL, 0.0), 1e-9);
+    }
+
     /** Regression: on the standard start (no extra FUEL) a colonizer could not afford Mars. */
     @Test void standardStart_colonizerWithFullHold_departsForMars() {
         World w = WorldGenerator.generate(1L);
