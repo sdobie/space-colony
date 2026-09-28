@@ -171,7 +171,10 @@ public class DetailPanel extends JPanel {
             }
             addLabel("→ " + dest + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
         }
-        addLabel(String.format("Fuel: %.1f", s.fuel), UiColors.FOREGROUND_DIM);
+        // Ships fly on their origin site's FUEL, drawn at departure, so an empty tank is normal.
+        String fuel = String.format("Fuel: %.1f", s.fuel);
+        if (s.fuel < 1e-6 && s.currentSiteId != null) fuel += " (fills from site FUEL on departure)";
+        addLabel(fuel, UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {
             addLabel("Cargo:", UiColors.FOREGROUND_DIM);
             for (Resource r : Resource.values()) {

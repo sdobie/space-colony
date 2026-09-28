@@ -17,6 +17,7 @@ import spacecolony.sim.ShipClass;
 import spacecolony.sim.Site;
 import spacecolony.sim.World;
 import spacecolony.sim.commands.DispatchShipCommand;
+import spacecolony.sim.phases.CommandPhase;
 
 public class DispatchShipDialog {
     public static void show(Component parent, Engine engine, String shipId) {
@@ -40,22 +41,45 @@ public class DispatchShipDialog {
             form.add(new JLabel(r.name() + ":"));
             form.add(f);
         }
-        int result = JOptionPane.showConfirmDialog(parent, form,
-            "Dispatch " + shipId, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) return;
-        Map<Resource, Double> manifest = new EnumMap<>(Resource.class);
-        for (var entry : fields.entrySet()) {
-            String raw = entry.getValue().getText().trim();
-            if (raw.isEmpty()) continue;
-            try {
-                double v = Double.parseDouble(raw);
-                if (v > 0) manifest.put(entry.getKey(), v);
-            } catch (NumberFormatException ignored) { /* skip bad input */ }
+        // Re-show the form (entries kept) until the trip is affordable or the player cancels,
+        // so a fuel shortfall is a popup right here rather than a line in the event strip.
+        while (true) {
+            int result = JOptionPane.showConfirmDialog(parent, form,
+                "Dispatch " + shipId, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            if (result != JOptionPane.OK_OPTION) return;
+            Map<Resource, Double> manifest = new EnumMap<>(Resource.class);
+            for (var entry : fields.entrySet()) {
+                String raw = entry.getValue().getText().trim();
+                if (raw.isEmpty()) continue;
+                try {
+                    double v = Double.parseDouble(raw);
+                    if (v > 0) manifest.put(entry.getKey(), v);
+                } catch (NumberFormatException ignored) { /* skip bad input */ }
+            }
+            Destination d = destinations.get((String) dest.getSelectedItem());
+            String shortfall = fuelShortfall(engine.world(), ship, d, manifest);
+            if (shortfall != null) {
+                JOptionPane.showMessageDialog(parent,
+                    shortfall + ".\nCarry less cargo, pick a closer destination, or bring more FUEL here.",
+                    "Not enough fuel", JOptionPane.WARNING_MESSAGE);
+                continue;
+            }
+            engine.enqueue(d.siteId() != null
+                ? new DispatchShipCommand(shipId, d.siteId(), manifest)
+                : DispatchShipCommand.toBody(shipId, d.bodyId(), manifest));
+            return;
         }
-        Destination d = destinations.get((String) dest.getSelectedItem());
-        engine.enqueue(d.siteId() != null
-            ? new DispatchShipCommand(shipId, d.siteId(), manifest)
-            : DispatchShipCommand.toBody(shipId, d.bodyId(), manifest));
+    }
+
+    /** The fuel rejection the sim would give this dispatch, or null if the trip is affordable. */
+    static String fuelShortfall(World w, Ship ship, Destination d, Map<Resource, Double> manifest) {
+        String destBodyId = d.bodyId();
+        if (d.siteId() != null) {
+            Site site = w.findSite(d.siteId());
+            if (site == null) return null; // the sim reports this one
+            destBodyId = site.bodyId;
+        }
+        return CommandPhase.fuelShortfall(w, ship, destBodyId, manifest);
     }
 
     /** Where a combo label sends the ship: a site, or (colonizers only) a body with no site. */
