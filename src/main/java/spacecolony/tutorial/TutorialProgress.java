@@ -33,7 +33,7 @@ public final class TutorialProgress {
         if (!onLastStep()) index++;
     }
 
-    /** Skip step: always moves on, except past the last step. */
+    /** Next step on an action step: always moves on, except past the last step. */
     public void skip() {
         if (!onLastStep()) index++;
     }

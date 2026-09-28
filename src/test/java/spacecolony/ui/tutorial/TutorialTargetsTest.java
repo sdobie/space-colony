@@ -126,6 +126,32 @@ class TutorialTargetsTest {
         assertEquals(0, completed.get());
     }
 
+    @Test void nextStep_isOnEveryStep_andAdvancesReadingAndActionSteps() throws Exception {
+        for (int i = 0; i < 11; i++) {
+            int index = i;
+            Edt.run(() -> {
+                assertEquals(index, tutorial.progress().index());
+                assertEquals(List.of("Exit tutorial", "Next step"), tutorial.card().buttonLabels());
+                AbstractButton next = findButton(tutorial.card(), "Next step");
+                assertNotNull(next);
+                next.doClick();
+            });
+            flush();
+        }
+        Edt.run(() -> assertTrue(tutorial.progress().onLastStep()));
+    }
+
+    private static AbstractButton findButton(java.awt.Container c, String text) {
+        for (Component k : c.getComponents()) {
+            if (k instanceof AbstractButton b && text.equals(b.getText())) return b;
+            if (k instanceof java.awt.Container kc) {
+                AbstractButton hit = findButton(kc, text);
+                if (hit != null) return hit;
+            }
+        }
+        return null;
+    }
+
     @Test void lastStep_marksComplete_andKeepPlayingEndsTutorialMode() throws Exception {
         Edt.run(() -> { for (int i = 0; i < 11; i++) tutorial.skip(); });
         flush();

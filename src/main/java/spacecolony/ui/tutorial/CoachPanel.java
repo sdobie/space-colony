@@ -100,8 +100,8 @@ final class CoachPanel extends JPanel {
             buttons.add(button("Keep playing", listener::keepPlaying));
         } else {
             buttons.add(button("Exit tutorial", listener::exit));
-            buttons.add(button("Skip step", listener::skip));
-            if (step.manual()) buttons.add(button("Next", listener::next));
+            // Next step on every step: it continues a reading step and skips an action step.
+            buttons.add(button("Next step", step.manual() ? listener::next : listener::skip));
         }
         revalidate();
         repaint();
