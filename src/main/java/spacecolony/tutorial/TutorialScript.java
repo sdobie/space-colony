@@ -52,12 +52,14 @@ public final class TutorialScript {
                 c -> Selection.site(HUB).equals(c.selection())),
             manual("read-dock", "Reading a colony",
                 "<p>The panel on the right shows the selected colony: population against its cap,"
-                + " morale, the stockpile of each resource, and the net change per day.</p>"
-                + "<p>Keep an eye on food and water. When they run out, morale and population fall.</p>",
+                + " morale, each resource's stock, its net change per day and how long it will last.</p>"
+                + "<p>Click a resource to see what makes and uses it. Keep an eye on food and water."
+                + " When they run out, morale and population fall.</p>",
                 List.of(T_DETAIL)),
             auto("build-lab", "Build a research lab",
                 "<p>Research needs a lab. With Earth Hub selected, click <b>Build building...</b>,"
-                + " pick <b>RESEARCH_LAB</b> and press OK.</p>",
+                + " pick <b>Research lab</b> and press <b>Build</b>. The card on the right shows what"
+                + " each building makes and uses, and what it would change at this colony.</p>",
                 List.of(T_BUILD_BUILDING), "Select Earth Hub in the colony list first.",
                 c -> hasBuilding(c.world(), BuildingType.RESEARCH_LAB)),
             auto("research", "Start researching",
