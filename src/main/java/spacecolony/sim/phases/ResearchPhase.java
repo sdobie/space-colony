@@ -2,6 +2,7 @@ package spacecolony.sim.phases;
 
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
+import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
@@ -35,7 +36,7 @@ public final class ResearchPhase {
         for (Body b : w.bodies) for (Site s : b.sites)
             for (Building bd : s.buildings)
                 if (bd.enabled && bd.type == BuildingType.RESEARCH_LAB)
-                    points += bd.level * 1.0 * TechEffects.researchLabMultiplier(w.tech);
+                    points += bd.level * BuildingCatalog.LAB_POINTS * TechEffects.researchLabMultiplier(w.tech);
         return points;
     }
 }
