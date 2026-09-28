@@ -147,7 +147,28 @@ class PanelSmokeTest {
             paintToImage(p, 280, 600);
             String text = allText(p);
             assertTrue(text.contains("base 200 + habitats 100 × 1.20"), text);
-            assertTrue(text.contains("Net / day:"), text);
+            assertTrue(text.contains("Resources"), text);
+            assertTrue(text.contains("Farm L1"), text);
+        });
+    }
+
+    @Test
+    void detailPanel_everyBuildingTypeAndADisabledOne() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            var hub = engine.world().findSite("site-earth-hub");
+            for (var t : spacecolony.sim.BuildingType.values()) hub.buildings.add(new spacecolony.sim.Building(t, 1));
+            hub.buildings.get(hub.buildings.size() - 1).enabled = false;
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.site("site-earth-hub"));
+            p.setSize(330, 900);
+            paintToImage(p, 330, 900);
+            assertTrue(allText(p).contains("(estimate)"), "no tick yet: estimate");
+            engine.tick();
+            paintToImage(p, 330, 900);
+            String text = allText(p);
+            assertTrue(text.contains("Research lab L1   (disabled)"), text);
+            assertTrue(text.contains("Refinery L1   44%: short of ICE"), text);
         });
     }
 

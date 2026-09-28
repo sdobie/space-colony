@@ -2,7 +2,6 @@ package spacecolony.ui;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -16,6 +15,7 @@ import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Selection;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
+import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
@@ -24,11 +24,19 @@ import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
 import spacecolony.sim.TechState;
+import spacecolony.sim.economy.BuildForecast;
+import spacecolony.sim.economy.BuildingOutcome;
+import spacecolony.sim.economy.DayReport;
+import spacecolony.sim.economy.FlowLine;
+import spacecolony.sim.economy.Limit;
 
 public class DetailPanel extends JPanel {
     private final Engine engine;
     private final JPanel content = new JPanel();
     private final SphereMiniRenderer miniRenderer;
+    /** Kept across refreshes so open rows stay open as the days tick. */
+    private final ResourceLedgerPanel ledger = new ResourceLedgerPanel();
+    private String ledgerSiteId;
 
     public DetailPanel(Engine engine) {
         this.engine = engine;
@@ -101,39 +109,22 @@ public class DetailPanel extends JPanel {
             .setToolTipText("Pop cap = (site base + 100 per enabled habitat level) × colony management techs");
         addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(tech)), moraleColor(s.morale));
         content.add(Box.createVerticalStrut(6));
-        addLabel("Stockpile:", UiColors.FOREGROUND_DIM);
-        JPanel stockGrid = new JPanel(new GridLayout(0, 2, 6, 2));
-        stockGrid.setOpaque(false);
-        stockGrid.setAlignmentX(LEFT_ALIGNMENT);
-        for (Resource r : Resource.values()) {
-            if (!r.isStockpileable()) continue;
-            stockGrid.add(rowLabel(r.name(), UiColors.FOREGROUND_DIM));
-            stockGrid.add(rowLabel(String.format("%.0f", s.stockpile.getOrDefault(r, 0.0)), UiColors.FOREGROUND));
+        if (!s.id.equals(ledgerSiteId)) {
+            ledger.collapseAll();
+            ledgerSiteId = s.id;
         }
-        stockGrid.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, stockGrid.getPreferredSize().height));
-        content.add(stockGrid);
-        content.add(Box.createVerticalStrut(6));
-        addLabel("Net / day:", UiColors.FOREGROUND_DIM);
-        JPanel rateGrid = new JPanel(new GridLayout(0, 2, 6, 2));
-        rateGrid.setOpaque(false);
-        rateGrid.setAlignmentX(LEFT_ALIGNMENT);
-        for (Resource r : Resource.values()) {
-            double rate = s.productionRateCache.getOrDefault(r, 0.0);
-            if (Math.abs(rate) <= 1e-6) continue;
-            rateGrid.add(rowLabel(r.name(), UiColors.FOREGROUND_DIM));
-            rateGrid.add(rowLabel(String.format("%+.1f", rate), rate < 0 ? UiColors.ERROR : UiColors.FOREGROUND));
-        }
-        if (rateGrid.getComponentCount() == 0) addLabel("  (idle)", UiColors.FOREGROUND_DIM);
-        else {
-            rateGrid.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, rateGrid.getPreferredSize().height));
-            content.add(rateGrid);
-        }
+        DayReport day = s.lastDay != null ? s.lastDay : BuildForecast.estimate(engine.world(), s);
+        ledger.update(s, day);
+        content.add(ledger);
         content.add(Box.createVerticalStrut(6));
         addLabel("Buildings:", UiColors.FOREGROUND_DIM);
-        for (Building b : s.buildings) {
-            String enabled = b.enabled ? "" : "  (disabled)";
-            addLabel("  " + b.type + " L" + b.level + techNote(b.type, tech) + enabled,
-                b.enabled ? UiColors.FOREGROUND : UiColors.WARNING);
+        for (int i = 0; i < s.buildings.size(); i++) {
+            Building b = s.buildings.get(i);
+            BuildingOutcome o = day.outcome(i);
+            JLabel row = addLabel("  " + BuildingCatalog.displayName(b.type) + " L" + b.level + "   "
+                + buildingResult(b, o, day, tech), buildingColor(b, o));
+            String note = techNote(b.type, tech).trim();
+            if (!note.isEmpty()) row.setToolTipText("Techs: " + note);
         }
         content.add(Box.createVerticalStrut(8));
         JButton build = new JButton("Build building...");
@@ -199,6 +190,42 @@ public class DetailPanel extends JPanel {
         }
     }
 
+    /**
+     * What a building did yesterday: "+2.4 ORE · +0.9 SILICATE", "idle: no BIOMASS",
+     * "60%: short of ORE", "+100 cap", "(disabled)".
+     */
+    static String buildingResult(Building b, BuildingOutcome o, DayReport day, TechState tech) {
+        if (!b.enabled || (o != null && o.limit() == Limit.DISABLED)) return "(disabled)";
+        if (o == null) return "";
+        String made = switch (b.type) {
+            case HABITAT -> "+" + BuildingCatalog.HABITAT_CAP * b.level + " cap";
+            case SHIPYARD -> "builds ships";
+            case RESEARCH_LAB -> String.format("+%.1f research",
+                b.level * BuildingCatalog.LAB_POINTS * TechEffects.researchLabMultiplier(tech));
+            default -> {
+                java.util.List<String> parts = new java.util.ArrayList<>();
+                for (FlowLine l : day.linesOf(o.index()))
+                    if (l.amount() > 1e-9) parts.add(String.format("+%.1f %s", l.amount(),
+                        l.resource() == Resource.ENERGY ? "energy" : l.resource().name()));
+                yield String.join(" · ", parts);
+            }
+        };
+        if (o.limit() == null) return made;
+        String why = ResourceLedgerPanel.limitText(o);
+        if (o.efficiency() <= 1e-9) return "idle: " + why;
+        if (o.efficiency() < 0.995) return String.format("%.0f%%: %s", o.efficiency() * 100, why);
+        return made.isEmpty() ? why : made + " (" + why + ")";
+    }
+
+    private static java.awt.Color buildingColor(Building b, BuildingOutcome o) {
+        if (!b.enabled) return UiColors.WARNING;
+        if (o == null || o.limit() == null) return UiColors.FOREGROUND;
+        return switch (o.limit()) {
+            case LOW_YIELD, NEEDS_TECH -> UiColors.FOREGROUND;
+            default -> UiColors.WARNING;
+        };
+    }
+
     /** "Morale: 0.95 / 1.00", with a note once life-support techs lift the ceiling. */
     static String moraleLine(double morale, double ceiling) {
         String line = String.format("Morale: %.2f / %.2f", morale, ceiling);
@@ -248,12 +275,6 @@ public class DetailPanel extends JPanel {
         l.setForeground(fg);
         l.setAlignmentX(LEFT_ALIGNMENT);
         content.add(l);
-        return l;
-    }
-
-    private JLabel rowLabel(String text, java.awt.Color fg) {
-        JLabel l = new JLabel(text);
-        l.setForeground(fg);
         return l;
     }
 }
