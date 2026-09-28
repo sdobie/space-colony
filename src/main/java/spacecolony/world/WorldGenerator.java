@@ -30,7 +30,7 @@ public final class WorldGenerator {
         start.stockpile.put(Resource.WATER, 200.0);
         start.stockpile.put(Resource.METAL, 100.0);
         start.stockpile.put(Resource.COMPONENTS, 50.0);
-        start.stockpile.put(Resource.FUEL, 100.0);
+        start.stockpile.put(Resource.FUEL, 400.0);
         start.stockpile.put(Resource.BIOMASS, 100.0);
         earth.sites.add(start);
         return w;

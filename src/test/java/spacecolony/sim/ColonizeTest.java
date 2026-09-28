@@ -6,6 +6,7 @@ import spacecolony.sim.commands.BuildShipCommand;
 import spacecolony.sim.commands.BuildSiteCommand;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.RetireShipCommand;
+import spacecolony.sim.phases.TransitPhase;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -113,5 +114,28 @@ class ColonizeTest {
         assertEquals(40.0, ares.stockpile.getOrDefault(Resource.FOOD, 0.0), 1.0);
         sim.advance(w);
         assertTrue(w.goals.achieved.contains("first-mars-colony"));
+    }
+
+    /** Regression: on the standard start (no extra FUEL) a colonizer could not afford Mars. */
+    @Test void standardStart_colonizerWithFullHold_departsForMars() {
+        World w = WorldGenerator.generate(1L);
+        Simulator sim = new Simulator();
+        sim.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub"));
+        sim.advance(w);
+        sim.enqueue(DispatchShipCommand.toBody("c1", "mars",
+            Map.of(Resource.FOOD, 40.0, Resource.WATER, 40.0, Resource.METAL, 20.0)));
+        for (int i = 0; i < 5 && w.findShip("c1").state != ShipState.IN_TRANSIT; i++) sim.advance(w);
+        assertEquals(ShipState.IN_TRANSIT, w.findShip("c1").state);
+    }
+
+    /** Earth Hub's starting FUEL covers an Earth→Mars colonizer run with a full hold at any alignment. */
+    @Test void standardStart_fuelCoversWorstCaseMarsRun() {
+        World w = WorldGenerator.generate(1L);
+        double stock = w.findSite("site-earth-hub").stockpile.get(Resource.FUEL);
+        for (long t = 0; t < 800; t++) {
+            double cost = TransitPhase.fuelCostToBody(w, ShipClass.COLONIZER, ShipClass.COLONIZER.cargoCap(),
+                "site-earth-hub", "mars", t, t + 8);
+            assertTrue(cost <= stock, "t=" + t + " costs " + cost + " > " + stock);
+        }
     }
 }
