@@ -115,7 +115,11 @@ public final class TransitPhase {
                 for (Resource r : Resource.values()) {
                     double in = s.cargo.getOrDefault(r, 0.0);
                     if (in <= 1e-9) continue;
-                    double move = Math.min(LOAD_RATE, in);
+                    // Stop at the destination's storage cap; the rest waits aboard until
+                    // there's room (unloading past the cap would be clipped away next tick).
+                    double room = Math.max(0.0, dest.stockpileCap.getOrDefault(r, 1000.0)
+                                              - dest.stockpile.getOrDefault(r, 0.0));
+                    double move = Math.min(LOAD_RATE, Math.min(in, room));
                     s.cargo.merge(r, -move, Double::sum);
                     dest.stockpile.merge(r, move, Double::sum);
                     if (s.cargo.getOrDefault(r, 0.0) > 1e-9) empty = false;
