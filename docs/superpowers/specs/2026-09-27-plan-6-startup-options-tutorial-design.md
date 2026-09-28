@@ -293,7 +293,7 @@ A target key names a component with `Component.setName(key)`. The panels set the
 - on a step change, updates the card and moves the highlight, and logs `INFO` to `spacecolony.tutorial` ("Tutorial step 5/12: build-lab");
 - on `WorldReplaced` (the player used New Game or Load from the File menu), ends the tutorial quietly and switches the session to NORMAL, because the tutorial world is gone.
 
-**CoachPanel.** A 340 px wide rounded card in the lower-left of the main view, above the event strip. It sits on the frame's `JLayeredPane` at `PALETTE_LAYER` and repositions on resize. It shows "Step 5 of 12", a title, the body text (HTML in a non-editable `JEditorPane`, game palette), the optional hint line, and a button row: **Next** (manual steps), **Skip step**, **Exit tutorial**, and a collapse chevron that shrinks the card to its title line. Exit asks "Leave the tutorial? You can keep playing this game or return to the main menu." with Keep playing, Main menu and Cancel.
+**CoachPanel.** A 340 px wide rounded card in the lower-left of the main view, above the event strip. It sits on the frame's `JLayeredPane` at `PALETTE_LAYER` and repositions on resize. It shows "Step 5 of 12", a title, the body text (HTML in a non-editable `JEditorPane`, game palette), the optional hint line, and a button row: **Exit tutorial** and **Next step** (on every step: it continues a reading step and skips an action step), and a collapse chevron that shrinks the card to its title line. Exit asks "Leave the tutorial? You can keep playing this game or return to the main menu." with Keep playing, Main menu and Cancel.
 
 **HighlightLayer.** A non-opaque `JComponent` on the layered pane at `PALETTE_LAYER`, sized to the layered pane, which paints a 2 px `UiColors.INFO` rounded outline around the target's bounds (converted with `SwingUtilities.convertRectangle`), pulsing alpha on a 50 ms timer. Its `contains(x, y)` returns false, so it never takes mouse events from the UI underneath. It repaints on target component moves and resizes.
 
@@ -405,7 +405,7 @@ A new `StartupDriver` (`./gradlew startupPlayTest`, runs under `xvfb-run` like `
 
 1. `./gradlew play` shows the splash for about 1.5 s, then the title. A click on the splash skips it once the saves are listed.
 2. First run (empty `~/.space-colony/saves`, no options file): the banner shows and Enter starts the tutorial.
-3. Tutorial: each step's highlight sits on the right control. Doing step 7 before step 5 skips ahead correctly. Skip step and Exit tutorial work.
+3. Tutorial: each step's highlight sits on the right control. Doing step 7 before step 5 skips ahead correctly. Next step and Exit tutorial work.
 4. The colonizer flies to Mars on its own fuel draw. Found colony… opens the Mars body view, clicking the surface founds the colony, and "Settle Mars" is achieved.
 5. Keep playing: Save As "first" works. The title bar drops "Tutorial".
 6. File → Main Menu: the confirm appears, the game autosaves, the title returns, and Continue reads "first · …".

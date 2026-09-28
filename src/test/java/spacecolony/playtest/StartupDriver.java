@@ -100,7 +100,7 @@ public class StartupDriver {
         Thread.sleep(600);
         check("window title says Tutorial", frame.getTitle().endsWith("Tutorial"));
         tutorialShot(frame, 1, "welcome");
-        click(button(frame.getLayeredPane(), "Next"));
+        click(button(frame.getLayeredPane(), "Next step"));
 
         expectStep(frame, 2);
         tutorialShot(frame, 2, "start-clock");
@@ -112,7 +112,7 @@ public class StartupDriver {
 
         expectStep(frame, 4);
         tutorialShot(frame, 4, "read-dock");
-        click(button(frame.getLayeredPane(), "Next"));
+        click(button(frame.getLayeredPane(), "Next step"));
 
         expectStep(frame, 5);
         tutorialShot(frame, 5, "build-lab");
@@ -191,7 +191,7 @@ public class StartupDriver {
         click(target(frame, TutorialScript.T_GOALS));
         JDialog goals = waitForDialog("Goals");
         if (goals != null) click(button(goals, "Close"));
-        click(button(frame.getLayeredPane(), "Next"));
+        click(button(frame.getLayeredPane(), "Next step"));
 
         expectStep(frame, 12);
         tutorialShot(frame, 12, "finish");
