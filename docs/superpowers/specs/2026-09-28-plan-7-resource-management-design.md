@@ -1,7 +1,7 @@
 # Plan 7 — Resource Management
 
 **Date:** 2026-09-28
-**Status:** Design, awaiting approval.
+**Status:** Implemented (Plan 7). Deviations: the parity fixture snapshots every colony at intervals over 2,000 ticks of a shared `EconomyScenario` (Earth Hub with every building, a Mars refinery colony, a Jovian mining outpost, a hauler shuttling Earth↔Mars) rather than only the end state, which starves out; a mine's `NEEDS_TECH` ranks after `BROWNOUT` but before the yield limits, and a fuel-mining gas-giant mine is judged by its fuel yield; the input warning fires whenever the new building drains an input, not only when it would starve (so "Needs WATER" also shows for a farm); the detail panel is 330 px wide (was 280) to fit the ledger's columns; the dialog's research line uses the same sum as `ResearchPhase.pointsPerTick` in `sim.economy`, which can't import `sim.phases`.
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–6 merged to `main` (sim core, render adaptation, engine + Swing UI shell, save/load + tech wiring, debug mode + save slots + panel polish, startup + options + tutorial), plus PRs #16 and #18. About 350 tests.
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.5 (buildings), §3.6 (resources and chains), §5.3 (site), §7 (detail panel).

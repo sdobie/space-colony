@@ -119,8 +119,9 @@ public class StartupDriver {
         click(target(frame, TutorialScript.T_BUILD_BUILDING));
         JDialog build = waitForDialog("");
         if (build != null) {
-            onEdt(() -> find(build, JComboBox.class, c -> true).setSelectedItem(spacecolony.sim.BuildingType.RESEARCH_LAB));
-            click(button(build, "OK"));
+            onEdt(() -> find(build, javax.swing.JList.class, c -> spacecolony.ui.dialogs.BuildBuildingDialog.LIST.equals(c.getName()))
+                .setSelectedValue(spacecolony.sim.BuildingCatalog.get(spacecolony.sim.BuildingType.RESEARCH_LAB), true));
+            click(button(build, spacecolony.ui.dialogs.BuildBuildingDialog.OK_LABEL));
         }
 
         expectStep(frame, 6);

@@ -19,6 +19,7 @@ import java.util.function.Predicate;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
 import javax.swing.JComboBox;
+import javax.swing.JList;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -33,6 +34,7 @@ import spacecolony.engine.Engine;
 import spacecolony.save.SaveFile;
 import spacecolony.save.SaveSlots;
 import spacecolony.sim.Building;
+import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
@@ -42,6 +44,7 @@ import spacecolony.sim.Site;
 import spacecolony.sim.World;
 import spacecolony.ui.SpaceColonyFrame;
 import spacecolony.ui.TechModal;
+import spacecolony.ui.ResourceLedgerPanel;
 import spacecolony.ui.dialogs.BuildBuildingDialog;
 import spacecolony.ui.dialogs.DispatchShipDialog;
 import spacecolony.world.WorldGenerator;
@@ -120,12 +123,13 @@ public class PlayTestDriver {
         tick(1);
         int capBefore = site("site-earth-hub").populationCap;
 
-        // Drive the real Build dialog: pick HABITAT, press OK.
+        // Drive the real Build dialog: look at Farm's forecast, then pick Habitat and build it.
         expect(dlg -> {
-            JComboBox<?> combo = find(dlg, JComboBox.class, c -> true);
-            combo.setSelectedItem(BuildingType.HABITAT);
+            JList<?> list = find(dlg, JList.class, c -> BuildBuildingDialog.LIST.equals(c.getName()));
+            list.setSelectedValue(BuildingCatalog.get(BuildingType.FARM), true);
             shotQuiet(((JDialog) dlg).getRootPane(), "02-build-dialog");
-            clickButton(dlg, "OK");
+            list.setSelectedValue(BuildingCatalog.get(BuildingType.HABITAT), true);
+            clickButton(dlg, BuildBuildingDialog.OK_LABEL);
         });
         runModal(() -> BuildBuildingDialog.show(frame, engine, "site-earth-hub"));
 
@@ -138,13 +142,26 @@ public class PlayTestDriver {
         check(capBefore == 300 && capAfter == 400 && habitats == 2,
             "2. HABITAT raises populationCap",
             "cap " + capBefore + " -> " + capAfter + " (habitats=" + habitats + ")");
+
+        // The colony ledger: open FOOD and check the farm and the population are listed.
+        SwingUtilities.invokeAndWait(() -> engine.setSelection(spacecolony.engine.Selection.site("site-earth-hub")));
+        SwingUtilities.invokeAndWait(() -> {
+            JLabel food = find(frame.getRootPane(), JLabel.class,
+                l -> (ResourceLedgerPanel.ROW_PREFIX + "FOOD").equals(l.getName()));
+            food.getMouseListeners()[0].mousePressed(null);
+        });
+        String ledger = dialogText(frame.getRootPane());
+        shot(frame.getRootPane(), "07-ledger");
+        check(ledger.contains("Farm L1") && ledger.contains("Population ("),
+            "2b. Ledger lists FOOD's producers and consumers", ledger);
     }
 
     static void step3_miningTech() throws Exception {
         // A lab is needed for research to accumulate points; build it via the real dialog.
         expect(dlg -> {
-            find(dlg, JComboBox.class, c -> true).setSelectedItem(BuildingType.RESEARCH_LAB);
-            clickButton(dlg, "OK");
+            find(dlg, JList.class, c -> BuildBuildingDialog.LIST.equals(c.getName()))
+                .setSelectedValue(BuildingCatalog.get(BuildingType.RESEARCH_LAB), true);
+            clickButton(dlg, BuildBuildingDialog.OK_LABEL);
         });
         runModal(() -> BuildBuildingDialog.show(frame, engine, "site-earth-hub"));
         tick(2);
