@@ -58,6 +58,7 @@ class TransitMathTest {
         World w = worldWithHaulerAtEarth();
         Ship s = w.findShip("ship-h1");
         s.fuel = 0.0;
+        w.findSite(s.currentSiteId).stockpile.put(Resource.FUEL, 0.0); // nothing to top up from
         Site mars = createDummySiteAtMars(w);
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("ship-h1", mars.id, Map.of(Resource.METAL, 50.0)));
