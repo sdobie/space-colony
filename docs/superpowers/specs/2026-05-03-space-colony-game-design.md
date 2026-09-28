@@ -79,6 +79,8 @@ A site holds a list of **Buildings**. Each building has a type and a level. Buil
 
 Buildings are abstract: no on-surface placement, no adjacency rules. A site is one entity with a list of building entries.
 
+Per-level rates, power draw and player-facing descriptions live in `sim.BuildingCatalog` (Plan 7); `sim.economy.SiteEconomy` computes a colony's day from them.
+
 ### 3.6 Resources (~10)
 
 Working list (final names locked in implementation plan):

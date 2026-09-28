@@ -18,6 +18,9 @@ import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.Site;
 import spacecolony.debug.ObjectInspectorDialog;
+import spacecolony.sim.economy.BuildingOutcome;
+import spacecolony.sim.economy.DayReport;
+import spacecolony.sim.economy.Outlook;
 
 public class ColonyListPanel extends JPanel {
     private final Engine engine;
@@ -53,9 +56,7 @@ public class ColonyListPanel extends JPanel {
         addHeader("Colonies");
         for (var body : engine.world().bodies) {
             for (Site s : body.sites) {
-                boolean shortFood = s.stockpile.getOrDefault(Resource.FOOD, 0.0) < 1e-6;
-                Color fg = shortFood ? UiColors.WARNING : UiColors.FOREGROUND;
-                list.add(row(s.name + "  (" + body.name + ")", Selection.site(s.id), fg));
+                list.add(row(s.name + "  (" + body.name + ")", Selection.site(s.id), rowColor(s)));
             }
         }
         addHeader("Ships (" + engine.world().ships.size() + ")");
@@ -95,6 +96,26 @@ public class ColonyListPanel extends JPanel {
         if (target == null) return;
         String kind = sel.kind() == Selection.Kind.SITE ? "Site " : "Ship ";
         ObjectInspectorDialog.inspect(from, engine, target, kind + sel.id());
+    }
+
+    /**
+     * Red when FOOD or WATER is gone; amber when either runs out within 10 days or a
+     * building sat short of an input yesterday.
+     */
+    static Color rowColor(Site s) {
+        double food = s.stockpile.getOrDefault(Resource.FOOD, 0.0);
+        double water = s.stockpile.getOrDefault(Resource.WATER, 0.0);
+        if (food < 1e-6 || water < 1e-6) return UiColors.ERROR;
+        DayReport d = s.lastDay;
+        if (d == null) return UiColors.FOREGROUND;
+        if (soon(s, Resource.FOOD, d) || soon(s, Resource.WATER, d)) return UiColors.WARNING;
+        if (d.buildings().stream().anyMatch(BuildingOutcome::starved)) return UiColors.WARNING;
+        return UiColors.FOREGROUND;
+    }
+
+    private static boolean soon(Site s, Resource r, DayReport d) {
+        return Outlook.of(s.stockpile.getOrDefault(r, 0.0), s.stockpileCap.getOrDefault(r, 1000.0), d.net(r))
+            instanceof Outlook.EmptyIn e && e.days() <= 10;
     }
 
     /** "Ark  ·", or "Ark  · orbiting Mars" for a colonizer waiting at an unsettled body. */

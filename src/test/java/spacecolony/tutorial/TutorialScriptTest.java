@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TutorialScriptTest {
     /** Every bold label in the card text; TutorialTargetsTest checks these against the real UI. */
-    static final Set<String> LABELS = Set.of("Earth Hub", "1×", "16×", "Build building...", "RESEARCH_LAB",
+    static final Set<String> LABELS = Set.of("Earth Hub", "1×", "16×", "Build building...", "Research lab", "Build",
         "Tech", "Build ship...", "COLONIZER", "Dispatch...", "Mars (unsettled)", "Found colony…", "Goals",
         "Keep playing", "Main menu");
 

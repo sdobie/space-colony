@@ -103,7 +103,7 @@ public class SpaceColonyFrame extends JFrame {
         this.mainView = new MainViewPanel(engine);
         add(mainView, BorderLayout.CENTER);
         DetailPanel detail = new DetailPanel(engine);
-        detail.setPreferredSize(new Dimension(280, 0));
+        detail.setPreferredSize(new Dimension(330, 0));
         add(detail, BorderLayout.EAST);
         // The debug overlay mounts at index 0 of this stack, above the event strip.
         JPanel southStack = new JPanel();

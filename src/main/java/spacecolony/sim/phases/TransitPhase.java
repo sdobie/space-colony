@@ -13,6 +13,8 @@ import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
+import spacecolony.sim.economy.FlowLine;
+import spacecolony.sim.economy.FlowSource.Shipping;
 
 public final class TransitPhase {
     // Tick rate for loading/unloading: each phase moves up to LOAD_RATE per resource per tick.
@@ -63,6 +65,7 @@ public final class TransitPhase {
                     if (move > 0) {
                         origin.stockpile.merge(r, -move, Double::sum);
                         s.cargo.merge(r, move, Double::sum);
+                        ship(origin, s, Shipping.Kind.LOADING, r, -move);
                     }
                     if (s.cargo.getOrDefault(r, 0.0) + 1e-9 < target) filled = false;
                 }
@@ -80,6 +83,7 @@ public final class TransitPhase {
                         if (draw > 0) {
                             origin.stockpile.merge(Resource.FUEL, -draw, Double::sum);
                             s.fuel += draw;
+                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -draw);
                         }
                     }
                     if (s.fuel < cost) {
@@ -90,6 +94,7 @@ public final class TransitPhase {
                         for (var entry : new java.util.EnumMap<>(s.cargo).entrySet()) {
                             if (entry.getValue() > 0) {
                                 origin.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
+                                ship(origin, s, Shipping.Kind.RETURNED, entry.getKey(), entry.getValue());
                                 s.cargo.put(entry.getKey(), 0.0);
                             }
                         }
@@ -122,6 +127,7 @@ public final class TransitPhase {
                     double move = Math.min(LOAD_RATE, Math.min(in, room));
                     s.cargo.merge(r, -move, Double::sum);
                     dest.stockpile.merge(r, move, Double::sum);
+                    if (move > 0) ship(dest, s, Shipping.Kind.UNLOADING, r, move);
                     if (s.cargo.getOrDefault(r, 0.0) > 1e-9) empty = false;
                 }
                 if (empty) {
@@ -187,5 +193,11 @@ public final class TransitPhase {
         double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, t1);
         double dx = dp[0] - op[0], dy = dp[1] - op[1];
         return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /** Record a stock movement on the site's day report, so the ledger adds up. */
+    private static void ship(Site site, Ship s, Shipping.Kind kind, Resource r, double amount) {
+        if (site.lastDay != null)
+            site.lastDay.add(new FlowLine(new Shipping(s.id, s.name, kind), r, amount, amount));
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import spacecolony.sim.economy.DayReport;
 
 /**
  * One colony at a fixed (lat, lon) on a body. Aggregate stats only — no per-building grid.
@@ -24,6 +25,8 @@ public class Site {
     /** Last computed net production rate per day; refreshed each tick. */
     public final Map<Resource, Double> productionRateCache = new EnumMap<>(Resource.class);
     public final List<Building> buildings = new ArrayList<>();
+    /** Yesterday's itemised economy; not saved, so null until the first tick after a load. */
+    public DayReport lastDay;
 
     public Site(String id, String name, String bodyId, double lat, double lon, int siteBase) {
         this.id = id;
