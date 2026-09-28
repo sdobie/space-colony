@@ -136,7 +136,6 @@ public final class CommandPhase {
                 + "; found a colony or retire it");
         }
         if (s.state != ShipState.IDLE) throw new CommandRejectedException("Ship not idle: " + ds.shipId());
-        Site originSite = w.findSite(s.currentSiteId);
         String destBodyId;
         if (ds.destSiteId() != null) {
             Site destSite = w.findSite(ds.destSiteId());
@@ -149,34 +148,43 @@ public final class CommandPhase {
                 throw new CommandRejectedException("Only colonizers can travel to a body without a site");
             destBodyId = ds.destBodyId();
         }
-        // Spec §3.7: estimate fuel at command time using current positions and reject if
-        // the ship clearly can't afford the manifest. The departure-time check still runs
-        // later, but this saves the player N ticks of LOADING for a doomed dispatch.
-        if (originSite != null) {
-            double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
-            double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
-            double dx = dp[0] - op[0], dy = dp[1] - op[1];
-            double dist = Math.sqrt(dx * dx + dy * dy);
-            double manifestMass = 0.0;
-            for (Double v : ds.manifest().values()) if (v != null) manifestMass += v;
-            double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
-                           * TechEffects.fuelCostMultiplier(w.tech);
-            // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
-            double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
-            Double mf = ds.manifest().get(Resource.FUEL);
-            double manifestFuel = mf == null ? 0.0 : mf;
-            double available = s.fuel + Math.max(0.0, originFuel - manifestFuel);
-            if (available < estCost)
-                throw new CommandRejectedException(String.format(
-                    "Not enough fuel at %s for this trip: need ≈%.0f, have %.0f",
-                    originSite.name, estCost, available));
-        }
+        // Spec §3.7: reject up front if the ship clearly can't afford the trip. The
+        // departure-time check still runs later, but this saves N ticks of LOADING.
+        String shortfall = fuelShortfall(w, s, destBodyId, ds.manifest());
+        if (shortfall != null) throw new CommandRejectedException(shortfall);
         // Move into LOADING; transit math runs in loadingAndUnloading() when manifest is filled.
         // Stash dest + manifest on Transit with PENDING_ARRIVAL_TICK; loadingAndUnloading()
         // recomputes the real arrival tick at departure.
         s.state = ShipState.LOADING;
         s.transit = new Transit(s.currentSiteId, ds.destSiteId(), ds.destBodyId(), w.tick,
                                 Transit.PENDING_ARRIVAL_TICK, Transit.snapshot(ds.manifest()));
+    }
+
+    /**
+     * Why {@code s} can't afford a trip from its site to {@code destBodyId} carrying
+     * {@code manifest}, estimated from current positions, or null if it can (or isn't at a
+     * site). The dispatch dialog calls this too, so the player sees the problem right away.
+     */
+    public static String fuelShortfall(World w, Ship s, String destBodyId,
+                                       java.util.Map<Resource, Double> manifest) {
+        Site originSite = w.findSite(s.currentSiteId);
+        if (originSite == null) return null;
+        double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
+        double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
+        double dx = dp[0] - op[0], dy = dp[1] - op[1];
+        double dist = Math.sqrt(dx * dx + dy * dy);
+        double manifestMass = 0.0;
+        for (Double v : manifest.values()) if (v != null) manifestMass += v;
+        double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
+                       * TechEffects.fuelCostMultiplier(w.tech);
+        // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
+        double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
+        Double mf = manifest.get(Resource.FUEL);
+        double manifestFuel = mf == null ? 0.0 : mf;
+        double available = s.fuel + Math.max(0.0, originFuel - manifestFuel);
+        if (available >= estCost) return null;
+        return String.format("Not enough fuel at %s for this trip: need ≈%.0f, have %.0f",
+                             originSite.name, estCost, available);
     }
 
     private static String currentBodyOf(World w, Ship s) {
