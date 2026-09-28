@@ -15,8 +15,7 @@ import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ResourceLedgerPanelTest {
-    private static World tickedEarth(int ticks) {
-        World w = WorldGenerator.generate(42L);
+    private static World tick(World w, int ticks) {
         w.randomEventsEnabled = false;
         Simulator sim = new Simulator();
         for (int i = 0; i < ticks; i++) sim.advance(w);
@@ -26,7 +25,10 @@ class ResourceLedgerPanelTest {
     @Test
     void rowsForStockOrFlow_andFoodExpandsToItsSources() throws Exception {
         Edt.run(() -> {
-            World w = tickedEarth(1);
+            World w = WorldGenerator.generate(42L);
+            // The hub's mine digs ICE; without it ICE has neither stock nor flow.
+            w.findSite("site-earth-hub").buildings.removeIf(b -> b.type == spacecolony.sim.BuildingType.MINE);
+            w = tick(w, 1);
             Site hub = w.findSite("site-earth-hub");
             ResourceLedgerPanel p = new ResourceLedgerPanel();
             p.update(hub, hub.lastDay);

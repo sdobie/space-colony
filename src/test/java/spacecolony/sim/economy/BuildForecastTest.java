@@ -96,6 +96,8 @@ class BuildForecastTest {
     @Test
     void refineryWithoutIceSaysSo() {
         World w = earth();
+        // The hub's mine digs a little ice; without it nothing here makes any.
+        w.findSite(HUB).buildings.removeIf(b -> b.type == MINE);
         BuildForecast f = BuildForecast.of(w, w.findSite(HUB), REFINERY);
         assertTrue(has(f.warnings(), "Needs ICE", "none here"), f.warnings().toString());
     }
