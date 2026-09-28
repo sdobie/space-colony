@@ -20,7 +20,7 @@ class SaveFileJsonTest {
     @Test
     void fromJson_wrongVersion_throws() {
         String bad = SaveFile.toJson(WorldGenerator.generate(1L))
-            .replace("\"schemaVersion\": 1", "\"schemaVersion\": 99");
+            .replace("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 99");
         IncompatibleSaveException e = assertThrows(IncompatibleSaveException.class, () -> SaveFile.fromJson(bad));
         assertEquals(99, e.fileSchemaVersion);
     }

@@ -28,6 +28,7 @@ public class ColonyListPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(UiColors.PANEL_BACKGROUND);
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, UiColors.PANEL_BORDER));
+        setName(TARGET);
         list.setOpaque(false);
         JScrollPane scroll = new JScrollPane(list,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -44,6 +45,9 @@ public class ColonyListPanel extends JPanel {
         refresh();
     }
 
+    /** Component name the tutorial highlights (Plan 6 §5.4). */
+    public static final String TARGET = "colonylist";
+
     private void refresh() {
         list.removeAll();
         addHeader("Colonies");
@@ -56,7 +60,7 @@ public class ColonyListPanel extends JPanel {
         }
         addHeader("Ships (" + engine.world().ships.size() + ")");
         for (Ship s : engine.world().ships) {
-            list.add(row(s.name + "  " + stateGlyph(s), Selection.ship(s.id), UiColors.FOREGROUND));
+            list.add(row(shipRowText(engine.world(), s), Selection.ship(s.id), UiColors.FOREGROUND));
         }
         list.revalidate();
         list.repaint();
@@ -91,6 +95,16 @@ public class ColonyListPanel extends JPanel {
         if (target == null) return;
         String kind = sel.kind() == Selection.Kind.SITE ? "Site " : "Ship ";
         ObjectInspectorDialog.inspect(from, engine, target, kind + sel.id());
+    }
+
+    /** "Ark  ·", or "Ark  · orbiting Mars" for a colonizer waiting at an unsettled body. */
+    static String shipRowText(spacecolony.sim.World w, Ship s) {
+        String text = s.name + "  " + stateGlyph(s);
+        if (s.orbitingBodyId != null) {
+            var b = w.findBody(s.orbitingBodyId);
+            text += " orbiting " + (b != null ? b.name : s.orbitingBodyId);
+        }
+        return text;
     }
 
     private static String stateGlyph(Ship s) {

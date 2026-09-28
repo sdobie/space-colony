@@ -21,18 +21,62 @@ class PanelSmokeTest {
         // this test never opens. Constructing the menu exercises the action wiring.
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
-            GameSession session = new GameSession(engine, new SaveSlots(tmp), new GameSession.Ui() {
-                public boolean confirmQuit() { return false; }
-                public boolean quitAnyway(String msg) { return false; }
-                public void savedToast(String label) {}
-            }, code -> {});
+            GameSession session = new GameSession(engine, new SaveSlots(tmp), NO_UI, code -> {});
             FileMenu menu = new FileMenu(null, engine, session);
             assertEquals(1, menu.getMenuCount());
             assertEquals("File", menu.getMenu(0).getText());
             assertEquals(7, menu.getMenu(0).getMenuComponentCount(),
                 "New/Save/Save As/Load/Load from file/separator/Quit");
+
+            FileMenu withOptions = new FileMenu(null, engine, session, () -> {});
+            assertEquals(9, withOptions.getMenu(0).getMenuComponentCount(),
+                "… separator/Options…/separator/Quit");
+
+            GameSession menuSession = new GameSession(engine, new SaveSlots(tmp), NO_UI, code -> {},
+                () -> {}, () -> true);
+            FileMenu full = new FileMenu(null, engine, menuSession, () -> {});
+            assertEquals(10, full.getMenu(0).getMenuComponentCount(),
+                "… separator/Options…/Main Menu/separator/Quit");
+            assertEquals("Main Menu", ((javax.swing.JMenuItem) full.getMenu(0).getMenuComponent(7)).getText());
         });
     }
+
+    @Test
+    void fileMenu_tutorialMode_disablesSaving(@TempDir Path tmp) throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            GameSession session = new GameSession(engine, new SaveSlots(tmp), NO_UI, code -> {});
+            FileMenu menu = new FileMenu(null, engine, session);
+            javax.swing.JMenuItem save = (javax.swing.JMenuItem) menu.getMenu(0).getMenuComponent(1);
+            javax.swing.JMenuItem saveAs = (javax.swing.JMenuItem) menu.getMenu(0).getMenuComponent(2);
+            assertTrue(save.isEnabled());
+            session.setMode(GameSession.Mode.TUTORIAL);
+            assertFalse(save.isEnabled());
+            assertFalse(saveAs.isEnabled());
+            assertEquals("Not available during the tutorial", save.getToolTipText());
+            session.setMode(GameSession.Mode.NORMAL);
+            assertTrue(saveAs.isEnabled());
+        });
+    }
+
+    @Test
+    void autosaveTimer_setMinutes() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            AutosaveTimer t = new AutosaveTimer(new GameSession(engine, new SaveSlots(Path.of("unused")), NO_UI, c -> {}));
+            t.setMinutes(5);
+            assertTrue(t.running());
+            assertEquals(300_000, t.delayMillis());
+            t.setMinutes(0);
+            assertFalse(t.running());
+        });
+    }
+
+    static final GameSession.Ui NO_UI = new GameSession.Ui() {
+        public boolean confirmQuit(GameSession.Mode mode, boolean toMenu) { return false; }
+        public boolean quitAnyway(String msg) { return false; }
+        public void toast(String text) {}
+    };
 
     @Test
     void sphereMiniRenderer_paintsWithoutCrashing() throws Exception {
@@ -188,6 +232,32 @@ class PanelSmokeTest {
     }
 
     /** Text of every JLabel under {@code c}, one per line. */
+    /** Text of every JButton under {@code c}. */
+    static java.util.List<String> buttonTexts(java.awt.Component c) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (c instanceof javax.swing.AbstractButton b && b.getText() != null) out.add(b.getText());
+        if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) out.addAll(buttonTexts(child));
+        return out;
+    }
+
+    @Test
+    void detailPanel_orbitingColonizer_offersFoundColonyNotDispatch() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            spacecolony.sim.Ship c = new spacecolony.sim.Ship("c1", "Ark", spacecolony.sim.ShipClass.COLONIZER, null);
+            c.orbitingBodyId = "mars";
+            engine.world().ships.add(c);
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.ship("c1"));
+            p.setSize(280, 600);
+            paintToImage(p, 280, 600);
+            assertTrue(allText(p).contains("Orbiting Mars"), allText(p));
+            assertTrue(buttonTexts(p).contains("Found colony…"), buttonTexts(p).toString());
+            assertFalse(buttonTexts(p).contains("Dispatch..."));
+            assertEquals("Ark  · orbiting Mars", ColonyListPanel.shipRowText(engine.world(), c));
+        });
+    }
+
     static String allText(java.awt.Component c) {
         StringBuilder sb = new StringBuilder();
         if (c instanceof javax.swing.JLabel l && l.getText() != null) sb.append(l.getText()).append('\n');

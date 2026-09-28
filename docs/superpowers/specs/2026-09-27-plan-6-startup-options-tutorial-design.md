@@ -1,7 +1,7 @@
 # Plan 6 — Startup Sequence, Options, Tutorial
 
 **Date:** 2026-09-27
-**Status:** Draft (pre-implementation-plan)
+**Status:** Implemented (Plan 6). Deviation: `OptionsDialog` and `NewGameDialog` live in `ui.dialogs`, not `ui.startup`, so the in-game File menu can use them without `ui` importing `ui.startup`.
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–5 merged to `main` (sim core, render adaptation, engine + Swing UI shell, save/load + tech wiring, debug mode + save slots + panel polish). 281 tests.
 **Source spec:** `2026-05-03-space-colony-game-design.md` §1–§2 (gameplay loops), §7 (UI), §9 (save/load). Plan 5 §9 "What's next" (timed autosave).

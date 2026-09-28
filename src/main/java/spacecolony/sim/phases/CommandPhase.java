@@ -9,6 +9,7 @@ import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
 import spacecolony.sim.OrbitalGeometry;
+import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
@@ -26,6 +27,7 @@ import spacecolony.sim.commands.Command;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.QueueResearchCommand;
 import spacecolony.sim.commands.RetireShipCommand;
+import spacecolony.sim.commands.SetRandomEventsCommand;
 
 public final class CommandPhase {
     private CommandPhase() {}
@@ -56,6 +58,7 @@ public final class CommandPhase {
             case QueueResearchCommand qr -> applyQueueResearch(w, qr);
             case BuildSiteCommand bsc    -> applyBuildSite(w, bsc);
             case DispatchShipCommand ds  -> applyDispatchShip(w, ds);
+            case SetRandomEventsCommand re -> w.randomEventsEnabled = re.enabled();
         }
     }
 
@@ -117,40 +120,67 @@ public final class CommandPhase {
         Site s = new Site(bsc.siteId(), bsc.name(), bsc.bodyId(), bsc.lat(), bsc.lon(), 100);
         s.buildings.add(new Building(BuildingType.HABITAT, 1));
         body.sites.add(s);
+        // The colonizer's cargo becomes the new colony's starting stock.
+        for (var e : colonizer.cargo.entrySet()) {
+            if (e.getValue() > 1e-9) s.stockpile.merge(e.getKey(), e.getValue(), Double::sum);
+        }
         w.ships.remove(colonizer); // colonizer is consumed
     }
 
     private static void applyDispatchShip(World w, DispatchShipCommand ds) {
         Ship s = w.findShip(ds.shipId());
         if (s == null) throw new CommandRejectedException("No such ship: " + ds.shipId());
+        if (s.orbitingBodyId != null) {
+            Body at = w.findBody(s.orbitingBodyId);
+            throw new CommandRejectedException("Ship is orbiting " + (at != null ? at.name : s.orbitingBodyId)
+                + "; found a colony or retire it");
+        }
         if (s.state != ShipState.IDLE) throw new CommandRejectedException("Ship not idle: " + ds.shipId());
         Site originSite = w.findSite(s.currentSiteId);
-        Site destSite = w.findSite(ds.destSiteId());
-        if (destSite == null) throw new CommandRejectedException("No such dest: " + ds.destSiteId());
+        String destBodyId;
+        if (ds.destSiteId() != null) {
+            Site destSite = w.findSite(ds.destSiteId());
+            if (destSite == null) throw new CommandRejectedException("No such dest: " + ds.destSiteId());
+            destBodyId = destSite.bodyId;
+        } else {
+            if (w.findBody(ds.destBodyId()) == null)
+                throw new CommandRejectedException("No such body: " + ds.destBodyId());
+            if (s.shipClass != ShipClass.COLONIZER)
+                throw new CommandRejectedException("Only colonizers can travel to a body without a site");
+            destBodyId = ds.destBodyId();
+        }
         // Spec §3.7: estimate fuel at command time using current positions and reject if
         // the ship clearly can't afford the manifest. The departure-time check still runs
         // later, but this saves the player N ticks of LOADING for a doomed dispatch.
         if (originSite != null) {
             double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
-            double[] dp = OrbitalGeometry.bodyPosition(w, destSite.bodyId, w.tick);
+            double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
             double dx = dp[0] - op[0], dy = dp[1] - op[1];
             double dist = Math.sqrt(dx * dx + dy * dy);
             double manifestMass = 0.0;
             for (Double v : ds.manifest().values()) if (v != null) manifestMass += v;
             double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
                            * TechEffects.fuelCostMultiplier(w.tech);
-            if (s.fuel < estCost)
-                throw new CommandRejectedException("Insufficient fuel for dispatch: " + ds.shipId());
+            // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
+            double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
+            Double mf = ds.manifest().get(Resource.FUEL);
+            double manifestFuel = mf == null ? 0.0 : mf;
+            double available = s.fuel + Math.max(0.0, originFuel - manifestFuel);
+            if (available < estCost)
+                throw new CommandRejectedException(String.format(
+                    "Not enough fuel at %s for this trip: need ≈%.0f, have %.0f",
+                    originSite.name, estCost, available));
         }
         // Move into LOADING; transit math runs in loadingAndUnloading() when manifest is filled.
         // Stash dest + manifest on Transit with PENDING_ARRIVAL_TICK; loadingAndUnloading()
         // recomputes the real arrival tick at departure.
         s.state = ShipState.LOADING;
-        s.transit = new Transit(s.currentSiteId, ds.destSiteId(), w.tick,
+        s.transit = new Transit(s.currentSiteId, ds.destSiteId(), ds.destBodyId(), w.tick,
                                 Transit.PENDING_ARRIVAL_TICK, Transit.snapshot(ds.manifest()));
     }
 
     private static String currentBodyOf(World w, Ship s) {
+        if (s.orbitingBodyId != null) return s.orbitingBodyId;
         if (s.currentSiteId == null) return null;
         Site site = w.findSite(s.currentSiteId);
         return site == null ? null : site.bodyId;

@@ -1,0 +1,211 @@
+{
+  "bodies": [
+    {
+      "id": "earth",
+      "sites": [
+        {
+          "buildings": [
+            {
+              "enabled": true,
+              "level": 1,
+              "type": "HABITAT"
+            },
+            {
+              "enabled": true,
+              "level": 1,
+              "type": "FARM"
+            },
+            {
+              "enabled": true,
+              "level": 1,
+              "type": "MINE"
+            },
+            {
+              "enabled": true,
+              "level": 1,
+              "type": "POWER_PLANT"
+            },
+            {
+              "enabled": true,
+              "level": 1,
+              "type": "SHIPYARD"
+            }
+          ],
+          "id": "site-earth-hub",
+          "lat": 0.5,
+          "lon": -1.5,
+          "morale": 0.0,
+          "name": "Earth Hub",
+          "population": 220,
+          "populationCap": 300,
+          "siteBase": 200,
+          "stockpile": {
+            "BIOMASS": 0.0,
+            "COMPONENTS": 50.0,
+            "ENERGY": 0.0,
+            "FOOD": 103.2500000000001,
+            "FUEL": 100.0,
+            "ICE": 0.0,
+            "METAL": 90.0,
+            "ORE": 118.00712947999457,
+            "SILICATE": 153.0269466463199,
+            "WATER": 0.0
+          },
+          "stockpileCap": {
+            "BIOMASS": 1000.0,
+            "COMPONENTS": 1000.0,
+            "ENERGY": 1000.0,
+            "FOOD": 1000.0,
+            "FUEL": 1000.0,
+            "ICE": 1000.0,
+            "METAL": 1000.0,
+            "ORE": 1000.0,
+            "SILICATE": 1000.0,
+            "WATER": 1000.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "mars",
+      "sites": [
+        {
+          "buildings": [],
+          "id": "site-mars-1",
+          "lat": 0.0,
+          "lon": 0.0,
+          "morale": 0.0,
+          "name": "Mars 1",
+          "population": 0,
+          "populationCap": 100,
+          "siteBase": 100,
+          "stockpile": {
+            "BIOMASS": 0.0,
+            "COMPONENTS": 0.0,
+            "ENERGY": 0.0,
+            "FOOD": 0.0,
+            "FUEL": 0.0,
+            "ICE": 0.0,
+            "METAL": 0.0,
+            "ORE": 0.0,
+            "SILICATE": 0.0,
+            "WATER": 0.0
+          },
+          "stockpileCap": {
+            "BIOMASS": 1000.0,
+            "COMPONENTS": 1000.0,
+            "ENERGY": 1000.0,
+            "FOOD": 1000.0,
+            "FUEL": 1000.0,
+            "ICE": 1000.0,
+            "METAL": 1000.0,
+            "ORE": 1000.0,
+            "SILICATE": 1000.0,
+            "WATER": 1000.0
+          }
+        }
+      ]
+    }
+  ],
+  "credits": 15000,
+  "events": [
+    {
+      "bodyId": null,
+      "kind": "GOAL_ACHIEVED",
+      "message": "Goal achieved: Settle Mars",
+      "severity": "INFO",
+      "shipId": null,
+      "siteId": null,
+      "tick": 1
+    },
+    {
+      "bodyId": "venus",
+      "kind": "METEOR_STRIKE",
+      "message": "Meteor strike on Venus",
+      "severity": "WARNING",
+      "shipId": null,
+      "siteId": null,
+      "tick": 17
+    },
+    {
+      "bodyId": "belt-c",
+      "kind": "DISEASE_OUTBREAK",
+      "message": "Disease outbreak on Belt-C",
+      "severity": "WARNING",
+      "shipId": null,
+      "siteId": null,
+      "tick": 36
+    },
+    {
+      "bodyId": "jovian",
+      "kind": "METEOR_STRIKE",
+      "message": "Meteor strike on Jovian",
+      "severity": "WARNING",
+      "shipId": null,
+      "siteId": null,
+      "tick": 98
+    },
+    {
+      "bodyId": null,
+      "kind": "SHIP_DEPARTED",
+      "message": "Ship H1 departed for site-mars-1",
+      "severity": "INFO",
+      "shipId": "h1",
+      "siteId": null,
+      "tick": 201
+    }
+  ],
+  "goals": {
+    "achieved": [
+      "first-mars-colony"
+    ]
+  },
+  "schemaVersion": 1,
+  "seed": 1,
+  "ships": [
+    {
+      "cargo": {
+        "BIOMASS": 0.0,
+        "COMPONENTS": 0.0,
+        "ENERGY": 0.0,
+        "FOOD": 0.0,
+        "FUEL": 0.0,
+        "ICE": 0.0,
+        "METAL": 10.0,
+        "ORE": 0.0,
+        "SILICATE": 0.0,
+        "WATER": 0.0
+      },
+      "class": "HAULER",
+      "currentSiteId": null,
+      "fuel": 999924.8586125136,
+      "id": "h1",
+      "name": "H1",
+      "state": "IN_TRANSIT",
+      "transit": {
+        "arrivalTick": 207,
+        "cargoSnapshot": {
+          "BIOMASS": 0.0,
+          "COMPONENTS": 0.0,
+          "ENERGY": 0.0,
+          "FOOD": 0.0,
+          "FUEL": 0.0,
+          "ICE": 0.0,
+          "METAL": 10.0,
+          "ORE": 0.0,
+          "SILICATE": 0.0,
+          "WATER": 0.0
+        },
+        "departureTick": 201,
+        "destSiteId": "site-mars-1",
+        "originSiteId": "site-earth-hub"
+      }
+    }
+  ],
+  "tech": {
+    "accumulatedPoints": 0.0,
+    "activeId": null,
+    "researched": []
+  },
+  "tick": 203
+}

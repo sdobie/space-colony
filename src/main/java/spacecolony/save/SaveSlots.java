@@ -106,7 +106,7 @@ public final class SaveSlots {
         try {
             var root = ((JsonValue.JsonObject) JsonReader.parse(Files.readString(p))).values();
             int version = (int) ((JsonValue.JsonNumber) root.get("schemaVersion")).asLong();
-            if (version != SaveFile.SCHEMA_VERSION) {
+            if (version < SaveFile.MIN_READABLE_VERSION || version > SaveFile.SCHEMA_VERSION) {
                 return new SlotInfo(name, p, autosave, modified, SlotInfo.Status.OTHER_SCHEMA, version, -1, -1, -1);
             }
             return new SlotInfo(name, p, autosave, modified, SlotInfo.Status.OK, version,

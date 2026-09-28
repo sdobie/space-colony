@@ -13,6 +13,9 @@ import javax.swing.KeyStroke;
 /** "Debug" menu, mounted on the menu bar only while debug mode is on (design §4.9). */
 public final class DebugMenu extends JMenu {
     static final Level[] LEVELS = { Level.FINE, Level.INFO, Level.WARNING };
+    public static final KeyStroke RUN_N_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK);
+    public static final KeyStroke INSPECTOR_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK);
+    public static final KeyStroke LOG_VIEWER_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK);
 
     private final JMenu logLevel = new JMenu("Log level");
 
@@ -20,14 +23,14 @@ public final class DebugMenu extends JMenu {
         super("Debug");
         DebugActions a = debug.actions();
         add(item(a.step, DebugController.STEP_KEY));
-        add(item(a.runN, KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK)));
+        add(item(a.runN, RUN_N_KEY));
         add(new JMenuItem(a.triggerEvent));
         addSeparator();
         add(new JMenuItem(a.dumpWorld));
         add(new JMenuItem(a.determinism));
         addSeparator();
-        add(item(a.inspector, KeyStroke.getKeyStroke(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK)));
-        add(item(a.logViewer, KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK)));
+        add(item(a.inspector, INSPECTOR_KEY));
+        add(item(a.logViewer, LOG_VIEWER_KEY));
 
         ButtonGroup group = new ButtonGroup();
         DebugLogging.Installed inst = DebugLogging.current();

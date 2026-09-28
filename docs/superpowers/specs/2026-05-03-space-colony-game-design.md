@@ -361,7 +361,7 @@ Sim coverage > 80%. UI coverage informal — verified manually.
 
 Gradle, Kotlin DSL.
 
-- `./gradlew run` — launch the game.
+- `./gradlew run` — launch the game (splash, then title screen since Plan 6; `--seed N` starts a game directly).
 - `./gradlew test` — run JUnit tests.
 - `./gradlew distZip` — packaged distribution (post-v1).
 - Java 21 (or latest LTS available locally).
@@ -415,4 +415,5 @@ These are best resolved when writing the plan, not here:
 - Specific goal definitions and reward values.
 - JSON save schema details (field naming convention).
 - ~~Debug-mode keyboard shortcut conflicts with main game shortcuts.~~ Resolved in Plan 5: Ctrl+D toggles debug mode; F10 (step), Ctrl+R (run N), Ctrl+I (inspector) and Ctrl+L (log viewer) are live only in debug mode; File uses the platform menu key with S, Shift+S, O and Q.
+- ~~Where player settings live and how new players learn the game.~~ Resolved in Plan 6: options live in `~/.space-colony/options.properties` (Options… on the title screen and File menu); a 12-step tutorial is offered from the title screen.
 - Whether `ResourceMap` is a flat array or a `double[][]` and the resolution.

@@ -25,15 +25,14 @@ import spacecolony.debug.CrashHandler;
 import spacecolony.engine.EdtGuard;
 import spacecolony.engine.Engine;
 import spacecolony.engine.Speed;
-import spacecolony.save.IncompatibleSaveException;
-import spacecolony.save.JsonParseException;
 import spacecolony.save.SaveFile;
 import spacecolony.save.SlotInfo;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 
 /**
- * File menu mounted on the main frame: New Game, Save, Save As…, Load…, Load from file…, Quit.
+ * File menu mounted on the main frame: New Game, Save, Save As…, Load…, Load from file…, then
+ * Options… and Main Menu when the frame supplies them (Plan 6), then Quit.
  * Save/Save As/Load go through named slots ({@link SaveSlotDialog}); Load from file… keeps the
  * Plan 4 file chooser for hand-edited or out-of-directory saves. Quit goes through
  * {@link GameSession#quit}, which autosaves.
@@ -45,27 +44,67 @@ public final class FileMenu extends JMenuBar {
     private final GameSession session;
 
     public FileMenu(JFrame owner, Engine engine, GameSession session) {
+        this(owner, engine, session, null);
+    }
+
+    /** @param openOptions shows the Options dialog; null leaves the item out */
+    public FileMenu(JFrame owner, Engine engine, GameSession session, Runnable openOptions) {
         this.owner = owner;
         this.engine = engine;
         this.session = session;
         JMenu file = new JMenu("File");
         file.add(new JMenuItem(new NewAction()));
-        file.add(new JMenuItem(withKey(new SaveAction(), KeyEvent.VK_S, 0)));
-        file.add(new JMenuItem(withKey(new SaveAsAction(), KeyEvent.VK_S, InputEvent.SHIFT_DOWN_MASK)));
-        file.add(new JMenuItem(withKey(new LoadAction(), KeyEvent.VK_O, 0)));
+        Action save = withKey(new SaveAction(), SAVE_KEY);
+        Action saveAs = withKey(new SaveAsAction(), SAVE_AS_KEY);
+        file.add(new JMenuItem(save));
+        file.add(new JMenuItem(saveAs));
+        file.add(new JMenuItem(withKey(new LoadAction(), LOAD_KEY)));
         file.add(new JMenuItem(new LoadFromFileAction()));
         file.addSeparator();
-        file.add(new JMenuItem(withKey(new QuitAction(), KeyEvent.VK_Q, 0)));
+        if (openOptions != null) file.add(new JMenuItem(new SimpleAction("Options…", () -> {
+            Speed prior = engine.speed();
+            engine.setSpeed(Speed.PAUSED);
+            try { openOptions.run(); } finally { engine.setSpeed(prior); }
+        })));
+        if (session.canLeaveToMenu()) file.add(new JMenuItem(new SimpleAction("Main Menu", session::leave)));
+        if (openOptions != null || session.canLeaveToMenu()) file.addSeparator();
+        file.add(new JMenuItem(withKey(new QuitAction(), QUIT_KEY)));
         add(file);
+
+        // A tutorial game can't be saved (Plan 6 §5.7).
+        java.util.function.Consumer<GameSession.Mode> applyMode = m -> {
+            boolean normal = m == GameSession.Mode.NORMAL;
+            String tip = normal ? null : "Not available during the tutorial";
+            save.setEnabled(normal);
+            saveAs.setEnabled(normal);
+            save.putValue(Action.SHORT_DESCRIPTION, tip);
+            saveAs.putValue(Action.SHORT_DESCRIPTION, tip);
+        };
+        session.addModeListener(applyMode);
+        applyMode.accept(session.mode());
     }
 
-    /** Menu shortcut: Ctrl on Windows/Linux, Cmd on macOS (plain Ctrl when headless, e.g. in tests). */
-    private static Action withKey(Action a, int key, int extraMods) {
-        int menuMask = GraphicsEnvironment.isHeadless()
-            ? InputEvent.CTRL_DOWN_MASK
-            : Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-        a.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, menuMask | extraMods));
+    /** Ctrl on Windows/Linux, Cmd on macOS (plain Ctrl when headless, e.g. in tests). */
+    private static final int MENU_MASK = GraphicsEnvironment.isHeadless()
+        ? InputEvent.CTRL_DOWN_MASK
+        : Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+    public static final KeyStroke SAVE_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_S, MENU_MASK);
+    public static final KeyStroke SAVE_AS_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_S, MENU_MASK | InputEvent.SHIFT_DOWN_MASK);
+    public static final KeyStroke LOAD_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_O, MENU_MASK);
+    public static final KeyStroke QUIT_KEY = KeyStroke.getKeyStroke(KeyEvent.VK_Q, MENU_MASK);
+
+    private static Action withKey(Action a, KeyStroke key) {
+        a.putValue(Action.ACCELERATOR_KEY, key);
         return a;
+    }
+
+    private static final class SimpleAction extends AbstractAction {
+        private final Runnable run;
+        SimpleAction(String name, Runnable run) { super(name); this.run = run; }
+        @Override public void actionPerformed(ActionEvent e) {
+            EdtGuard.assertEdt();
+            run.run();
+        }
     }
 
     private JFileChooser chooser(String dialogTitle, boolean save) {
@@ -85,17 +124,11 @@ public final class FileMenu extends JMenuBar {
             int choice = JOptionPane.showConfirmDialog(owner,
                 "Discard the current game?", "New Game", JOptionPane.OK_CANCEL_OPTION);
             if (choice != JOptionPane.OK_OPTION) { engine.setSpeed(prior); return; }
-            String seedStr = JOptionPane.showInputDialog(owner,
-                "Seed:", Long.toString(System.currentTimeMillis()));
-            if (seedStr == null) { engine.setSpeed(prior); return; }
-            try {
-                long seed = Long.parseLong(seedStr.trim());
-                engine.reset(WorldGenerator.generate(seed));
-                session.onNewGame();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(owner, "Not a valid number: " + seedStr,
-                    "New Game", JOptionPane.ERROR_MESSAGE);
-            }
+            Long seed = spacecolony.ui.dialogs.NewGameDialog.show(owner);
+            if (seed == null) { engine.setSpeed(prior); return; }
+            engine.reset(WorldGenerator.generate(seed));
+            session.setMode(GameSession.Mode.NORMAL);
+            session.onNewGame();
             // Leave the game paused after reset; player presses 1x to start.
         }
     }
@@ -187,41 +220,11 @@ public final class FileMenu extends JMenuBar {
 
     /** Loads in a worker with Plan 4's error dialogs; on success swaps the world in. */
     private void loadFrom(Path file, Speed prior) {
-        new SwingWorker<World, Void>() {
-            Exception err;
-            @Override protected World doInBackground() {
-                try { return SaveFile.load(file); }
-                catch (Exception ex) { err = ex; return null; }
-            }
-            @Override protected void done() {
-                EdtGuard.assertEdt();
-                if (err != null) LOG.log(Level.WARNING, "Load from " + file + " failed", err);
-                if (err instanceof IncompatibleSaveException inc) {
-                    JOptionPane.showMessageDialog(owner,
-                        "This save was written with schema v" + inc.fileSchemaVersion
-                            + "; the current game uses v" + inc.currentSchemaVersion
-                            + ". Cannot load this save.",
-                        "Incompatible Save", JOptionPane.WARNING_MESSAGE);
-                } else if (err instanceof JsonParseException jpe) {
-                    JOptionPane.showMessageDialog(owner,
-                        "Save file is not valid JSON: " + jpe.getMessage(),
-                        "Load Error", JOptionPane.ERROR_MESSAGE);
-                } else if (err != null) {
-                    JOptionPane.showMessageDialog(owner,
-                        "Could not load: " + err.getMessage(),
-                        "Load Error", JOptionPane.ERROR_MESSAGE);
-                } else {
-                    try {
-                        engine.reset(get());
-                        session.onLoaded(file);
-                        LOG.info("Loaded " + file);
-                    } catch (InterruptedException | ExecutionException ex) {
-                        CrashHandler.reportIfInstalled(ex.getCause() == null ? ex : ex.getCause());
-                    }
-                }
-                engine.setSpeed(prior);
-            }
-        }.execute();
+        SaveLoading.load(owner, file, world -> {
+            engine.reset(world);
+            session.setMode(GameSession.Mode.NORMAL);
+            session.onLoaded(file);
+        }, () -> engine.setSpeed(prior));
     }
 
     /**

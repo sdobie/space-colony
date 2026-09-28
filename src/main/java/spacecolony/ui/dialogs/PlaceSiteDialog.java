@@ -17,7 +17,9 @@ public class PlaceSiteDialog {
         // Find a colonizer at this body, if any.
         Ship colonizer = null;
         for (Ship s : engine.world().ships) {
-            if (s.shipClass == ShipClass.COLONIZER && s.currentSiteId != null) {
+            if (s.shipClass != ShipClass.COLONIZER) continue;
+            if (bodyId.equals(s.orbitingBodyId)) { colonizer = s; break; }
+            if (s.currentSiteId != null) {
                 var site = engine.world().findSite(s.currentSiteId);
                 if (site != null && site.bodyId.equals(bodyId)) { colonizer = s; break; }
             }

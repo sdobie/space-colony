@@ -27,18 +27,28 @@ import spacecolony.world.WorldGenerator;
 
 /** Save/load entry points. Schema version 1. */
 public final class SaveFile {
-    public static final int SCHEMA_VERSION = 1;
+    /** v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId. */
+    public static final int SCHEMA_VERSION = 2;
+    /** Oldest schema {@link #fromJson} still reads; v1 files load with the v2 defaults. */
+    public static final int MIN_READABLE_VERSION = 1;
     private SaveFile() {}
 
     // ===== SAVE =====
 
-    /** Serialise {@code w} to the schema-v1 envelope (same text {@link #save} writes). */
+    /** Serialise {@code w} to the current envelope (same text {@link #save} writes). */
     public static String toJson(World w) { return JsonWriter.write(buildEnvelope(w)); }
 
     public static void save(World w, Path file) throws IOException {
+        writeJson(toJson(w), file);
+    }
+
+    /**
+     * The atomic-write half of {@link #save}: writes {@code json} beside {@code file} and moves
+     * it into place. Lets a caller snapshot on the EDT and write on a worker.
+     */
+    public static void writeJson(String json, Path file) throws IOException {
         Path parent = file.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
-        String json = toJson(w);
         Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             Files.writeString(tmp, json);
@@ -55,6 +65,7 @@ public final class SaveFile {
         root.put("seed",          num(w.seed));
         root.put("tick",          num(w.tick));
         root.put("credits",       num(w.credits));
+        root.put("randomEventsEnabled", new JsonValue.JsonBool(w.randomEventsEnabled));
         root.put("bodies",        buildBodies(w));
         root.put("ships",         buildShips(w));
         root.put("tech",          buildTech(w));
@@ -109,13 +120,15 @@ public final class SaveFile {
             o.put("name", str(s.name));
             o.put("class", str(s.shipClass.name()));
             o.put("state", str(s.state.name()));
-            o.put("currentSiteId", s.currentSiteId == null ? new JsonValue.JsonNull() : str(s.currentSiteId));
+            o.put("currentSiteId", optStr(s.currentSiteId));
+            o.put("orbitingBodyId", optStr(s.orbitingBodyId));
             o.put("fuel", num(Double.toString(s.fuel)));
             o.put("cargo", resourceMap(s.cargo));
             if (s.transit != null) {
                 Map<String, JsonValue> t = new LinkedHashMap<>();
                 t.put("originSiteId", str(s.transit.originSiteId()));
-                t.put("destSiteId",   str(s.transit.destSiteId()));
+                t.put("destSiteId",   optStr(s.transit.destSiteId()));
+                t.put("destBodyId",   optStr(s.transit.destBodyId()));
                 t.put("departureTick", num(s.transit.departureTick()));
                 t.put("arrivalTick",   num(s.transit.arrivalTick()));
                 t.put("cargoSnapshot", resourceMap(s.transit.cargoSnapshot()));
@@ -180,16 +193,22 @@ public final class SaveFile {
         return fromJson(Files.readString(file));
     }
 
-    /** Parse a schema-v1 envelope. Throws {@link JsonParseException} on malformed text. */
+    /**
+     * Parse a schema v1 or v2 envelope; v1 fields missing from v2 take their defaults.
+     * Throws {@link JsonParseException} on malformed text.
+     */
     public static World fromJson(String text) throws IncompatibleSaveException {
         JsonValue.JsonObject root = (JsonValue.JsonObject) JsonReader.parse(text);
         int version = (int) ((JsonValue.JsonNumber) root.values().get("schemaVersion")).asLong();
-        if (version != SCHEMA_VERSION) throw new IncompatibleSaveException(version, SCHEMA_VERSION);
+        if (version < MIN_READABLE_VERSION || version > SCHEMA_VERSION)
+            throw new IncompatibleSaveException(version, SCHEMA_VERSION);
 
         long seed = ((JsonValue.JsonNumber) root.values().get("seed")).asLong();
         World w = WorldGenerator.generate(seed);
         w.tick = ((JsonValue.JsonNumber) root.values().get("tick")).asLong();
         w.credits = ((JsonValue.JsonNumber) root.values().get("credits")).asLong();
+        w.randomEventsEnabled = !(root.values().get("randomEventsEnabled") instanceof JsonValue.JsonBool jb)
+            || jb.value();
 
         // Geometry comes from the seed, but player-placed sites come from the file.
         // Wipe the generated sites (including the Earth Hub) so the file is authoritative.
@@ -260,6 +279,7 @@ public final class SaveFile {
         JsonValue currentSiteIdV = o.values().get("currentSiteId");
         String currentSiteId = currentSiteIdV instanceof JsonValue.JsonString jss ? jss.value() : null;
         Ship s = new Ship(id, name, cls, currentSiteId);
+        s.orbitingBodyId = optString(o, "orbitingBodyId");
         s.state = ShipState.valueOf(((JsonValue.JsonString) o.values().get("state")).value());
         s.fuel = ((JsonValue.JsonNumber) o.values().get("fuel")).asDouble();
         loadResourceMap((JsonValue.JsonObject) o.values().get("cargo"), s.cargo);
@@ -269,7 +289,8 @@ public final class SaveFile {
             loadResourceMap((JsonValue.JsonObject) to.values().get("cargoSnapshot"), snapshot);
             s.transit = new Transit(
                 ((JsonValue.JsonString) to.values().get("originSiteId")).value(),
-                ((JsonValue.JsonString) to.values().get("destSiteId")).value(),
+                optString(to, "destSiteId"),
+                optString(to, "destBodyId"),
                 ((JsonValue.JsonNumber) to.values().get("departureTick")).asLong(),
                 ((JsonValue.JsonNumber) to.values().get("arrivalTick")).asLong(),
                 snapshot);
@@ -286,6 +307,10 @@ public final class SaveFile {
         String msg = ((JsonValue.JsonString) o.values().get("message")).value();
         return new Event(tick, sev, kind, msg,
             optString(o, "bodyId"), optString(o, "siteId"), optString(o, "shipId"));
+    }
+
+    private static JsonValue optStr(String s) {
+        return s == null ? new JsonValue.JsonNull() : str(s);
     }
 
     private static String optString(JsonValue.JsonObject o, String key) {

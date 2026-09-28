@@ -30,6 +30,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import spacecolony.engine.Engine;
+import spacecolony.save.SaveFile;
 import spacecolony.save.SaveSlots;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
@@ -111,7 +112,7 @@ public class PlayTestDriver {
             }
         });
         boolean ok = mb.getMenuCount() == 1 && "File".equals(mb.getMenu(0).getText())
-            && items.equals(List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Quit"));
+            && items.equals(List.of("New Game", "Save", "Save As…", "Load…", "Load from file…", "<separator>", "Options…", "<separator>", "Quit"));
         check(ok, "1. File menu present", "menu=" + mb.getMenu(0).getText() + " items=" + items);
     }
 
@@ -192,7 +193,7 @@ public class PlayTestDriver {
         expect(dlg -> {
             JTextField f = find(dlg, JTextField.class, c -> true);
             f.setText("999");
-            clickButton(dlg, "OK");
+            clickButton(dlg, "Start");
         });
         runModal(() -> menuItem("New Game").doClick());
         long tickAfterNew = world().tick;
@@ -222,7 +223,7 @@ public class PlayTestDriver {
     static void step5_schemaMismatch(Path saveFile) throws Exception {
         String good = Files.readString(saveFile);
         Path bad = saveFile.resolveSibling("schema99.json");
-        Files.writeString(bad, good.replaceFirst("\"schemaVersion\": 1", "\"schemaVersion\": 99"));
+        Files.writeString(bad, good.replaceFirst("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 99"));
         long tickBefore = world().tick;
 
         String[] msg = new String[1];
@@ -271,16 +272,17 @@ public class PlayTestDriver {
     }
 
     static void step7_midTransit(Path saveFile) throws Exception {
-        // Seed a destination site and a fuelled hauler (a colonizer run would take
+        // Seed a destination site and a hauler (a colonizer run would take
         // thousands of ticks); the dispatch itself goes through the real dialog.
         SwingUtilities.invokeAndWait(() -> {
             World w = engine.world();
             Site mars = new Site("site-mars-1", "Mars 1", "mars", 0.0, 0.0, 100);
             w.findBody("mars").sites.add(mars);
             Ship h = new Ship("h1", "H1", ShipClass.HAULER, "site-earth-hub");
-            h.fuel = 1_000_000.0;
             w.ships.add(h);
             w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
+            // The hauler draws its trip fuel from the hub at departure (Plan 6 §6.1).
+            w.findSite("site-earth-hub").stockpile.put(Resource.FUEL, 1_000.0);
         });
 
         expect(dlg -> {
@@ -307,7 +309,7 @@ public class PlayTestDriver {
         waitFor(() -> Files.exists(f), 10000);
 
         expect(dlg -> clickButton(dlg, "OK"));
-        expect(dlg -> { find(dlg, JTextField.class, c -> true).setText("5"); clickButton(dlg, "OK"); });
+        expect(dlg -> { find(dlg, JTextField.class, c -> true).setText("5"); clickButton(dlg, "Start"); });
         runModal(() -> menuItem("New Game").doClick());
 
         expect(dlg -> selectSlotThen(dlg, "transit", () -> clickButton(dlg, "Load")));

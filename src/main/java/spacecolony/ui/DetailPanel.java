@@ -32,6 +32,7 @@ public class DetailPanel extends JPanel {
 
     public DetailPanel(Engine engine) {
         this.engine = engine;
+        setName(TARGET);
         setLayout(new BorderLayout());
         setBackground(UiColors.PANEL_BACKGROUND);
         setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, UiColors.PANEL_BORDER));
@@ -136,23 +137,39 @@ public class DetailPanel extends JPanel {
         }
         content.add(Box.createVerticalStrut(8));
         JButton build = new JButton("Build building...");
+        build.setName(TARGET_BUILD_BUILDING);
         build.addActionListener(e -> spacecolony.ui.dialogs.BuildBuildingDialog.show(this, engine, s.id));
         content.add(build);
         boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.enabled);
         if (hasShipyard) {
             JButton ship = new JButton("Build ship...");
+            ship.setName(TARGET_BUILD_SHIP);
             ship.addActionListener(e -> spacecolony.ui.dialogs.BuildShipDialog.show(this, engine, s.id));
             content.add(ship);
         }
     }
 
+    static final String FOUND_COLONY_LABEL = "Found colony…";
+    // Component names the tutorial highlights (Plan 6 §5.4).
+    public static final String TARGET = "detail";
+    public static final String TARGET_BUILD_BUILDING = "detail.buildBuilding";
+    public static final String TARGET_BUILD_SHIP = "detail.buildShip";
+    public static final String TARGET_DISPATCH = "detail.dispatch";
+    public static final String TARGET_FOUND_COLONY = "detail.foundColony";
+
     private void renderShip(Ship s) {
         if (s == null) { renderNone(); return; }
         addLabel(s.name + "  (" + s.shipClass + ")", UiColors.FOREGROUND);
-        addLabel("State: " + s.state, UiColors.FOREGROUND_DIM);
+        Body orbiting = s.orbitingBodyId == null ? null : engine.world().findBody(s.orbitingBodyId);
+        addLabel(orbiting != null ? "Orbiting " + orbiting.name : "State: " + s.state, UiColors.FOREGROUND_DIM);
         if (s.currentSiteId != null) addLabel("At: " + s.currentSiteId, UiColors.FOREGROUND_DIM);
         if (s.transit != null && s.state == ShipState.IN_TRANSIT) {
-            addLabel("→ " + s.transit.destSiteId() + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
+            String dest = s.transit.destSiteId();
+            if (dest == null) {
+                Body b = engine.world().findBody(s.transit.destBodyId());
+                dest = (b != null ? b.name : s.transit.destBodyId()) + " (unsettled)";
+            }
+            addLabel("→ " + dest + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
         }
         addLabel(String.format("Fuel: %.1f", s.fuel), UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {
@@ -162,8 +179,18 @@ public class DetailPanel extends JPanel {
                 if (v > 1e-6) addLabel("  " + r + ": " + String.format("%.0f", v), UiColors.FOREGROUND);
             }
         }
-        if (s.state == ShipState.IDLE) {
+        if (orbiting != null) {
+            // An orbiting colonizer can only found a colony here (or be retired).
+            JButton found = new JButton(FOUND_COLONY_LABEL);
+            found.setName(TARGET_FOUND_COLONY);
+            found.addActionListener(e -> {
+                engine.setSelection(Selection.body(orbiting.id));
+                engine.setView(EngineEvent.ViewChanged.View.BODY_VIEW);
+            });
+            content.add(found);
+        } else if (s.state == ShipState.IDLE) {
             JButton dispatch = new JButton("Dispatch...");
+            dispatch.setName(TARGET_DISPATCH);
             dispatch.addActionListener(e -> spacecolony.ui.dialogs.DispatchShipDialog.show(this, engine, s.id));
             content.add(dispatch);
         }

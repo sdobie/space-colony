@@ -13,11 +13,17 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 import spacecolony.debug.DebugController;
+import spacecolony.debug.DebugLogging;
 import spacecolony.debug.ExceptionLog;
 import spacecolony.engine.Engine;
 import spacecolony.engine.GameLoop;
+import spacecolony.options.Options;
 import spacecolony.save.SaveSlots;
+import spacecolony.ui.dialogs.OptionsDialog;
 
 /** Top-level Swing window. Owns the engine + game loop and wires the 5-region layout. */
 public class SpaceColonyFrame extends JFrame {
@@ -25,14 +31,37 @@ public class SpaceColonyFrame extends JFrame {
     private final GameLoop gameLoop;
     private final DebugController debugController;
     private final GameSession session;
+    private final Hooks hooks;
+    private final TopBar topBar;
+    private final AutosaveTimer autosave;
+    private final MainViewPanel mainView;
+    private static final String TITLE = "Space Colony";
+
+    /**
+     * What the frame needs from whoever built it (Plan 6 §3.5): how to exit, how to return to the
+     * main menu (null for no Main Menu item), and the options, read and saved.
+     */
+    public record Hooks(IntConsumer exit, Runnable mainMenu, Supplier<Options> options,
+                        Consumer<Options> saveOptions) {
+        /** What the existing constructors use: System::exit, no Main Menu, in-memory default options. */
+        public static Hooks standalone() {
+            Options[] held = { Options.DEFAULTS };
+            return new Hooks(System::exit, null, () -> held[0], o -> held[0] = o);
+        }
+    }
 
     public SpaceColonyFrame(Engine engine) {
         this(engine, new ExceptionLog(20));
     }
 
     public SpaceColonyFrame(Engine engine, ExceptionLog exceptions) {
-        super("Space Colony");
+        this(engine, exceptions, Hooks.standalone());
+    }
+
+    public SpaceColonyFrame(Engine engine, ExceptionLog exceptions, Hooks hooks) {
+        super(TITLE);
         this.engine = engine;
+        this.hooks = hooks;
         this.gameLoop = new GameLoop(engine);
 
         // The close box goes through GameSession.quit so it confirms and autosaves like File → Quit.
@@ -41,31 +70,37 @@ public class SpaceColonyFrame extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(UiColors.BACKGROUND);
 
-        TopBar topBar = new TopBar(engine);
+        this.topBar = new TopBar(engine);
         this.session = new GameSession(engine, SaveSlots.defaultDir(), new GameSession.Ui() {
-            @Override public boolean confirmQuit() {
-                return JOptionPane.showConfirmDialog(SpaceColonyFrame.this, "Quit Space Colony?",
-                    "Quit", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
+            @Override public boolean confirmQuit(GameSession.Mode mode, boolean toMenu) {
+                String msg = mode == GameSession.Mode.TUTORIAL ? "Leave the tutorial?"
+                    : toMenu ? "Return to the main menu? Your game will be autosaved."
+                    : "Quit Space Colony?";
+                return JOptionPane.showConfirmDialog(SpaceColonyFrame.this, msg,
+                    toMenu ? "Main Menu" : "Quit", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION;
             }
             @Override public boolean quitAnyway(String autosaveError) {
                 return JOptionPane.showConfirmDialog(SpaceColonyFrame.this,
                     "Autosave failed: " + autosaveError + ". Quit anyway?", "Autosave Error",
                     JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
             }
-            @Override public void savedToast(String label) { topBar.toast("Saved “" + label + "”"); }
-        }, System::exit);
+            @Override public void toast(String text) { topBar.toast(text); }
+        }, hooks.exit(), hooks.mainMenu(), () -> hooks.options().get().confirmQuit());
+        session.addModeListener(m -> setTitle(m == GameSession.Mode.TUTORIAL ? TITLE + " — Tutorial" : TITLE));
+        this.autosave = new AutosaveTimer(session);
+        autosave.setMinutes(hooks.options().get().autosaveMinutes());
         addWindowListener(new WindowAdapter() {
             @Override public void windowClosing(WindowEvent e) { session.quit(); }
         });
 
-        FileMenu menuBar = new FileMenu(this, engine, session);
+        FileMenu menuBar = new FileMenu(this, engine, session, this::openOptions);
         setJMenuBar(menuBar);
 
         add(topBar, BorderLayout.NORTH);
         ColonyListPanel colonyList = new ColonyListPanel(engine);
         colonyList.setPreferredSize(new Dimension(220, 0));
         add(colonyList, BorderLayout.WEST);
-        MainViewPanel mainView = new MainViewPanel(engine);
+        this.mainView = new MainViewPanel(engine);
         add(mainView, BorderLayout.CENTER);
         DetailPanel detail = new DetailPanel(engine);
         detail.setPreferredSize(new Dimension(280, 0));
@@ -94,6 +129,27 @@ public class SpaceColonyFrame extends JFrame {
         return p;
     }
 
+    /** File → Options…: edit, save through the hooks, and apply what takes effect at once. */
+    private void openOptions() {
+        Options updated = OptionsDialog.show(this, hooks.options().get());
+        if (updated == null) return;
+        hooks.saveOptions().accept(updated);
+        autosave.setMinutes(updated.autosaveMinutes());
+        DebugLogging.Installed logging = DebugLogging.current();
+        if (logging != null) logging.setLevel(updated.logLevel());
+    }
+
+    /** Stops the game's timers and closes the window (Main Menu and tests). */
+    @Override public void dispose() {
+        autosave.stop();
+        gameLoop.dispose();
+        super.dispose();
+    }
+
+    public TopBar topBar() { return topBar; }
+    /** The centre region (system map or body view); the tutorial card sits in its lower left. */
+    public java.awt.Component centerView() { return mainView; }
+    AutosaveTimer autosaveTimer() { return autosave; }
     public Engine engine() { return engine; }
     public GameLoop gameLoop() { return gameLoop; }
     public DebugController debugController() { return debugController; }
