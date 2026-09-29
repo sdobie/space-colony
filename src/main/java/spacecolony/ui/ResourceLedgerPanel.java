@@ -123,7 +123,7 @@ public class ResourceLedgerPanel extends JPanel {
         JLabel state = label(brownout ? String.format("brownout %.0f%%", report.powerFactor * 100) : "ok",
             brownout ? UiColors.ERROR : UiColors.FOREGROUND_DIM);
         state.setToolTipText(brownout
-            ? String.format("Brownout: %.1f made, %.1f used. Farms, mines and refineries run at %.0f%%.",
+            ? String.format("Brownout: %.1f made, %.1f used. Farms, mines, refineries and factories run at %.0f%%.",
                 report.powerMade, report.powerUsed, report.powerFactor * 100)
             : "Enough power for every building");
         clickable(cell(state, 3, 1, null), click);

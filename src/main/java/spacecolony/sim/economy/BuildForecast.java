@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import spacecolony.sim.Body;
+import spacecolony.sim.BuildCost;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingSpec;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.Construction;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Site;
@@ -15,24 +17,44 @@ import spacecolony.sim.TechEffects;
 import spacecolony.sim.World;
 
 /**
- * What adding one L1 building of {@code type} to a colony would do tomorrow: the colony's
- * day with and without it, from today's stock, plus plain-language facts and warnings.
- * Never touches the world.
+ * What adding one L1 building of {@code type} to a colony would do once it's finished, or what
+ * raising one of its buildings a level would do: the colony's day with and without it, from
+ * today's stock, plus plain-language facts and warnings, what it costs and, when it can't be
+ * ordered now, why ({@code blocker}). Never touches the world.
  */
 public record BuildForecast(BuildingType type, DayReport before, DayReport after,
-                            List<String> facts, List<String> warnings) {
+                            List<String> facts, List<String> warnings, BuildCost cost, String blocker) {
 
     public static BuildForecast of(World w, Site s, BuildingType type) {
-        Body b = w.findBody(s.bodyId);
-        DayReport before = SiteEconomy.run(w, b, s, s.buildings, new EnumMap<>(s.stockpile));
         // Same Building objects, so today's disabled buildings stay disabled; the new one
         // goes at the end, where BuildBuildingCommand puts it.
         List<Building> plus = new ArrayList<>(s.buildings);
         plus.add(new Building(type, 1));
+        return forecast(w, s, type, plus, plus.size() - 1, false,
+            Construction.buildCost(type), Construction.whyNotBuild(s, type));
+    }
+
+    /** What upgrading building {@code buildingId} one level would do once the upgrade finishes. */
+    public static BuildForecast ofUpgrade(World w, Site s, int buildingId) {
+        Building target = s.findBuilding(buildingId);
+        if (target == null) throw new IllegalArgumentException("No building " + buildingId + " at " + s.id);
+        List<Building> plus = new ArrayList<>(s.buildings);
+        int i = plus.indexOf(target);
+        Building next = new Building(target.type, target.level + 1);
+        next.enabled = target.enabled;
+        plus.set(i, next);
+        return forecast(w, s, target.type, plus, i, true,
+            Construction.upgradeCost(target.type, target.level + 1), Construction.whyNotUpgrade(s, target));
+    }
+
+    private static BuildForecast forecast(World w, Site s, BuildingType type, List<Building> plus, int index,
+                                          boolean upgrade, BuildCost cost, String blocker) {
+        Body b = w.findBody(s.bodyId);
+        DayReport before = SiteEconomy.run(w, b, s, s.buildings, new EnumMap<>(s.stockpile));
         DayReport after = SiteEconomy.run(w, b, s, plus, new EnumMap<>(s.stockpile));
-        BuildingOutcome added = after.outcome(plus.size() - 1);
+        BuildingOutcome added = after.outcome(index);
         return new BuildForecast(type, before, after,
-            facts(w, s, type, before, after), warnings(w, s, type, before, after, added));
+            facts(w, s, type, upgrade, before, after), warnings(w, s, type, before, after, added), cost, blocker);
     }
 
     /** The next day at this colony as it stands; shown when {@code Site.lastDay} is null. */
@@ -47,7 +69,8 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
         return after.net(r) - before.net(r);
     }
 
-    private static List<String> facts(World w, Site s, BuildingType type, DayReport before, DayReport after) {
+    private static List<String> facts(World w, Site s, BuildingType type, boolean upgrade,
+                                      DayReport before, DayReport after) {
         List<String> out = new ArrayList<>();
         switch (type) {
             case HABITAT -> {
@@ -63,8 +86,9 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
             }
             case SHIPYARD -> {
                 boolean has = s.buildings.stream().anyMatch(x -> x.type == BuildingType.SHIPYARD && x.isOperational());
-                out.add(has ? s.name + " already has a shipyard; a second one adds nothing yet."
-                            : "Lets " + s.name + " build ships.");
+                if (upgrade) out.add("A higher level adds nothing yet.");
+                else out.add(has ? s.name + " already has a shipyard; a second one adds nothing yet."
+                                 : "Lets " + s.name + " build ships.");
             }
             case POWER_PLANT -> out.add(String.format("Power %.1f → %.1f made (%.1f used)",
                 before.powerMade, after.powerMade, after.powerUsed));
@@ -115,7 +139,7 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
                 out.add(String.format("Makes the brownout worse: %.0f%% → %.0f%%.",
                     before.powerFactor * 100, after.powerFactor * 100));
             } else {
-                out.add(String.format("Power short: %.1f made, %.1f needed. Farms, mines and refineries here run at %.0f%%.",
+                out.add(String.format("Power short: %.1f made, %.1f needed. Farms, mines, refineries and factories here run at %.0f%%.",
                     after.powerMade, after.powerUsed, after.powerFactor * 100));
             }
         }

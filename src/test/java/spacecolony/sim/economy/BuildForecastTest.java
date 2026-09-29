@@ -136,4 +136,50 @@ class BuildForecastTest {
         assertTrue(d.estimate);
         assertEquals(10.0, d.powerMade, 1e-6);
     }
+
+    @Test
+    void factoryTurnsMetalIntoComponents() {
+        World w = earth();
+        Site hub = w.findSite(HUB);
+        hub.stockpile.put(Resource.SILICATE, 20.0);
+        BuildForecast f = BuildForecast.of(w, hub, FACTORY);
+        assertEquals(0.5, f.delta(Resource.COMPONENTS), 1e-9);
+        assertEquals(-0.5, f.delta(Resource.METAL), 1e-9);
+        assertEquals(30.0, f.cost().resources().get(Resource.METAL));
+        assertNull(f.blocker());
+    }
+
+    @Test
+    void blockerSaysWhyItCantBeBuilt() {
+        World w = earth();
+        Site hub = w.findSite(HUB);
+        hub.stockpile.put(Resource.METAL, 0.0);
+        assertEquals("Need 15 more METAL (have 0 of 15)", BuildForecast.of(w, hub, FARM).blocker());
+    }
+
+    @Test
+    void upgradeForecastAddsALevel() {
+        World w = earth();
+        Site hub = w.findSite(HUB);
+        String json = SaveFile.toJson(w);
+        int farm = hub.buildings.stream().filter(b -> b.type == FARM).findFirst().orElseThrow().id;
+        BuildForecast f = BuildForecast.ofUpgrade(w, hub, farm);
+        assertEquals(1.5, f.delta(Resource.FOOD), 1e-9);
+        assertEquals(2.0, f.after().powerUsed - f.before().powerUsed, 1e-9);
+        assertEquals(15.0, f.cost().resources().get(Resource.METAL));
+        assertEquals(json, SaveFile.toJson(w));
+        int habitat = hub.buildings.get(0).id;
+        assertTrue(has(BuildForecast.ofUpgrade(w, hub, habitat).facts(), "Population cap 300 → 400"),
+            BuildForecast.ofUpgrade(w, hub, habitat).facts().toString());
+    }
+
+    @Test
+    void buildingUnderConstructionIsNotCountedYet() {
+        World w = earth();
+        Site hub = w.findSite(HUB);
+        spacecolony.sim.Building lab = hub.addBuilding(new spacecolony.sim.Building(RESEARCH_LAB, 0));
+        lab.daysLeft = 3;
+        BuildForecast f = BuildForecast.of(w, hub, FARM);
+        assertEquals(10.0, f.after().powerUsed, 1e-9); // 8 + the new farm's 2; the lab draws nothing yet
+    }
 }
