@@ -34,4 +34,12 @@ class DispatchShipDialogTest {
         assertNotNull(msg);
         assertTrue(msg.startsWith("Not enough fuel at Earth Hub for this trip"), msg);
     }
+
+    @Test void overCapacity_explainsTheHoldLimit() {
+        Ship ark = new Ship("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub");
+        assertNull(spacecolony.sim.phases.CommandPhase.cargoOverflow(ark, Map.of(Resource.FOOD, 100.0)));
+        String msg = spacecolony.sim.phases.CommandPhase.cargoOverflow(ark,
+            Map.of(Resource.FOOD, 60.0, Resource.WATER, 50.0));
+        assertEquals("Manifest of 110 is more than Ark can carry (100)", msg);
+    }
 }

@@ -152,6 +152,8 @@ public final class CommandPhase {
                 throw new CommandRejectedException("Only colonizers can travel to a body without a site");
             destBodyId = ds.destBodyId();
         }
+        String overflow = cargoOverflow(s, ds.manifest());
+        if (overflow != null) throw new CommandRejectedException(overflow);
         // Spec §3.7: reject up front if the ship clearly can't afford the trip. The
         // departure-time check still runs later, but this saves N ticks of LOADING.
         String shortfall = fuelShortfall(w, s, destBodyId, ds.manifest());
@@ -162,6 +164,15 @@ public final class CommandPhase {
         s.state = ShipState.LOADING;
         s.transit = new Transit(s.currentSiteId, ds.destSiteId(), ds.destBodyId(), w.tick,
                                 Transit.PENDING_ARRIVAL_TICK, Transit.snapshot(ds.manifest()));
+    }
+
+    /** Why {@code s} can't hold {@code manifest}, or null if it fits. */
+    public static String cargoOverflow(Ship s, java.util.Map<Resource, Double> manifest) {
+        double total = 0.0;
+        for (Double v : manifest.values()) if (v != null && v > 0) total += v;
+        double cap = s.shipClass.cargoCap();
+        if (total <= cap + 1e-9) return null;
+        return String.format("Manifest of %.0f is more than %s can carry (%.0f)", total, s.name, cap);
     }
 
     /**

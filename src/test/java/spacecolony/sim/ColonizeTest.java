@@ -126,6 +126,18 @@ class ColonizeTest {
         assertEquals(12.5, w.findSite("site-mars-a").stockpile.getOrDefault(Resource.FUEL, 0.0), 1e-9);
     }
 
+    /** Play-tester: a colonizer took a 150 FOOD manifest and kept loading past its 100 hold. */
+    @Test void manifestOverCargoCapacity_rejected() {
+        World w = withColonizer();
+        Simulator sim = new Simulator();
+        sim.enqueue(DispatchShipCommand.toBody("c1", "mars", Map.of(Resource.FOOD, 150.0)));
+        for (int i = 0; i < 8; i++) sim.advance(w);
+        assertTrue(rejected(w, "Manifest of 150 is more than Ark can carry (100)"));
+        Ship c = w.findShip("c1");
+        assertEquals(ShipState.IDLE, c.state);
+        assertEquals(0.0, c.cargoMass(), 1e-9);
+    }
+
     /** Regression: on the standard start (no extra FUEL) a colonizer could not afford Mars. */
     @Test void standardStart_colonizerWithFullHold_departsForMars() {
         World w = WorldGenerator.generate(1L);

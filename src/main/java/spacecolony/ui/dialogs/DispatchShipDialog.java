@@ -41,8 +41,9 @@ public class DispatchShipDialog {
             form.add(new JLabel(r.name() + ":"));
             form.add(f);
         }
-        // Re-show the form (entries kept) until the trip is affordable or the player cancels,
-        // so a fuel shortfall is a popup right here rather than a line in the event strip.
+        // Re-show the form (entries kept) until the cargo fits, the trip is affordable, or the
+        // player cancels, so an overfull hold or a fuel shortfall is a popup right here rather
+        // than a line in the event strip.
         while (true) {
             int result = JOptionPane.showConfirmDialog(parent, form,
                 "Dispatch " + shipId, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -55,6 +56,12 @@ public class DispatchShipDialog {
                     double v = Double.parseDouble(raw);
                     if (v > 0) manifest.put(entry.getKey(), v);
                 } catch (NumberFormatException ignored) { /* skip bad input */ }
+            }
+            String overflow = CommandPhase.cargoOverflow(ship, manifest);
+            if (overflow != null) {
+                JOptionPane.showMessageDialog(parent, overflow + ".",
+                    "Too much cargo", JOptionPane.WARNING_MESSAGE);
+                continue;
             }
             Destination d = destinations.get((String) dest.getSelectedItem());
             String shortfall = fuelShortfall(engine.world(), ship, d, manifest);
