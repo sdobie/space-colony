@@ -2,9 +2,12 @@ package spacecolony.sim.phases;
 
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
+import spacecolony.sim.BuildCost;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.Construction;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
@@ -23,11 +26,15 @@ import spacecolony.sim.World;
 import spacecolony.sim.commands.BuildBuildingCommand;
 import spacecolony.sim.commands.BuildShipCommand;
 import spacecolony.sim.commands.BuildSiteCommand;
+import spacecolony.sim.commands.CancelConstructionCommand;
 import spacecolony.sim.commands.Command;
+import spacecolony.sim.commands.DemolishBuildingCommand;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.QueueResearchCommand;
+import spacecolony.sim.commands.RepairBuildingCommand;
 import spacecolony.sim.commands.RetireShipCommand;
 import spacecolony.sim.commands.SetRandomEventsCommand;
+import spacecolony.sim.commands.UpgradeBuildingCommand;
 
 public final class CommandPhase {
     private CommandPhase() {}
@@ -59,19 +66,94 @@ public final class CommandPhase {
             case BuildSiteCommand bsc    -> applyBuildSite(w, bsc);
             case DispatchShipCommand ds  -> applyDispatchShip(w, ds);
             case SetRandomEventsCommand re -> w.randomEventsEnabled = re.enabled();
+            case UpgradeBuildingCommand ub -> applyUpgrade(w, ub);
+            case RepairBuildingCommand rb -> applyRepair(w, rb);
+            case CancelConstructionCommand cc -> applyCancel(w, cc);
+            case DemolishBuildingCommand db -> applyDemolish(w, db);
         }
     }
 
     private static void applyBuildBuilding(World w, BuildBuildingCommand bb) {
         Site s = w.findSite(bb.siteId());
         if (s == null) throw new CommandRejectedException("No such site: " + bb.siteId());
-        s.buildings.add(new Building(bb.type(), 1));
+        String why = Construction.whyNotBuild(s, bb.type());
+        if (why != null) throw new CommandRejectedException(why);
+        BuildCost cost = Construction.buildCost(bb.type());
+        pay(s, cost);
+        Building b = new Building(bb.type(), 0);
+        b.daysLeft = cost.days();
+        s.addBuilding(b);
+    }
+
+    private static void applyUpgrade(World w, UpgradeBuildingCommand c) {
+        Site s = site(w, c.siteId());
+        Building b = building(s, c.buildingId());
+        String why = Construction.whyNotUpgrade(s, b);
+        if (why != null) throw new CommandRejectedException(why);
+        BuildCost cost = Construction.upgradeCost(b.type, b.level + 1);
+        pay(s, cost);
+        b.daysLeft = cost.days();
+    }
+
+    private static void applyRepair(World w, RepairBuildingCommand c) {
+        Site s = site(w, c.siteId());
+        Building b = building(s, c.buildingId());
+        String why = Construction.whyNotRepair(s, b);
+        if (why != null) throw new CommandRejectedException(why);
+        pay(s, Construction.repairCost(b.type));
+        b.enabled = true;
+    }
+
+    private static void applyCancel(World w, CancelConstructionCommand c) {
+        Site s = site(w, c.siteId());
+        Building b = building(s, c.buildingId());
+        String why = Construction.whyNotCancel(b);
+        if (why != null) throw new CommandRejectedException(why);
+        refund(s, Construction.cancelRefund(b));
+        if (b.level == 0) s.buildings.remove(b);
+        else b.daysLeft = 0;
+    }
+
+    private static void applyDemolish(World w, DemolishBuildingCommand c) {
+        Site s = site(w, c.siteId());
+        Building b = building(s, c.buildingId());
+        String why = Construction.whyNotDemolish(b);
+        if (why != null) throw new CommandRejectedException(why);
+        refund(s, Construction.demolishRefund(b));
+        s.buildings.remove(b);
+    }
+
+    private static Site site(World w, String siteId) {
+        Site s = w.findSite(siteId);
+        if (s == null) throw new CommandRejectedException("No such site: " + siteId);
+        return s;
+    }
+
+    private static Building building(Site s, int id) {
+        Building b = s.findBuilding(id);
+        if (b == null) throw new CommandRejectedException("No such building at " + s.name + ": " + id);
+        return b;
+    }
+
+    private static void pay(Site s, BuildCost cost) {
+        for (var e : cost.resources().entrySet())
+            s.stockpile.put(e.getKey(), Math.max(0.0, s.stockpile.getOrDefault(e.getKey(), 0.0) - e.getValue()));
+    }
+
+    /** Adds each amount up to the stockpile's free room; the rest is lost (Plan 8 §3.6). */
+    private static void refund(Site s, Map<Resource, Double> amounts) {
+        for (var e : amounts.entrySet()) {
+            Resource r = e.getKey();
+            double have = s.stockpile.getOrDefault(r, 0.0);
+            double room = Math.max(0.0, s.stockpileCap.getOrDefault(r, 1000.0) - have);
+            s.stockpile.put(r, have + Math.min(e.getValue(), room));
+        }
     }
 
     private static void applyBuildShip(World w, BuildShipCommand bs) {
         Site s = w.findSite(bs.shipyardSiteId());
         if (s == null) throw new CommandRejectedException("No such site: " + bs.shipyardSiteId());
-        boolean hasYard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.enabled);
+        boolean hasYard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.isOperational());
         if (!hasYard) throw new CommandRejectedException("Site has no shipyard: " + bs.shipyardSiteId());
         if (w.findShip(bs.shipId()) != null) throw new CommandRejectedException("Ship id taken: " + bs.shipId());
         w.ships.add(new Ship(bs.shipId(), bs.name(), bs.shipClass(), bs.shipyardSiteId()));
@@ -120,7 +202,7 @@ public final class CommandPhase {
         if (w.findSite(bsc.siteId()) != null)
             throw new CommandRejectedException("Site id taken: " + bsc.siteId());
         Site s = new Site(bsc.siteId(), bsc.name(), bsc.bodyId(), bsc.lat(), bsc.lon(), 100);
-        s.buildings.add(new Building(BuildingType.HABITAT, 1));
+        s.addBuilding(new Building(BuildingType.HABITAT, 1));
         body.sites.add(s);
         // The colonizer's cargo becomes the new colony's starting stock.
         for (var e : colonizer.cargo.entrySet()) {

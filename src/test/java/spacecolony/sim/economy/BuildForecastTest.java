@@ -10,7 +10,6 @@ import spacecolony.sim.Resource;
 import spacecolony.sim.Simulator;
 import spacecolony.sim.Site;
 import spacecolony.sim.World;
-import spacecolony.sim.commands.BuildBuildingCommand;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 import static spacecolony.sim.BuildingType.*;
@@ -118,7 +117,8 @@ class BuildForecastTest {
             Site hub = w.findSite(HUB);
             BuildForecast f = BuildForecast.of(w, hub, type);
             Simulator sim = new Simulator();
-            sim.enqueue(new BuildBuildingCommand(HUB, type));
+            // Placed finished, as the forecast imagines it; construction time is Plan 8's concern.
+            hub.addBuilding(new spacecolony.sim.Building(type, 1));
             sim.advance(w);
             for (Resource r : Resource.values()) {
                 if (!r.isStockpileable()) continue;

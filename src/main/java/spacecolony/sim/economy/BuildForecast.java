@@ -62,7 +62,7 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
                 out.add(String.format("Research %.1f → %.1f points a day", now, now + lab));
             }
             case SHIPYARD -> {
-                boolean has = s.buildings.stream().anyMatch(x -> x.type == BuildingType.SHIPYARD && x.enabled);
+                boolean has = s.buildings.stream().anyMatch(x -> x.type == BuildingType.SHIPYARD && x.isOperational());
                 out.add(has ? s.name + " already has a shipyard; a second one adds nothing yet."
                             : "Lets " + s.name + " build ships.");
             }

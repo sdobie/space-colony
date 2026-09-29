@@ -1,7 +1,7 @@
 package spacecolony.sim;
 
+import java.util.List;
 import java.util.Map;
-import spacecolony.sim.commands.BuildBuildingCommand;
 import spacecolony.sim.commands.BuildShipCommand;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.QueueResearchCommand;
@@ -40,7 +40,12 @@ public final class EconomyScenario {
         jov.buildings.add(new Building(BuildingType.MINE, 2));
         world.findBody("jovian").sites.add(jov);
 
-        for (BuildingType t : BuildingType.values()) sim.enqueue(new BuildBuildingCommand(HUB, t));
+        // Placed directly (the commands used to apply at tick 1, before any production), so the
+        // parity fixture doesn't depend on building costs. Explicit list: new types stay out.
+        Site hub = world.findSite(HUB);
+        for (BuildingType t : List.of(BuildingType.HABITAT, BuildingType.FARM, BuildingType.MINE,
+                BuildingType.REFINERY, BuildingType.POWER_PLANT, BuildingType.SHIPYARD, BuildingType.RESEARCH_LAB))
+            hub.addBuilding(new Building(t, 1));
         sim.enqueue(new BuildShipCommand("h1", "Mule", ShipClass.HAULER, HUB));
         sim.enqueue(new QueueResearchCommand("basic-mining"));
     }

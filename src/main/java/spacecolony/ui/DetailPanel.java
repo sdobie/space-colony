@@ -131,7 +131,7 @@ public class DetailPanel extends JPanel {
         build.setName(TARGET_BUILD_BUILDING);
         build.addActionListener(e -> spacecolony.ui.dialogs.BuildBuildingDialog.show(this, engine, s.id));
         content.add(build);
-        boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.enabled);
+        boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.isOperational());
         if (hasShipyard) {
             JButton ship = new JButton("Build ship...");
             ship.setName(TARGET_BUILD_SHIP);

@@ -169,13 +169,14 @@ public class ResourceLedgerPanel extends JPanel {
     /** "no BIOMASS", "short of ORE", "brownout", "poor ORE here", "disabled". */
     static String limitText(BuildingOutcome o) {
         return switch (o.limit()) {
-            case DISABLED -> "disabled";
+            case DISABLED -> "damaged";
             case NO_INPUT -> "no " + o.limitResource();
             case SHORT_INPUT -> "short of " + o.limitResource();
             case BROWNOUT -> "brownout";
             case NEEDS_TECH -> "needs Atmospheric Mining";
             case NO_YIELD -> "no " + o.limitResource() + " here";
             case LOW_YIELD -> "poor " + o.limitResource() + " here";
+            case CONSTRUCTING -> "under construction";
         };
     }
 

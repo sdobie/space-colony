@@ -156,4 +156,51 @@ class SiteEconomyTest {
         TestWorlds t = TestWorlds.at1Au(Map.of()).with(BuildingType.values());
         assertEquals(BuildingType.values().length, t.runOnCopy().buildings().size());
     }
+
+    @Test
+    void factoryMakesComponents() {
+        DayReport d = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FACTORY)
+            .stock(Resource.METAL, 10).stock(Resource.SILICATE, 10).runOnCopy();
+        assertEquals(0.5, d.net(Resource.COMPONENTS), EPS);
+        assertEquals(-0.5, d.net(Resource.METAL), EPS);
+        assertEquals(-0.5, d.net(Resource.SILICATE), EPS);
+        assertNull(d.outcome(1).limit());
+    }
+
+    @Test
+    void factoryIsHeldToItsScarcerInput() {
+        DayReport d = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FACTORY)
+            .stock(Resource.METAL, 10).stock(Resource.SILICATE, 0.25).runOnCopy();
+        assertEquals(0.25, d.net(Resource.COMPONENTS), EPS);
+        assertEquals(-0.25, d.net(Resource.METAL), EPS);
+        assertEquals(Limit.SHORT_INPUT, d.outcome(1).limit());
+        assertEquals(Resource.SILICATE, d.outcome(1).limitResource());
+        DayReport none = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FACTORY)
+            .stock(Resource.SILICATE, 10).runOnCopy();
+        assertEquals(0.0, none.net(Resource.COMPONENTS), EPS);
+        assertEquals(Limit.NO_INPUT, none.outcome(1).limit());
+        assertEquals(Resource.METAL, none.outcome(1).limitResource());
+    }
+
+    @Test
+    void factoryBrownoutCutsOutputOnce() {
+        // 10 made at 1 AU; the factory and nine habitats draw 20: half power.
+        TestWorlds t = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FACTORY)
+            .stock(Resource.METAL, 10).stock(Resource.SILICATE, 10);
+        for (int i = 0; i < 9; i++) t.with(HABITAT);
+        DayReport d = t.runOnCopy();
+        assertEquals(0.5, d.powerFactor, 1e-9);
+        assertEquals(0.25, d.net(Resource.COMPONENTS), EPS);
+        assertEquals(Limit.BROWNOUT, d.outcome(1).limit());
+    }
+
+    @Test
+    void buildingUnderConstructionDrawsNothing() {
+        TestWorlds t = TestWorlds.at1Au(Map.of()).with(POWER_PLANT);
+        t.site.buildings.add(new spacecolony.sim.Building(MINE, 0));
+        DayReport d = t.runOnCopy();
+        assertEquals(0.0, d.powerUsed, EPS);
+        assertEquals(Limit.CONSTRUCTING, d.outcome(1).limit());
+        assertTrue(d.linesOf(1).isEmpty());
+    }
 }

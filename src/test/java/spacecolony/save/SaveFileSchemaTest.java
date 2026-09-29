@@ -4,10 +4,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import spacecolony.sim.Body;
+import spacecolony.sim.Building;
+import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
+import spacecolony.sim.Site;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
@@ -62,9 +66,34 @@ class SaveFileSchemaTest {
     }
 
     @Test void newerSchema_rejected() throws Exception {
-        String v3 = v1Sample().replace("\"schemaVersion\": 1", "\"schemaVersion\": 3");
-        IncompatibleSaveException ex = assertThrows(IncompatibleSaveException.class, () -> SaveFile.fromJson(v3));
-        assertEquals(3, ex.fileSchemaVersion);
+        String future = v1Sample().replace("\"schemaVersion\": 1", "\"schemaVersion\": " + (SaveFile.SCHEMA_VERSION + 1));
+        IncompatibleSaveException ex = assertThrows(IncompatibleSaveException.class, () -> SaveFile.fromJson(future));
+        assertEquals(SaveFile.SCHEMA_VERSION + 1, ex.fileSchemaVersion);
         assertEquals(SaveFile.SCHEMA_VERSION, ex.currentSchemaVersion);
+    }
+
+    @Test void v3_roundTripsConstruction() throws Exception {
+        World w = WorldGenerator.generate(4L);
+        Site hub = w.findSite("site-earth-hub");
+        Building fresh = hub.addBuilding(new Building(BuildingType.FARM, 0));
+        fresh.daysLeft = 2;
+        hub.buildings.get(1).daysLeft = 3; // an upgrade under way
+        String json = SaveFile.toJson(w);
+        World back = SaveFile.fromJson(json);
+        assertEquals(json, SaveFile.toJson(back));
+        Site hub2 = back.findSite("site-earth-hub");
+        assertEquals(6, hub2.buildings.get(5).id);
+        assertEquals(0, hub2.buildings.get(5).level);
+        assertEquals(2, hub2.buildings.get(5).daysLeft);
+        assertEquals(3, hub2.buildings.get(1).daysLeft);
+    }
+
+    @Test void olderSaves_numberBuildingsInOrder() throws Exception {
+        World w = SaveFile.fromJson(v1Sample());
+        for (Body b : w.bodies) for (Site s : b.sites)
+            for (int i = 0; i < s.buildings.size(); i++) {
+                assertEquals(i + 1, s.buildings.get(i).id);
+                assertEquals(0, s.buildings.get(i).daysLeft);
+            }
     }
 }

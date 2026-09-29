@@ -2,7 +2,11 @@ package spacecolony.sim.phases;
 
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
+import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.Event;
+import spacecolony.sim.EventKind;
+import spacecolony.sim.EventSeverity;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Site;
@@ -48,7 +52,22 @@ public final class ProductionPhase {
                 // 8. Recover power plants knocked out by solar flare (Task 23): brownout
                 // applies for the tick they were offline, but they come back online for next tick.
                 for (Building bd : s.buildings) if (bd.type == BuildingType.POWER_PLANT) bd.enabled = true;
+
+                // 9. Construction: a day off every build and upgrade under way (damage pauses it).
+                advanceConstruction(w, b, s);
             }
+        }
+    }
+
+    private static void advanceConstruction(World w, Body b, Site s) {
+        for (Building bd : s.buildings) {
+            if (!bd.enabled || bd.daysLeft <= 0) continue;
+            if (--bd.daysLeft > 0) continue;
+            bd.level++;
+            String name = BuildingCatalog.displayName(bd.type);
+            String msg = bd.level == 1 ? name + " finished at " + s.name
+                                       : name + " upgraded to L" + bd.level + " at " + s.name;
+            w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.BUILDING_COMPLETED, msg, b.id, s.id, null));
         }
     }
 

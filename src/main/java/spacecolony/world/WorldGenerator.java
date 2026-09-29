@@ -21,11 +21,11 @@ public final class WorldGenerator {
         Site start = new Site("site-earth-hub", "Earth Hub",
                               earth.id, SystemLayout.STARTING_SITE_LAT, SystemLayout.STARTING_SITE_LON, 200);
         start.population = 100;
-        start.buildings.add(new Building(BuildingType.HABITAT, 1));
-        start.buildings.add(new Building(BuildingType.FARM, 1));
-        start.buildings.add(new Building(BuildingType.MINE, 1));
-        start.buildings.add(new Building(BuildingType.POWER_PLANT, 1));
-        start.buildings.add(new Building(BuildingType.SHIPYARD, 1));
+        start.addBuilding(new Building(BuildingType.HABITAT, 1));
+        start.addBuilding(new Building(BuildingType.FARM, 1));
+        start.addBuilding(new Building(BuildingType.MINE, 1));
+        start.addBuilding(new Building(BuildingType.POWER_PLANT, 1));
+        start.addBuilding(new Building(BuildingType.SHIPYARD, 1));
         start.stockpile.put(Resource.FOOD, 200.0);
         start.stockpile.put(Resource.WATER, 200.0);
         start.stockpile.put(Resource.METAL, 100.0);

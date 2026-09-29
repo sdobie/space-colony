@@ -2,7 +2,7 @@ package spacecolony.sim.economy;
 
 /** Why a building ran below its full rate yesterday, most important first. */
 public enum Limit {
-    /** Knocked out by an event. */
+    /** Damaged by an event, until repaired. */
     DISABLED,
     /** Got none of an input it needs. */
     NO_INPUT,
@@ -15,5 +15,7 @@ public enum Limit {
     /** The ground here has (almost) none of the resource. */
     NO_YIELD,
     /** The ground here is poor in the resource. */
-    LOW_YIELD
+    LOW_YIELD,
+    /** A new building that isn't finished yet. */
+    CONSTRUCTING
 }

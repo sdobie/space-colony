@@ -25,10 +25,13 @@ import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 
-/** Save/load entry points. Schema version 1. */
+/** Save/load entry points. Schema version 3. */
 public final class SaveFile {
-    /** v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId. */
-    public static final int SCHEMA_VERSION = 2;
+    /**
+     * v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId.
+     * v3 (Plan 8) adds building id and daysLeft.
+     */
+    public static final int SCHEMA_VERSION = 3;
     /** Oldest schema {@link #fromJson} still reads; v1 files load with the v2 defaults. */
     public static final int MIN_READABLE_VERSION = 1;
     private SaveFile() {}
@@ -106,6 +109,8 @@ public final class SaveFile {
             bo.put("type", str(b.type.name()));
             bo.put("level", num(b.level));
             bo.put("enabled", new JsonValue.JsonBool(b.enabled));
+            bo.put("id", num(b.id));
+            bo.put("daysLeft", num(b.daysLeft));
             bldgs.add(new JsonValue.JsonObject(bo));
         }
         o.put("buildings", new JsonValue.JsonArray(bldgs));
@@ -267,7 +272,14 @@ public final class SaveFile {
             int level = (int) ((JsonValue.JsonNumber) bo.values().get("level")).asLong();
             Building b = new Building(type, level);
             b.enabled = ((JsonValue.JsonBool) bo.values().get("enabled")).value();
-            s.buildings.add(b);
+            // Before v3 there were no ids or construction: number the buildings in list order.
+            if (bo.values().get("daysLeft") instanceof JsonValue.JsonNumber dl) b.daysLeft = (int) dl.asLong();
+            if (bo.values().get("id") instanceof JsonValue.JsonNumber idn) {
+                b.id = (int) idn.asLong();
+                s.buildings.add(b);
+            } else {
+                s.addBuilding(b);
+            }
         }
         return s;
     }
