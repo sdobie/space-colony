@@ -128,12 +128,14 @@ public class PlayTestDriver {
             JList<?> list = find(dlg, JList.class, c -> BuildBuildingDialog.LIST.equals(c.getName()));
             list.setSelectedValue(BuildingCatalog.get(BuildingType.FARM), true);
             shotQuiet(((JDialog) dlg).getRootPane(), "02-build-dialog");
+            shotQuiet(((JDialog) dlg).getRootPane(), "08-build-cost");
             list.setSelectedValue(BuildingCatalog.get(BuildingType.HABITAT), true);
             clickButton(dlg, BuildBuildingDialog.OK_LABEL);
         });
         runModal(() -> BuildBuildingDialog.show(frame, engine, "site-earth-hub"));
 
-        tick(2);
+        // A habitat takes 5 days to build; the command applies on the first tick.
+        tick(6);
         int capAfter = site("site-earth-hub").populationCap;
         int habitats = 0;
         for (Building b : site("site-earth-hub").buildings)
@@ -154,6 +156,27 @@ public class PlayTestDriver {
         shot(frame.getRootPane(), "07-ledger");
         check(ledger.contains("Farm L1") && ledger.contains("Population ("),
             "2b. Ledger lists FOOD's producers and consumers", ledger);
+
+        // The building menu behind the farm row's ⋯ button.
+        String[] items = new String[1];
+        SwingUtilities.invokeAndWait(() -> {
+            Building farm = site("site-earth-hub").buildings.stream()
+                .filter(b -> b.type == BuildingType.FARM).findFirst().orElseThrow();
+            javax.swing.JPopupMenu menu = spacecolony.ui.BuildingMenu.create(engine, site("site-earth-hub"), farm);
+            menu.setSize(menu.getPreferredSize());
+            menu.doLayout();
+            BufferedImage img = new BufferedImage(menu.getWidth(), menu.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D g = img.createGraphics();
+            menu.printAll(g);
+            g.dispose();
+            try { ImageIO.write(img, "png", out.resolve("08-building-menu.png").toFile()); }
+            catch (Exception e) { System.out.println("  [shot failed] 08-building-menu: " + e); }
+            StringBuilder sb = new StringBuilder();
+            for (Component c : menu.getComponents()) if (c instanceof JMenuItem mi) sb.append(mi.getText()).append(" | ");
+            items[0] = sb.toString();
+        });
+        check(items[0].contains("Upgrade to L2") && items[0].contains("Demolish"),
+            "2c. Building menu offers upgrade and demolish", items[0]);
     }
 
     static void step3_miningTech() throws Exception {
@@ -164,7 +187,7 @@ public class PlayTestDriver {
             clickButton(dlg, BuildBuildingDialog.OK_LABEL);
         });
         runModal(() -> BuildBuildingDialog.show(frame, engine, "site-earth-hub"));
-        tick(2);
+        tick(6); // five days to build
 
         double before = oreDeltaOneTick();
 
