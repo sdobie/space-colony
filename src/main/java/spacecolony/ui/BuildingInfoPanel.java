@@ -16,6 +16,7 @@ import javax.swing.Scrollable;
 import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingSpec;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.Construction;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechState;
@@ -24,6 +25,7 @@ import spacecolony.sim.economy.BuildForecast;
 /** The build dialog's right-hand card: what a building does, and what it would do here. */
 public class BuildingInfoPanel extends JPanel implements Scrollable {
     public static final String NAME = "build.info";
+    public static final String COST = "build.cost";
     private static final int TEXT_WIDTH = 370;
 
     public BuildingInfoPanel() {
@@ -42,11 +44,14 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
         add(wrapped(spec.summary(), UiColors.FOREGROUND));
         add(Box.createVerticalStrut(8));
 
+        add(costBlock(f, site));
+        add(Box.createVerticalStrut(8));
+
         add(label("Per level, per day", UiColors.FOREGROUND_DIM));
         for (String line : perLevel(spec, tech)) add(label("  " + line, UiColors.FOREGROUND));
         add(Box.createVerticalStrut(8));
 
-        add(label("At " + site.name + ", per day", UiColors.FOREGROUND_DIM));
+        add(label("At " + site.name + ", once built, per day", UiColors.FOREGROUND_DIM));
         add(forecastTable(f));
         for (String fact : f.facts()) add(wrapped(fact, UiColors.FOREGROUND_DIM));
         if (!f.warnings().isEmpty()) add(Box.createVerticalStrut(6));
@@ -54,6 +59,46 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
         add(Box.createVerticalGlue());
         revalidate();
         repaint();
+    }
+
+    /** Cost against the colony's stock, build time and slots (Plan 8 §4). */
+    private JPanel costBlock(BuildForecast f, Site site) {
+        JPanel grid = new JPanel(new java.awt.GridBagLayout());
+        grid.setName(COST);
+        grid.setOpaque(false);
+        grid.setAlignmentX(LEFT_ALIGNMENT);
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.anchor = java.awt.GridBagConstraints.WEST;
+        c.insets = new java.awt.Insets(0, 0, 1, 12);
+        int row = 0;
+        boolean first = true;
+        for (var e : f.cost().resources().entrySet()) {
+            Resource r = e.getKey();
+            double need = e.getValue(), have = site.stockpile.getOrDefault(r, 0.0);
+            boolean ok = have + 1e-9 >= need;
+            String text = String.format("%.0f %s (have %.0f)", need, r, Math.floor(have + 1e-9))
+                + (ok ? "" : String.format("   need %.0f more", Math.ceil(need - have - 1e-9)));
+            addRow(grid, c, row++, first ? "Cost" : "", text, ok ? UiColors.FOREGROUND : UiColors.ERROR);
+            first = false;
+        }
+        int days = f.cost().days();
+        addRow(grid, c, row++, "Build time",
+            days + (days == 1 ? " day" : " days") + ", ready in about " + (days + 1), UiColors.FOREGROUND);
+        int used = Construction.slotsUsed(site);
+        addRow(grid, c, row, "Slots", used + " of " + Construction.SLOTS + " used",
+            used >= Construction.SLOTS ? UiColors.ERROR : UiColors.FOREGROUND);
+        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, grid.getPreferredSize().height));
+        return grid;
+    }
+
+    private static void addRow(JPanel grid, java.awt.GridBagConstraints c, int row, String key, String value, Color fg) {
+        c.gridy = row;
+        c.gridx = 0;
+        c.weightx = 0;
+        grid.add(label(key, UiColors.FOREGROUND_DIM), c);
+        c.gridx = 1;
+        c.weightx = 1;
+        grid.add(label(value, fg), c);
     }
 
     /** "uses 0.5 BIOMASS, 0.3 WATER, 2 energy" / "makes 1.5 FOOD" lines, with tech multipliers named. */

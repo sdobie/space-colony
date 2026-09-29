@@ -16,6 +16,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -38,6 +39,7 @@ public class BuildBuildingDialog {
     public static final String LIST = "build.list";
     public static final String OK = "build.ok";
     public static final String CANCEL = "build.cancel";
+    public static final String REASON = "build.reason";
     public static final String OK_LABEL = "Build";
 
     public static void show(Component parent, Engine engine, String siteId) {
@@ -68,8 +70,11 @@ public class BuildBuildingDialog {
             @Override public Component getListCellRendererComponent(JList<?> l, Object value, int index,
                                                                     boolean selected, boolean focus) {
                 BuildingSpec spec = (BuildingSpec) value;
-                String text = spec.displayName() + (forecasts.get(spec.type()).warnings().isEmpty() ? "" : "  ⚠");
+                BuildForecast f = forecasts.get(spec.type());
+                String text = spec.displayName() + (f.warnings().isEmpty() ? "" : "  ⚠");
                 super.getListCellRendererComponent(l, text, index, selected, focus);
+                // Entries that can't be built right now are drawn dim.
+                setForeground(f.blocker() == null ? UiColors.FOREGROUND : UiColors.FOREGROUND_DIM);
                 setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
                 return this;
             }
@@ -85,6 +90,11 @@ public class BuildBuildingDialog {
         infoScroll.getViewport().setBackground(UiColors.PANEL_BACKGROUND);
         infoScroll.setPreferredSize(new Dimension(540, 360));
 
+        JButton ok = new JButton(OK_LABEL);
+        ok.setName(OK);
+        JLabel reason = new JLabel(" ");
+        reason.setName(REASON);
+        reason.setForeground(UiColors.WARNING);
         list.addListSelectionListener(e -> {
             BuildingSpec spec = list.getSelectedValue();
             if (spec == null) return;
@@ -92,15 +102,17 @@ public class BuildBuildingDialog {
             BuildForecast f = BuildForecast.of(engine.world(), site, spec.type());
             forecasts.put(spec.type(), f);
             info.show(f, site, engine.world().tech);
+            // Build waits on stock and slots; say why when it can't.
+            ok.setEnabled(f.blocker() == null);
+            ok.setToolTipText(f.blocker());
+            reason.setText(f.blocker() == null ? " " : f.blocker());
         });
 
-        JButton ok = new JButton(OK_LABEL);
-        ok.setName(OK);
         JButton cancel = new JButton("Cancel");
         cancel.setName(CANCEL);
         Runnable build = () -> {
             BuildingSpec spec = list.getSelectedValue();
-            if (spec == null) return;
+            if (spec == null || !ok.isEnabled()) return;
             engine.enqueue(new BuildBuildingCommand(siteId, spec.type()));
             dialog.dispose();
         };
@@ -113,6 +125,7 @@ public class BuildBuildingDialog {
         });
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.add(reason);
         buttons.add(cancel);
         buttons.add(ok);
 
