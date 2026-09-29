@@ -1,5 +1,6 @@
 package spacecolony.sim.economy;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import spacecolony.sim.Body;
@@ -66,6 +67,8 @@ public final class SiteEconomy {
 
         // 3. Production by building type, in list order (earlier buildings get inputs first).
         ResourceYieldSampler yields = b.resourceYields;
+        // Farms' replanting biomass lands at the end of the day, so it can't feed another farm today.
+        List<FlowLine> harvests = new ArrayList<>();
         for (int i = 0; i < buildings.size(); i++) {
             Building bd = buildings.get(i);
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
@@ -131,6 +134,13 @@ public final class SiteEconomy {
                                           Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * BuildingCatalog.FARM_BIOMASS))
                                         * foodMult;
                     produce(stock, report, src, Resource.FOOD, foodProduced, bd.level * BuildingCatalog.FARM_FOOD * foodMult);
+                    // Replanting: seed stock back from the harvest, plus what living soil grows. Scales
+                    // with the biomass actually planted, so an idle farm regrows nothing.
+                    double soil = yields == null ? 0.0 : yields.sample(Resource.BIOMASS, s.lat, s.lon);
+                    double regrowPerLevel = BuildingCatalog.FARM_BIOMASS_RESEED + BuildingCatalog.FARM_SOIL_BIOMASS * soil;
+                    harvests.add(new FlowLine(src, Resource.BIOMASS,
+                        bd.level * regrowPerLevel * biomassConsumed / Math.max(1e-6, bd.level * BuildingCatalog.FARM_BIOMASS),
+                        bd.level * regrowPerLevel));
                     Limit limit = inputLimit(biomassAsked, biomassConsumed);
                     Resource limitRes = limit != null ? Resource.BIOMASS : null;
                     if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
@@ -169,6 +179,7 @@ public final class SiteEconomy {
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, 1.0, null, null));
             }
         }
+        for (FlowLine h : harvests) produce(stock, report, h.source(), h.resource(), h.amount(), h.wanted());
         return report;
     }
 

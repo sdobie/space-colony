@@ -41,6 +41,24 @@ class SiteEconomyTest {
     }
 
     @Test
+    void farmReplantsBiomassAndSoilAddsMore() {
+        DayReport barren = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FARM)
+            .stock(Resource.BIOMASS, 10).stock(Resource.WATER, 50).runOnCopy();
+        assertEquals(-0.5 + 0.3, barren.net(Resource.BIOMASS), EPS);
+        DayReport soil = TestWorlds.at1Au(Map.of(Resource.BIOMASS, 0.2)).with(POWER_PLANT, FARM)
+            .stock(Resource.BIOMASS, 10).stock(Resource.WATER, 50).runOnCopy();
+        assertEquals(-0.5 + 0.3 + 2.5 * 0.2, soil.net(Resource.BIOMASS), EPS);
+        assertNull(soil.outcome(1).limit());
+    }
+
+    @Test
+    void idleFarmRegrowsNothing() {
+        DayReport d = TestWorlds.at1Au(Map.of(Resource.BIOMASS, 0.4)).with(POWER_PLANT, FARM)
+            .stock(Resource.WATER, 50).runOnCopy();
+        assertEquals(0.0, d.net(Resource.BIOMASS), EPS);
+    }
+
+    @Test
     void brownoutSlowsProducersButNotLabs() {
         // One plant at 2 AU makes 2.5; four consumers want 8.
         TestWorlds t = new TestWorlds(2.0, BodyType.ROCKY, Map.of(Resource.ORE, 1.0, Resource.SILICATE, 1.0))

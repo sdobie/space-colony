@@ -54,7 +54,7 @@ class BuildBuildingDialogTest {
                 BuildingInfoPanel info = find(d.getContentPane(), BuildingInfoPanel.class, p -> true);
                 String text = info.text();
                 assertTrue(text.contains("Grows food from biomass"), text);
-                assertTrue(text.contains("Needs BIOMASS"), text);
+                assertTrue(text.contains("BIOMASS"), text);
                 assertTrue(text.contains("At Earth Hub, per day"), text);
             } finally {
                 d.dispose();

@@ -40,12 +40,21 @@ class BuildForecastTest {
     }
 
     @Test
-    void farmWarnsAboutBiomass() {
+    void farmOnEarthGrowsItsOwnBiomass() {
         World w = earth();
         BuildForecast f = BuildForecast.of(w, w.findSite(HUB), FARM);
         assertEquals(1.5, f.delta(Resource.FOOD), 1e-9);
-        assertEquals(-0.5, f.delta(Resource.BIOMASS), 1e-9);
-        assertTrue(has(f.warnings(), "Needs BIOMASS", "Nothing here makes it", "about 100 days"), f.warnings().toString());
+        assertTrue(f.delta(Resource.BIOMASS) >= 0, "biomass delta " + f.delta(Resource.BIOMASS));
+        assertFalse(has(f.warnings(), "Needs BIOMASS"), f.warnings().toString());
+    }
+
+    @Test
+    void farmOnBarrenGroundWarnsAboutBiomass() {
+        TestWorlds t = TestWorlds.at1Au(Map.of()).with(POWER_PLANT).stock(Resource.BIOMASS, 20).stock(Resource.WATER, 50);
+        BuildForecast f = BuildForecast.of(t.world, t.site, FARM);
+        assertEquals(1.5, f.delta(Resource.FOOD), 1e-9);
+        assertEquals(-0.2, f.delta(Resource.BIOMASS), 1e-9);
+        assertTrue(has(f.warnings(), "Needs BIOMASS", "about 100 days"), f.warnings().toString());
     }
 
     @Test

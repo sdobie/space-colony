@@ -26,6 +26,10 @@ public final class BuildingCatalog {
     public static final double FARM_BIOMASS = 0.5;
     public static final double FARM_WATER = 0.3;
     public static final double FARM_FOOD = 1.5;
+    /** Seed stock a farm saves from each harvest, anywhere (spec: biomass "closes loop on repeat planting"). */
+    public static final double FARM_BIOMASS_RESEED = 0.3;
+    /** Extra biomass grown from living soil, × the ground's BIOMASS yield (Earth-like bodies have it). */
+    public static final double FARM_SOIL_BIOMASS = 2.5;
     public static final double REFINERY_ORE = 1.5;
     public static final double REFINERY_METAL_PER_ORE = 0.8;
     public static final double REFINERY_ICE = 1.0;
@@ -40,11 +44,15 @@ public final class BuildingCatalog {
             "Housing. Each level raises the population cap by " + HABITAT_CAP + ".",
             POWER_DRAW, List.of());
         add(BuildingType.FARM, "Farm",
-            "Grows food from biomass and water. Without biomass it sits idle.",
+            "Grows food from biomass and water, and saves biomass to replant. On living soil it"
+                + " grows more biomass than it plants; elsewhere it needs biomass shipped in, and"
+                + " without any it sits idle.",
             POWER_DRAW, List.of(
                 new Rate(Resource.BIOMASS, FARM_BIOMASS, Kind.INPUT),
                 new Rate(Resource.WATER, FARM_WATER, Kind.INPUT),
-                new Rate(Resource.FOOD, FARM_FOOD, Kind.OUTPUT)));
+                new Rate(Resource.FOOD, FARM_FOOD, Kind.OUTPUT),
+                new Rate(Resource.BIOMASS, FARM_BIOMASS_RESEED, Kind.OUTPUT),
+                new Rate(Resource.BIOMASS, FARM_SOIL_BIOMASS, Kind.YIELD_OUTPUT)));
         add(BuildingType.MINE, "Mine",
             "Digs ore, silicate and ice; output depends on what's in the ground here. At a gas giant,"
                 + " with Atmospheric Mining, it also pulls fuel from the air.",
