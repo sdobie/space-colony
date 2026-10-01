@@ -14,9 +14,11 @@ import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Selection;
 import spacecolony.sim.Body;
+import spacecolony.sim.BuildCost;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.Construction;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
@@ -117,21 +119,19 @@ public class DetailPanel extends JPanel {
         ledger.update(s, day);
         content.add(ledger);
         content.add(Box.createVerticalStrut(6));
-        addLabel("Buildings:", UiColors.FOREGROUND_DIM);
+        addLabel("Buildings  " + Construction.slotsUsed(s) + " of " + Construction.SLOTS + " slots",
+            UiColors.FOREGROUND_DIM);
         for (int i = 0; i < s.buildings.size(); i++) {
             Building b = s.buildings.get(i);
             BuildingOutcome o = day.outcome(i);
-            JLabel row = addLabel("  " + BuildingCatalog.displayName(b.type) + " L" + b.level + "   "
-                + buildingResult(b, o, day, tech), buildingColor(b, o));
-            String note = techNote(b.type, tech).trim();
-            if (!note.isEmpty()) row.setToolTipText("Techs: " + note);
+            content.add(buildingRow(s, b, buildingText(b, o, day, tech), buildingColor(b, o), techNote(b.type, tech).trim()));
         }
         content.add(Box.createVerticalStrut(8));
         JButton build = new JButton("Build building...");
         build.setName(TARGET_BUILD_BUILDING);
         build.addActionListener(e -> spacecolony.ui.dialogs.BuildBuildingDialog.show(this, engine, s.id));
         content.add(build);
-        boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.enabled);
+        boolean hasShipyard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.isOperational());
         if (hasShipyard) {
             JButton ship = new JButton("Build ship...");
             ship.setName(TARGET_BUILD_SHIP);
@@ -147,6 +147,8 @@ public class DetailPanel extends JPanel {
     public static final String TARGET_BUILD_SHIP = "detail.buildShip";
     public static final String TARGET_DISPATCH = "detail.dispatch";
     public static final String TARGET_FOUND_COLONY = "detail.foundColony";
+    /** Each building row's ⋯ button is named this plus the building id. */
+    public static final String TARGET_BUILDING_PREFIX = "detail.building.";
 
     private void renderShip(Ship s) {
         if (s == null) { renderNone(); return; }
@@ -190,12 +192,51 @@ public class DetailPanel extends JPanel {
         }
     }
 
+    /** One building row: its label, and a ⋯ button that opens {@link BuildingMenu}. */
+    private JPanel buildingRow(Site s, Building b, String text, java.awt.Color fg, String techs) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        JLabel label = new JLabel(text);
+        label.setForeground(fg);
+        if (!techs.isEmpty()) label.setToolTipText("Techs: " + techs);
+        row.add(label, BorderLayout.CENTER);
+        JButton more = new JButton("⋯");
+        more.setName(TARGET_BUILDING_PREFIX + b.id);
+        more.setToolTipText("Upgrade, repair or demolish");
+        more.setMargin(new java.awt.Insets(0, 4, 0, 4));
+        more.setFocusable(false);
+        more.addActionListener(e -> BuildingMenu.create(engine, s, b).show(more, 0, more.getHeight()));
+        row.add(more, BorderLayout.EAST);
+        row.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        return row;
+    }
+
+    /**
+     * A building row's text (Plan 8 §5.1): "  Farm L1   +1.5 FOOD", "  Mine L1 → L2   +0.9 ORE  (upgrading, 3 d)",
+     * "  Refinery   building, 4 days left", or a damaged building's repair cost.
+     */
+    static String buildingText(Building b, BuildingOutcome o, DayReport day, TechState tech) {
+        String name = BuildingCatalog.displayName(b.type);
+        if (b.level == 0)
+            return "  " + name + "   " + (b.enabled ? "building, " + days(b.daysLeft) + " left" : "building paused: damaged");
+        String level = " L" + b.level + (b.isUnderConstruction() ? " → L" + (b.level + 1) : "");
+        String upgrading = b.isUnderConstruction() && b.enabled ? "  (upgrading, " + b.daysLeft + " d)" : "";
+        return "  " + name + level + "   " + buildingResult(b, o, day, tech) + upgrading;
+    }
+
+    private static String days(int n) { return n + (n == 1 ? " day" : " days"); }
+
     /**
      * What a building did yesterday: "+2.4 ORE · +0.9 SILICATE", "idle: no BIOMASS",
      * "60%: short of ORE", "+100 cap", "(disabled)".
      */
     static String buildingResult(Building b, BuildingOutcome o, DayReport day, TechState tech) {
-        if (!b.enabled || (o != null && o.limit() == Limit.DISABLED)) return "(disabled)";
+        if (!b.enabled || (o != null && o.limit() == Limit.DISABLED)) {
+            // Power plants come back by themselves each day (ProductionPhase step 8).
+            if (b.type == BuildingType.POWER_PLANT) return "offline today";
+            return "damaged: repair " + BuildCost.describe(Construction.repairCost(b.type).resources());
+        }
         if (o == null) return "";
         String made = switch (b.type) {
             case HABITAT -> "+" + BuildingCatalog.HABITAT_CAP * b.level + " cap";
@@ -219,6 +260,7 @@ public class DetailPanel extends JPanel {
 
     private static java.awt.Color buildingColor(Building b, BuildingOutcome o) {
         if (!b.enabled) return UiColors.WARNING;
+        if (b.level == 0) return UiColors.FOREGROUND_DIM;
         if (o == null || o.limit() == null) return UiColors.FOREGROUND;
         return switch (o.limit()) {
             case LOW_YIELD, NEEDS_TECH -> UiColors.FOREGROUND;

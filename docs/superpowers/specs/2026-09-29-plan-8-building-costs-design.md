@@ -1,7 +1,7 @@
 # Plan 8 — Building Costs and Construction
 
 **Date:** 2026-09-29
-**Status:** Design, awaiting approval.
+**Status:** Implemented (Plan 8). Deviations: `ConstructionPacingTest` orders the factory last (lab, refinery, power plant, mine L2, then factory), because on a metal-poor Earth (seed 42, ore yield 0.19) a factory built first eats every unit of METAL the refinery makes and the mine upgrade never becomes affordable; costs are unchanged. The tutorial's dispatch step packs FOOD 40, WATER 30, METAL 20 and COMPONENTS 10 so the new colony can pay for a building. `Construction` also has `whyNotCancel`.
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–7 merged to `main` (last: Plan 7 resource management, PRs #19 and #20), plus play-tester and balance PRs #16, #18, #21, #22 and #23. About 400 tests.
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.5 (buildings), §3.6 (COMPONENTS "used to construct buildings, ships, maintenance"; METAL + SILICATE → COMPONENTS), §7 (detail panel: "building list with upgrade buttons ... build building, demolish").

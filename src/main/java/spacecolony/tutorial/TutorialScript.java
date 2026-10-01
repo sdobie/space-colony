@@ -59,12 +59,14 @@ public final class TutorialScript {
             auto("build-lab", "Build a research lab",
                 "<p>Research needs a lab. With Earth Hub selected, click <b>Build building...</b>,"
                 + " pick <b>Research lab</b> and press <b>Build</b>. The card on the right shows what"
-                + " each building makes and uses, and what it would change at this colony.</p>",
+                + " each building makes and uses, and what it would change at this colony.</p>"
+                + "<p>Buildings cost METAL and COMPONENTS from the colony's stock and take a few days to"
+                + " finish; the building's row counts them down.</p>",
                 List.of(T_BUILD_BUILDING), "Select Earth Hub in the colony list first.",
                 c -> hasBuilding(c.world(), BuildingType.RESEARCH_LAB)),
             auto("research", "Start researching",
                 "<p>Open <b>Tech</b> in the top bar and click any tech without a lock. Research points"
-                + " come from your labs every day.</p>",
+                + " come from your labs every day, starting once the lab is finished.</p>",
                 List.of(T_TECH), null,
                 c -> c.world().tech.activeId != null || !c.world().tech.researched.isEmpty()),
             auto("build-colonizer", "Build a colonizer",
@@ -74,8 +76,9 @@ public final class TutorialScript {
                 c -> hasColonizer(c.world()) || settledBeyondEarth(c.world())),
             auto("dispatch", "Send it to Mars",
                 "<p>Select your colonizer in the colony list and click <b>Dispatch...</b>, then choose"
-                + " <b>Mars (unsettled)</b> and pack FOOD 40, WATER 40 and METAL 20: whatever it carries"
-                + " becomes the new colony's first stock.</p>"
+                + " <b>Mars (unsettled)</b> and pack FOOD 40, WATER 30, METAL 20 and COMPONENTS 10:"
+                + " whatever it carries becomes the new colony's first stock, and its METAL and"
+                + " COMPONENTS pay for its first buildings.</p>"
                 + "<p>Fuel for the trip comes from Earth Hub's stockpile when the ship leaves.</p>",
                 List.of(T_DISPATCH), "Select your colonizer in the colony list.",
                 c -> colonizerHeadingOut(c.world()) || orbiting(c.world()) || settledBeyondEarth(c.world())),

@@ -69,4 +69,42 @@ class DeterminismTest {
             assertEquals(sa.stockpile.get(r), sb.stockpile.get(r), 1e-6, "stockpile " + r);
         }
     }
+
+    /** Plan 8: construction survives a save/load mid-way and replays identically. */
+    @Test
+    void construction_saveLoadReplay() throws Exception {
+        World a = WorldGenerator.generate(7777L);
+        World b = WorldGenerator.generate(7777L);
+        Simulator s1 = new Simulator();
+        Simulator s2 = new Simulator();
+        for (int t = 0; t < 300; t++) {
+            if (t == 150) b = spacecolony.save.SaveFile.fromJson(spacecolony.save.SaveFile.toJson(b));
+            for (Command c : script(a, t)) s1.enqueue(c);
+            for (Command c : script(b, t)) s2.enqueue(c);
+            s1.advance(a);
+            s2.advance(b);
+        }
+        assertEquals(spacecolony.save.SaveFile.toJson(a), spacecolony.save.SaveFile.toJson(b));
+        assertTrue(a.findSite("site-earth-hub").buildings.stream().anyMatch(x -> x.type == BuildingType.FARM && x.level == 2));
+    }
+
+    /** Build, upgrade, repair after a forced meteor, demolish; stays mid-construction across tick 150. */
+    private static java.util.List<Command> script(World w, int t) {
+        String hub = "site-earth-hub";
+        Site s = w.findSite(hub);
+        java.util.List<Command> out = new java.util.ArrayList<>();
+        switch (t) {
+            case 0 -> out.add(new BuildBuildingCommand(hub, BuildingType.RESEARCH_LAB));
+            case 148 -> out.add(new UpgradeBuildingCommand(hub, 2)); // the farm; finishes after the save
+            case 200 -> {
+                spacecolony.sim.phases.EventPhase.applyForced(w, w.findBody(s.bodyId), EventKind.METEOR_STRIKE,
+                    DeterministicRng.forStep(w.seed, w.tick, spacecolony.sim.phases.EventPhase.DEBUG_STEP_ID));
+                for (Building b : s.buildings)
+                    if (!b.enabled && b.type != BuildingType.POWER_PLANT) out.add(new RepairBuildingCommand(hub, b.id));
+            }
+            case 250 -> out.add(new DemolishBuildingCommand(hub, 5)); // the shipyard
+            default -> {}
+        }
+        return out;
+    }
 }

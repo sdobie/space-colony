@@ -167,8 +167,35 @@ class PanelSmokeTest {
             engine.tick();
             paintToImage(p, 330, 900);
             String text = allText(p);
-            assertTrue(text.contains("Research lab L1   (disabled)"), text);
+            assertTrue(text.contains("Research lab L1   damaged: repair 5 METAL, 3 COMPONENTS"), text);
             assertTrue(text.contains("Refinery L1   65%: short of ICE"), text);
+        });
+    }
+
+    @Test
+    void detailPanel_constructionUpgradesAndDamage() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(1L));
+            engine.world().randomEventsEnabled = false;
+            var hub = engine.world().findSite("site-earth-hub");
+            var farm = hub.addBuilding(new spacecolony.sim.Building(spacecolony.sim.BuildingType.FARM, 0));
+            farm.daysLeft = 4;
+            hub.buildings.get(2).daysLeft = 3; // the mine, upgrading
+            hub.buildings.get(4).enabled = false; // the shipyard, damaged
+            engine.tick();
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.site("site-earth-hub"));
+            p.setSize(330, 900);
+            paintToImage(p, 330, 900);
+            String text = allText(p);
+            assertTrue(text.contains("Buildings  6 of 10 slots"), text);
+            assertTrue(text.contains("Farm   building, 3 days left"), text);
+            assertTrue(text.contains("Mine L1 → L2"), text);
+            assertTrue(text.contains("(upgrading, 2 d)"), text);
+            assertTrue(text.contains("Shipyard L1   damaged: repair 13 METAL, 5 COMPONENTS"), text);
+            javax.swing.JButton more = find(p, javax.swing.JButton.class,
+                b -> (DetailPanel.TARGET_BUILDING_PREFIX + farm.id).equals(b.getName()));
+            assertNotNull(more);
         });
     }
 
@@ -277,6 +304,17 @@ class PanelSmokeTest {
             assertFalse(buttonTexts(p).contains("Dispatch..."));
             assertEquals("Ark  · orbiting Mars", ColonyListPanel.shipRowText(engine.world(), c));
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T extends java.awt.Component> T find(java.awt.Component c, Class<T> type, java.util.function.Predicate<T> p) {
+        if (type.isInstance(c) && p.test((T) c)) return (T) c;
+        if (c instanceof java.awt.Container k)
+            for (java.awt.Component child : k.getComponents()) {
+                T hit = find(child, type, p);
+                if (hit != null) return hit;
+            }
+        return null;
     }
 
     static String allText(java.awt.Component c) {

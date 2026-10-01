@@ -123,7 +123,7 @@ public class ResourceLedgerPanel extends JPanel {
         JLabel state = label(brownout ? String.format("brownout %.0f%%", report.powerFactor * 100) : "ok",
             brownout ? UiColors.ERROR : UiColors.FOREGROUND_DIM);
         state.setToolTipText(brownout
-            ? String.format("Brownout: %.1f made, %.1f used. Farms, mines and refineries run at %.0f%%.",
+            ? String.format("Brownout: %.1f made, %.1f used. Farms, mines, refineries and factories run at %.0f%%.",
                 report.powerMade, report.powerUsed, report.powerFactor * 100)
             : "Enough power for every building");
         clickable(cell(state, 3, 1, null), click);
@@ -169,13 +169,14 @@ public class ResourceLedgerPanel extends JPanel {
     /** "no BIOMASS", "short of ORE", "brownout", "poor ORE here", "disabled". */
     static String limitText(BuildingOutcome o) {
         return switch (o.limit()) {
-            case DISABLED -> "disabled";
+            case DISABLED -> "damaged";
             case NO_INPUT -> "no " + o.limitResource();
             case SHORT_INPUT -> "short of " + o.limitResource();
             case BROWNOUT -> "brownout";
             case NEEDS_TECH -> "needs Atmospheric Mining";
             case NO_YIELD -> "no " + o.limitResource() + " here";
             case LOW_YIELD -> "poor " + o.limitResource() + " here";
+            case CONSTRUCTING -> "under construction";
         };
     }
 

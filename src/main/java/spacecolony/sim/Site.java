@@ -43,4 +43,24 @@ public class Site {
             productionRateCache.put(r, 0.0);
         }
     }
+
+    /** Appends {@code b}, giving it the next free id if it has none. */
+    public Building addBuilding(Building b) {
+        if (b.id == 0) b.id = nextBuildingId();
+        buildings.add(b);
+        return b;
+    }
+
+    /** One more than the highest building id here (1 for an empty colony). */
+    public int nextBuildingId() {
+        int max = 0;
+        for (Building b : buildings) max = Math.max(max, b.id);
+        return max + 1;
+    }
+
+    /** The building with this id, or null. */
+    public Building findBuilding(int id) {
+        for (Building b : buildings) if (b.id == id) return b;
+        return null;
+    }
 }

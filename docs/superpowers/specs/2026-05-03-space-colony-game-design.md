@@ -73,13 +73,14 @@ A site holds a list of **Buildings**. Each building has a type and a level. Buil
 - FARM — produces FOOD, consumes WATER + ENERGY
 - MINE — produces ORE / SILICATE / ICE depending on body and yield
 - REFINERY — converts ORE → METAL, ICE → WATER
+- FACTORY — converts METAL + SILICATE → COMPONENTS (Plan 8)
 - POWER_PLANT — produces ENERGY (solar; output scales with distance from sun)
 - SHIPYARD — required to build/dock ships at this site
 - RESEARCH_LAB — produces research points
 
 Buildings are abstract: no on-surface placement, no adjacency rules. A site is one entity with a list of building entries.
 
-Per-level rates, power draw and player-facing descriptions live in `sim.BuildingCatalog` (Plan 7); `sim.economy.SiteEconomy` computes a colony's day from them.
+Per-level rates, power draw and player-facing descriptions live in `sim.BuildingCatalog` (Plan 7); `sim.economy.SiteEconomy` computes a colony's day from them. Costs, build times, slots, upgrades, repair and demolition (Plan 8): see `sim.Construction` and `BuildingCatalog`. A FACTORY makes COMPONENTS from METAL + SILICATE.
 
 ### 3.6 Resources (~10)
 

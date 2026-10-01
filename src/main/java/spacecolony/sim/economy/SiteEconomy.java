@@ -39,6 +39,7 @@ public final class SiteEconomy {
         for (int i = 0; i < buildings.size(); i++) {
             Building bd = buildings.get(i);
             if (!bd.enabled) continue;
+            if (bd.level == 0) continue; // still under construction: draws nothing
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
             if (bd.type == BuildingType.POWER_PLANT) {
                 // Solar output scales with 1/r^2 (r = distance from sun, in AU).
@@ -74,6 +75,10 @@ public final class SiteEconomy {
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
             if (!bd.enabled) {
                 report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, false, 0.0, Limit.DISABLED, null));
+                continue;
+            }
+            if (bd.level == 0) {
+                report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, 0.0, Limit.CONSTRUCTING, null));
                 continue;
             }
             switch (bd.type) {
@@ -174,6 +179,27 @@ public final class SiteEconomy {
                     if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
                 }
+                case FACTORY -> {
+                    double metalAsked = bd.level * BuildingCatalog.FACTORY_METAL * powerFactor;
+                    double siAsked = bd.level * BuildingCatalog.FACTORY_SILICATE * powerFactor;
+                    // Take only what the scarcer input can match, so neither is wasted, and scale
+                    // output by that share: a brownout cuts it once, not twice.
+                    double metalShare = share(stock, Resource.METAL, metalAsked);
+                    double siShare = share(stock, Resource.SILICATE, siAsked);
+                    double share = Math.min(metalShare, siShare);
+                    consume(stock, report, src, Resource.METAL, metalAsked * share,
+                        bd.level * BuildingCatalog.FACTORY_METAL);
+                    consume(stock, report, src, Resource.SILICATE, siAsked * share,
+                        bd.level * BuildingCatalog.FACTORY_SILICATE);
+                    produce(stock, report, src, Resource.COMPONENTS,
+                        bd.level * BuildingCatalog.FACTORY_COMPONENTS * powerFactor * share,
+                        bd.level * BuildingCatalog.FACTORY_COMPONENTS);
+                    Resource scarce = metalShare <= siShare ? Resource.METAL : Resource.SILICATE;
+                    Limit limit = share <= 1e-9 ? Limit.NO_INPUT : share < 0.99 ? Limit.SHORT_INPUT : null;
+                    Resource limitRes = limit != null ? scarce : null;
+                    if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
+                    report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
+                }
                 case POWER_PLANT, HABITAT, SHIPYARD, RESEARCH_LAB ->
                     // Their effects (power, cap, ships, research) aren't slowed by brownouts.
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, 1.0, null, null));
@@ -181,6 +207,12 @@ public final class SiteEconomy {
         }
         for (FlowLine h : harvests) produce(stock, report, h.source(), h.resource(), h.amount(), h.wanted());
         return report;
+    }
+
+    /** Fraction of {@code asked} the stock can cover, in [0, 1]; 1 when nothing is asked. */
+    private static double share(Map<Resource, Double> stock, Resource r, double asked) {
+        if (asked <= 1e-12) return 1.0;
+        return Math.max(0.0, Math.min(1.0, stock.getOrDefault(r, 0.0) / asked));
     }
 
     private static Limit inputLimit(double asked, double got) {

@@ -20,6 +20,8 @@ import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Selection;
 import spacecolony.engine.Speed;
 import spacecolony.save.SaveFile;
+import spacecolony.sim.Building;
+import spacecolony.sim.Site;
 import spacecolony.sim.World;
 
 /** One Swing Action per debug control, shared by the overlay buttons and the Debug menu. */
@@ -33,6 +35,7 @@ public final class DebugActions {
     public final Action step;
     public final Action runN;
     public final Action triggerEvent;
+    public final Action finishConstruction;
     public final Action dumpWorld;
     public final Action determinism;
     public final Action inspector;
@@ -45,6 +48,7 @@ public final class DebugActions {
         step = action("Step", this::doStep);
         runN = action("Run N…", this::doRunN);
         triggerEvent = action("Trigger event…", () -> TriggerEventDialog.show(debug.frame(), engine));
+        finishConstruction = action("Finish construction", this::doFinishConstruction);
         dumpWorld = action("Dump world", this::doDump);
         determinism = action("Determinism check", this::doDeterminism);
         inspector = action("Inspector", this::doInspect);
@@ -65,6 +69,24 @@ public final class DebugActions {
         boolean paused = engine.speed().isPaused();
         step.setEnabled(paused);
         triggerEvent.setEnabled(paused);
+        finishConstruction.setEnabled(paused);
+    }
+
+    /** Selected colony's builds and upgrades all finish on the next tick. */
+    private void doFinishConstruction() {
+        Selection sel = engine.selection();
+        if (sel.kind() != Selection.Kind.SITE || engine.world().findSite(sel.id()) == null) {
+            JOptionPane.showMessageDialog(debug.frame(), "Select a colony first.", "Finish construction",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        engine.applyDebugEdit("finish construction at " + sel.id(),
+            w -> finishConstruction(w.findSite(sel.id())));
+    }
+
+    /** Sets every build and upgrade under way at {@code s} to one day left. */
+    static void finishConstruction(Site s) {
+        for (Building b : s.buildings) if (b.daysLeft > 1) b.daysLeft = 1;
     }
 
     private void doStep() {
