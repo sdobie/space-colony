@@ -1,6 +1,7 @@
 package spacecolony.render;
 
 import java.awt.Color;
+import spacecolony.sim.Body;
 import spacecolony.sim.BodyType;
 
 /** Default appearance for each BodyType. */
@@ -101,6 +102,34 @@ public final class BodyAppearances {
         new Color(160, 145, 125)
     };
 
+    // Venus: sulphur-yellow cloud deck, seen as soft latitude bands.
+    private static final Color[] VENUS_CLOUDS = {
+        new Color(222, 205, 150),
+        new Color(232, 218, 168),
+        new Color(240, 228, 182),
+        new Color(246, 236, 196),
+        new Color(250, 242, 208),
+        new Color(246, 236, 196),
+        new Color(238, 226, 178),
+        new Color(230, 214, 162),
+        new Color(222, 204, 148),
+        new Color(214, 194, 138),
+        new Color(206, 186, 130)
+    };
+
+    /**
+     * Appearance for a specific body: the type default, except the named rocky planets, which
+     * would otherwise all render as Earth.
+     */
+    public static BodyAppearance forBody(Body body) {
+        return switch (body.id) {
+            case "mars"    -> mars();
+            case "venus"   -> new BodyAppearance(new Color(250, 235, 190), null, VENUS_CLOUDS, false, true);
+            case "mercury" -> new BodyAppearance(null, null, MOON_LAND, false, false);
+            default        -> defaultFor(body.type);
+        };
+    }
+
     public static BodyAppearance defaultFor(BodyType type) {
         return switch (type) {
             case ROCKY     -> new BodyAppearance(new Color(100, 150, 255), EARTH_OCEAN, EARTH_LAND,    true,  false);
@@ -111,7 +140,7 @@ public final class BodyAppearances {
         };
     }
 
-    /** Mars-flavoured rocky variant. Plan 2 doesn't auto-pick this — callers opt in by body id. */
+    /** Mars-flavoured rocky variant, picked by {@link #forBody} for the body with id "mars". */
     public static BodyAppearance mars() {
         return new BodyAppearance(new Color(220, 160, 110), null, MARS_LAND, false, false);
     }

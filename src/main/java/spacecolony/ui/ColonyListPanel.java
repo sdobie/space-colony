@@ -50,7 +50,7 @@ import spacecolony.sim.economy.DayReport;
 import spacecolony.sim.economy.Outlook;
 
 /**
- * Left dock: colony cards (planet thumbnail, status dot, population, FOOD/WATER gauges) and
+ * Left dock: an empire totals strip, colony cards (planet thumbnail, status dot, population, FOOD/WATER gauges) and
  * ship cards (hull icon, where it is or is headed, trip progress or cargo fill) over a faint
  * starfield. Cards read the world when they paint, so a tick only repaints; the card list is
  * rebuilt only when colonies or ships come or go.
@@ -112,6 +112,7 @@ public class ColonyListPanel extends JPanel {
             shownKeys = keys;
             list.removeAll();
             int colonies = (int) keys.stream().filter(k -> ((Selection) k).kind() == Selection.Kind.SITE).count();
+            list.add(new Totals());
             list.add(new Header("Colonies", colonies));
             for (Object k : keys) if (((Selection) k).kind() == Selection.Kind.SITE) list.add(new ColonyCard((Selection) k));
             list.add(new Header("Ships", w.ships.size()));
@@ -202,6 +203,36 @@ public class ColonyListPanel extends JPanel {
         };
     }
 
+    /** Summed population and FOOD/WATER/FUEL stock and yesterday's net across all colonies. */
+    record EmpireTotals(int population, int populationCap, Map<Resource, Double> stock, Map<Resource, Double> net) {
+        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.FUEL);
+
+        static EmpireTotals of(World w) {
+            int pop = 0, cap = 0;
+            Map<Resource, Double> stock = new java.util.EnumMap<>(Resource.class);
+            Map<Resource, Double> net = new java.util.EnumMap<>(Resource.class);
+            for (Body b : w.bodies) {
+                for (Site s : b.sites) {
+                    pop += s.population;
+                    cap += s.populationCap;
+                    for (Resource r : SHOWN) {
+                        stock.merge(r, s.stockpile.getOrDefault(r, 0.0), Double::sum);
+                        net.merge(r, s.lastDay == null ? 0.0 : s.lastDay.net(r), Double::sum);
+                    }
+                }
+            }
+            return new EmpireTotals(pop, cap, stock, net);
+        }
+    }
+
+    /** "1.2k" style figures so four tiles fit across the column. */
+    static String compact(double v) {
+        double a = Math.abs(v);
+        if (a >= 9_999.5) return String.format("%.0fk", v / 1000);
+        if (a >= 999.5) return String.format("%.1fk", v / 1000);
+        return String.format("%.0f", v);
+    }
+
     private static String destName(World w, Transit t) {
         if (t == null) return "?";
         return t.destSiteId() != null ? siteName(w, t.destSiteId()) : bodyName(w, t.destBodyId());
@@ -225,7 +256,7 @@ public class ColonyListPanel extends JPanel {
     private BufferedImage planetIcon(Body body) {
         return planetIcons.computeIfAbsent(body.id, id -> {
             int size = ICON * 2;
-            BodyAppearance app = BodyAppearances.defaultFor(body.type);
+            BodyAppearance app = BodyAppearances.forBody(body);
             BufferedImage flat = new PlanetGenerator(128, 64).generate(body.surfaceSeed, app);
             BufferedImage sphere = SphereRenderer.render(flat, size, 30.0, 12.0, 1.0,
                 body.surfaceSeed, app.atmosphereColor());
@@ -293,6 +324,74 @@ public class ColonyListPanel extends JPanel {
             g2.setPaint(new GradientPaint(lineX, 0, UiColors.PANEL_BORDER, getWidth() - 8, 0, new Color(0, 0, 0, 0)));
             g2.fillRect(lineX, base - 4, Math.max(0, getWidth() - 8 - lineX), 1);
             g2.dispose();
+        }
+    }
+
+    /** Empire strip: population and FOOD/WATER/FUEL totals, each with yesterday's net trend. */
+    private final class Totals extends JComponent {
+        Totals() {
+            setPreferredSize(new Dimension(10, 58));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
+            setAlignmentX(LEFT_ALIGNMENT);
+            setToolTipText("");
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            smooth(g2);
+            EmpireTotals t = EmpireTotals.of(engine.world());
+            var box = new RoundRectangle2D.Double(6, 8, getWidth() - 12, getHeight() - 12, 10, 10);
+            g2.setPaint(new GradientPaint(0, 8, new Color(26, 46, 74, 150), 0, getHeight(), new Color(26, 46, 74, 40)));
+            g2.fill(box);
+            g2.setColor(UiColors.PANEL_BORDER);
+            g2.draw(box);
+
+            int cols = 4, inner = getWidth() - 12;
+            Font label = getFont().deriveFont(Font.BOLD, 8.5f).deriveFont(Map.of(TextAttribute.TRACKING, 0.1f));
+            Font value = getFont().deriveFont(Font.BOLD, 13f);
+            Font sub = getFont().deriveFont(Font.PLAIN, 9f);
+            String[] labels = { "POP", "FOOD", "H₂O", "FUEL" };
+            for (int i = 0; i < cols; i++) {
+                int cx = 6 + inner * i / cols + inner / (2 * cols);
+                if (i > 0) {
+                    g2.setColor(new Color(255, 255, 255, 18));
+                    g2.fillRect(6 + inner * i / cols, 16, 1, getHeight() - 28);
+                }
+                String v, d;
+                Color dc;
+                if (i == 0) {
+                    v = compact(t.population());
+                    d = "of " + compact(t.populationCap());
+                    dc = UiColors.FOREGROUND_DIM;
+                } else {
+                    Resource r = EmpireTotals.SHOWN.get(i - 1);
+                    v = compact(t.stock().get(r));
+                    double n = t.net().get(r);
+                    d = Math.abs(n) < 0.05 ? "steady" : (n > 0 ? "▲ " : "▼ ") + String.format("%.1f", Math.abs(n));
+                    dc = Math.abs(n) < 0.05 ? UiColors.FOREGROUND_DIM : n > 0 ? FOOD_BAR : UiColors.ERROR;
+                }
+                centered(g2, label, UiColors.INFO, labels[i], cx, 22);
+                centered(g2, value, UiColors.FOREGROUND, v, cx, 37);
+                centered(g2, sub, dc, d, cx, 48);
+            }
+            g2.dispose();
+        }
+
+        private void centered(Graphics2D g, Font f, Color c, String text, int cx, int y) {
+            g.setFont(f);
+            g.setColor(c);
+            g.drawString(text, cx - g.getFontMetrics().stringWidth(text) / 2, y);
+        }
+
+        @Override
+        public String getToolTipText(MouseEvent e) {
+            EmpireTotals t = EmpireTotals.of(engine.world());
+            return String.format("Population %d / %d · FOOD %.0f (%+.1f/d) · WATER %.0f (%+.1f/d) · FUEL %.0f (%+.1f/d)",
+                t.population(), t.populationCap(),
+                t.stock().get(Resource.FOOD), t.net().get(Resource.FOOD),
+                t.stock().get(Resource.WATER), t.net().get(Resource.WATER),
+                t.stock().get(Resource.FUEL), t.net().get(Resource.FUEL));
         }
     }
 

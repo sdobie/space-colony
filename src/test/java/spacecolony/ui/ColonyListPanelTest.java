@@ -73,4 +73,22 @@ class ColonyListPanelTest {
         s.orbitingBodyId = "mars";
         assertEquals("Orbiting Mars", ColonyListPanel.shipStatusText(w, s));
     }
+
+    @Test
+    void empireTotalsSumEveryColony() {
+        World w = earth();
+        new Simulator().advance(w);
+        Site hub = w.findSite("site-earth-hub");
+        var t = ColonyListPanel.EmpireTotals.of(w);
+        assertEquals(hub.population, t.population());
+        assertEquals(hub.stockpile.get(Resource.FOOD), t.stock().get(Resource.FOOD), 1e-9);
+        assertEquals(hub.lastDay.net(Resource.WATER), t.net().get(Resource.WATER), 1e-9);
+    }
+
+    @Test
+    void compactFiguresFitATile() {
+        assertEquals("212", ColonyListPanel.compact(212.4));
+        assertEquals("1.2k", ColonyListPanel.compact(1234));
+        assertEquals("12k", ColonyListPanel.compact(12_345));
+    }
 }

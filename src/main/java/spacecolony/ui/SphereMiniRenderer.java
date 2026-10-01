@@ -48,10 +48,10 @@ public class SphereMiniRenderer extends JPanel {
         super.paintComponent(g);
         if (body == null) return;
         BufferedImage flat = flatCache.computeIfAbsent(body.id, id -> {
-            BodyAppearance app = BodyAppearances.defaultFor(body.type);
+            BodyAppearance app = BodyAppearances.forBody(body);
             return new PlanetGenerator(FLAT_W, FLAT_H).generate(body.surfaceSeed, app);
         });
-        BodyAppearance app = BodyAppearances.defaultFor(body.type);
+        BodyAppearance app = BodyAppearances.forBody(body);
         // Rotation advances slowly with tick: 1 full rotation per 360 ticks.
         double rotation = (engine.world().tick % 360) * 1.0;
         BufferedImage sphere = SphereRenderer.render(flat, SIZE, rotation, 12.0, 1.0,
