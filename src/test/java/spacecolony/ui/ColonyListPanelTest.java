@@ -3,8 +3,12 @@ package spacecolony.ui;
 import org.junit.jupiter.api.Test;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
+import spacecolony.sim.Ship;
+import spacecolony.sim.ShipClass;
+import spacecolony.sim.ShipState;
 import spacecolony.sim.Simulator;
 import spacecolony.sim.Site;
+import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,5 +51,26 @@ class ColonyListPanelTest {
         new Simulator().advance(w);
         assertTrue(hub.buildings.stream().anyMatch(b -> b.type == BuildingType.FARM));
         assertEquals(UiColors.WARNING, ColonyListPanel.rowColor(hub));
+    }
+
+    @Test
+    void shipStatusSaysWhereTheShipIsOrIsHeaded() {
+        World w = earth();
+        Ship s = new Ship("x1", "Mule", ShipClass.HAULER, "site-earth-hub");
+        assertEquals("Docked at Earth Hub", ColonyListPanel.shipStatusText(w, s));
+
+        s.state = ShipState.LOADING;
+        s.transit = new Transit("site-earth-hub", null, "mars", w.tick, Transit.PENDING_ARRIVAL_TICK, Transit.snapshot(s.cargo));
+        assertEquals("Loading for Mars", ColonyListPanel.shipStatusText(w, s));
+
+        s.state = ShipState.IN_TRANSIT;
+        s.currentSiteId = null;
+        s.transit = new Transit("site-earth-hub", null, "mars", w.tick, w.tick + 12, Transit.snapshot(s.cargo));
+        assertEquals("→ Mars · 12d", ColonyListPanel.shipStatusText(w, s));
+
+        s.state = ShipState.IDLE;
+        s.transit = null;
+        s.orbitingBodyId = "mars";
+        assertEquals("Orbiting Mars", ColonyListPanel.shipStatusText(w, s));
     }
 }
