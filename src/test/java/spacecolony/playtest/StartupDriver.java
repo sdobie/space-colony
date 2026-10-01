@@ -32,6 +32,7 @@ import spacecolony.save.SaveSlots;
 import spacecolony.sim.Resource;
 import spacecolony.sim.ShipClass;
 import spacecolony.tutorial.TutorialScript;
+import spacecolony.ui.ColonyListPanel;
 import spacecolony.ui.SpaceColonyFrame;
 import spacecolony.ui.startup.SplashWindow;
 import spacecolony.ui.startup.TitleScreen;
@@ -108,7 +109,7 @@ public class StartupDriver {
 
         expectStep(frame, 3);
         tutorialShot(frame, 3, "select-hub");
-        click(label(frame, l -> l.getText().contains("Earth Hub")));
+        click(target(frame, TutorialScript.T_HUB_CARD));
 
         expectStep(frame, 4);
         tutorialShot(frame, 4, "read-dock");
@@ -150,8 +151,8 @@ public class StartupDriver {
         }
 
         expectStep(frame, 8);
-        waitFor(() -> label(frame, l -> l.getText().contains("Ark")) != null, 3000);
-        click(label(frame, l -> l.getText().contains("Ark")));
+        waitFor(() -> target(frame, ColonyListPanel.cardName("c1")) != null, 3000);
+        click(target(frame, ColonyListPanel.cardName("c1")));
         tutorialShot(frame, 8, "dispatch");
         click(target(frame, TutorialScript.T_DISPATCH));
         JDialog dispatch = waitForDialog("Dispatch");

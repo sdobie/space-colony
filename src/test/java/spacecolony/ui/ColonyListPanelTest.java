@@ -1,6 +1,12 @@
 package spacecolony.ui;
 
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import org.junit.jupiter.api.Test;
+import spacecolony.engine.Engine;
+import spacecolony.engine.Selection;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
@@ -10,10 +16,34 @@ import spacecolony.sim.Simulator;
 import spacecolony.sim.Site;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
+import spacecolony.testutil.Edt;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ColonyListPanelTest {
+    @Test
+    void pressingAColonyCardSelectsThatColony() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(earth());
+            ColonyListPanel p = new ColonyListPanel(engine);
+            p.setSize(260, 600);
+            p.doLayout();
+            Component card = named(p, ColonyListPanel.cardName("site-earth-hub"));
+            assertNotNull(card, "no card for Earth Hub");
+            card.dispatchEvent(new MouseEvent(card, MouseEvent.MOUSE_PRESSED, 0L, InputEvent.BUTTON1_DOWN_MASK,
+                10, 10, 1, false, MouseEvent.BUTTON1));
+            assertEquals(Selection.site("site-earth-hub"), engine.selection());
+        });
+    }
+
+    private static Component named(Container root, String name) {
+        for (Component c : root.getComponents()) {
+            if (name.equals(c.getName())) return c;
+            if (c instanceof Container inner && named(inner, name) instanceof Component found) return found;
+        }
+        return null;
+    }
+
     private static World earth() {
         World w = WorldGenerator.generate(42L);
         w.randomEventsEnabled = false;
