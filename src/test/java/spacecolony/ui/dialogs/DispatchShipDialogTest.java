@@ -42,4 +42,32 @@ class DispatchShipDialogTest {
             Map.of(Resource.FOOD, 60.0, Resource.WATER, 50.0));
         assertEquals("Manifest of 110 is more than Ark can carry (100)", msg);
     }
+
+    @Test void explorer_seesEveryBodyWithItsSurveyTag() {
+        World w = WorldGenerator.generate(1L);
+        Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, "site-earth-hub");
+        var d = DispatchShipDialog.destinations(w, x);
+        assertTrue(d.containsKey("site-earth-hub"));
+        assertEquals(new DispatchShipDialog.Destination(null, "earth"), d.get("Earth (surveyed)"));
+        assertEquals(new DispatchShipDialog.Destination(null, "mars"), d.get("Mars (unsurveyed)"));
+        assertEquals(1 + w.bodies.size(), d.size());
+
+        x.currentSiteId = null;
+        x.orbitingBodyId = "mars";
+        var fromMars = DispatchShipDialog.destinations(w, x);
+        assertFalse(fromMars.containsKey("Mars (unsurveyed)"), "not the body it orbits");
+        assertEquals(w.bodies.size(), fromMars.size());
+    }
+
+    @Test void explorer_inOrbit_tankShortfallExplained() {
+        World w = WorldGenerator.generate(1L);
+        Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, null);
+        x.orbitingBodyId = "mars";
+        x.fuel = 0.5;
+        String msg = DispatchShipDialog.fuelShortfall(w, x, new DispatchShipDialog.Destination(null, "jovian"), Map.of());
+        assertNotNull(msg);
+        assertTrue(msg.startsWith("Not enough fuel in Scout-1's tank"), msg);
+        x.fuel = 100;
+        assertNull(DispatchShipDialog.fuelShortfall(w, x, new DispatchShipDialog.Destination(null, "belt-a"), Map.of()));
+    }
 }

@@ -96,4 +96,38 @@ class SaveFileSchemaTest {
                 assertEquals(0, s.buildings.get(i).daysLeft);
             }
     }
+
+    /** Plan 9 §3.7: v4 saves surveys and orbit departures. */
+    @Test void v4_roundTripsSurveysAndOrbitDepartures() throws Exception {
+        World w = WorldGenerator.generate(4L);
+        w.survey("mars", "Scout-1");
+        Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, null);
+        x.state = ShipState.IN_TRANSIT;
+        x.fuel = 42.5;
+        x.transit = new Transit(null, null, "belt-a", 3L, 9L, Transit.snapshot(x.cargo), "mars");
+        w.ships.add(x);
+
+        String json = SaveFile.toJson(w);
+        assertTrue(json.contains("\"surveyedBodies\""));
+        World back = SaveFile.fromJson(json);
+        assertEquals(json, SaveFile.toJson(back));
+        assertEquals(java.util.List.of("earth", "mars"), java.util.List.copyOf(back.surveyedBodies));
+        Ship bx = back.findShip("x1");
+        assertEquals(ShipClass.EXPLORER, bx.shipClass);
+        assertNull(bx.transit.originSiteId());
+        assertEquals("mars", bx.transit.originBodyId());
+        assertEquals(42.5, bx.fuel);
+    }
+
+    @Test void v3_loadsWithSettledBodiesSurveyed() throws Exception {
+        World w = WorldGenerator.generate(4L);
+        w.findBody("belt-b").sites.add(new Site("site-b", "B Camp", "belt-b", 0.0, 0.0, 100));
+        w.survey("mars", "Scout-1"); // dropped: v3 files carry no surveys
+        String v3 = SaveFile.toJson(w)
+            .replace("\"schemaVersion\": 4", "\"schemaVersion\": 3")
+            .replaceAll("\"surveyedBodies\": \\[[^\\]]*\\],\\s*", "");
+        assertFalse(v3.contains("surveyedBodies"));
+        World back = SaveFile.fromJson(v3);
+        assertEquals(java.util.List.of("belt-b", "earth"), java.util.List.copyOf(back.surveyedBodies));
+    }
 }

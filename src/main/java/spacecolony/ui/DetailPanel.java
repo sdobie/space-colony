@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Rectangle;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -26,6 +27,9 @@ import spacecolony.sim.BuildingType;
 import spacecolony.sim.Construction;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
+import spacecolony.sim.ResourceSurvey;
+import spacecolony.sim.ShipClass;
+import spacecolony.sim.World;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
@@ -92,8 +96,14 @@ public class DetailPanel extends JPanel {
         addLabel(b.name, UiColors.FOREGROUND);
         addLabel(b.type.name() + "  ·  " + b.sites.size() + " site(s)", UiColors.FOREGROUND_DIM);
         miniRenderer.setBody(b);
-        JPanel wrap = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel wrap = new JPanel(new FlowLayout(FlowLayout.LEFT)) {
+            // Never taller than the globe, so the Resources rows sit right under it.
+            @Override public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         wrap.setOpaque(false);
+        wrap.setAlignmentX(LEFT_ALIGNMENT);
         wrap.add(miniRenderer);
         content.add(wrap);
         JButton open = new JButton("Open body view");
@@ -102,6 +112,49 @@ public class DetailPanel extends JPanel {
             engine.setView(EngineEvent.ViewChanged.View.BODY_VIEW);
         });
         content.add(open);
+        content.add(Box.createVerticalStrut(6));
+        World w = engine.world();
+        if (!w.isSurveyed(b.id)) {
+            addLabel(UNSURVEYED_TEXT, UiColors.FOREGROUND_DIM);
+            addLabel("Send an explorer to survey it.", UiColors.FOREGROUND_DIM);
+            return;
+        }
+        addLabel("Resources (surveyed)", UiColors.FOREGROUND_DIM);
+        List<ResourceSurvey.Entry> entries = ResourceSurvey.of(b);
+        if (entries.isEmpty()) addLabel("  No useful resources.", UiColors.FOREGROUND_DIM);
+        for (ResourceSurvey.Entry e : entries) {
+            java.awt.Color fg = e.rating() == ResourceSurvey.Rating.RICH ? UiColors.FOREGROUND : UiColors.FOREGROUND_DIM;
+            // Short enough for the 330 px column on one line.
+            addLabel("  " + resourceRow(e), fg).setToolTipText("Best " + e.resource() + " at "
+                + degrees(e.bestLat(), e.bestLon()) + ". The body view's overlay shows where.");
+        }
+    }
+
+    static final String UNSURVEYED_TEXT = "Resources unknown.";
+
+    /** {@code ORE  Rich  avg .51  best .85}. */
+    static String resourceRow(ResourceSurvey.Entry e) {
+        return e.resource() + "  " + e.rating().label() + "  avg " + ResourceSurvey.fmt(e.average())
+            + "  best " + ResourceSurvey.fmt(e.best());
+    }
+
+    /** {@code 23°N 104°W} for a latitude and longitude in radians. */
+    static String degrees(double lat, double lon) {
+        long la = Math.round(Math.toDegrees(lat));
+        long lo = Math.round(Math.toDegrees(lon));
+        return Math.abs(la) + "°" + (la < 0 ? "S" : "N") + " " + Math.abs(lo) + "°" + (lo < 0 ? "W" : "E");
+    }
+
+    /** {@code Ground: ORE .19 · SIL .45 · ICE .10 · BIO .21}: the yields at a colony's spot. */
+    static String groundLine(Body b, Site s) {
+        StringBuilder sb = new StringBuilder("Ground:");
+        List<ResourceSurvey.Entry> here = ResourceSurvey.at(b, s.lat, s.lon);
+        if (here.isEmpty()) return "Ground: nothing to mine or farm";
+        for (int i = 0; i < here.size(); i++) {
+            sb.append(i == 0 ? " " : " · ").append(ResourceSurvey.abbrev(here.get(i).resource()))
+              .append(' ').append(ResourceSurvey.fmt(here.get(i).best()));
+        }
+        return sb.toString();
     }
 
     private void renderSite(Site s) {
@@ -112,6 +165,11 @@ public class DetailPanel extends JPanel {
         // the two are equal after any tick.
         PopCapBreakdown cap = PopCapBreakdown.of(s, tech);
         addLabel("Body: " + s.bodyId + "  ·  pop " + s.population + "/" + cap.cap(), UiColors.FOREGROUND_DIM);
+        Body body = engine.world().findBody(s.bodyId);
+        if (body != null) {
+            addLabel(groundLine(body, s), UiColors.FOREGROUND_DIM)
+                .setToolTipText("Yield at this colony's spot (0 to 1). Mines and farms scale with it.");
+        }
         addLabel(capBreakdown(cap), UiColors.FOREGROUND_DIM)
             .setToolTipText("Pop cap = (site base + 100 per enabled habitat level) × colony management techs");
         addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(tech)), moraleColor(s.morale));
@@ -171,7 +229,8 @@ public class DetailPanel extends JPanel {
         }
         // Ships fly on their origin site's FUEL, drawn at departure, so an empty tank is normal.
         String fuel = String.format("Fuel: %.1f", s.fuel);
-        if (s.fuel < 1e-6 && s.currentSiteId != null) fuel += " (fills from site FUEL on departure)";
+        if (s.shipClass.tankCap() > 0) fuel = String.format("Tank: %.0f / %.0f FUEL", s.fuel, s.shipClass.tankCap());
+        else if (s.fuel < 1e-6 && s.currentSiteId != null) fuel += " (fills from site FUEL on departure)";
         addLabel(fuel, UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {
             addLabel("Cargo:", UiColors.FOREGROUND_DIM);
@@ -180,7 +239,13 @@ public class DetailPanel extends JPanel {
                 if (v > 1e-6) addLabel("  " + r + ": " + String.format("%.0f", v), UiColors.FOREGROUND);
             }
         }
-        if (orbiting != null) {
+        if (orbiting != null && s.shipClass == ShipClass.EXPLORER) {
+            // An explorer flies on from orbit on its own tank.
+            JButton dispatch = new JButton("Dispatch...");
+            dispatch.setName(TARGET_DISPATCH);
+            dispatch.addActionListener(e -> spacecolony.ui.dialogs.DispatchShipDialog.show(this, engine, s.id));
+            content.add(dispatch);
+        } else if (orbiting != null) {
             // An orbiting colonizer can only found a colony here (or be retired).
             JButton found = new JButton(FOUND_COLONY_LABEL);
             found.setName(TARGET_FOUND_COLONY);

@@ -204,6 +204,7 @@ public final class CommandPhase {
         Site s = new Site(bsc.siteId(), bsc.name(), bsc.bodyId(), bsc.lat(), bsc.lon(), 100);
         s.addBuilding(new Building(BuildingType.HABITAT, 1));
         body.sites.add(s);
+        w.survey(body.id, bsc.name());
         // The colonizer's cargo becomes the new colony's starting stock.
         for (var e : colonizer.cargo.entrySet()) {
             if (e.getValue() > 1e-9) s.stockpile.merge(e.getKey(), e.getValue(), Double::sum);
@@ -216,7 +217,7 @@ public final class CommandPhase {
     private static void applyDispatchShip(World w, DispatchShipCommand ds) {
         Ship s = w.findShip(ds.shipId());
         if (s == null) throw new CommandRejectedException("No such ship: " + ds.shipId());
-        if (s.orbitingBodyId != null) {
+        if (s.orbitingBodyId != null && s.shipClass != ShipClass.EXPLORER) {
             Body at = w.findBody(s.orbitingBodyId);
             throw new CommandRejectedException("Ship is orbiting " + (at != null ? at.name : s.orbitingBodyId)
                 + "; found a colony or retire it");
@@ -230,12 +231,18 @@ public final class CommandPhase {
         } else {
             if (w.findBody(ds.destBodyId()) == null)
                 throw new CommandRejectedException("No such body: " + ds.destBodyId());
-            if (s.shipClass != ShipClass.COLONIZER)
-                throw new CommandRejectedException("Only colonizers can travel to a body without a site");
+            if (s.shipClass != ShipClass.COLONIZER && s.shipClass != ShipClass.EXPLORER)
+                throw new CommandRejectedException("Only colonizers and explorers can travel to a body without a site");
             destBodyId = ds.destBodyId();
         }
         String overflow = cargoOverflow(s, ds.manifest());
         if (overflow != null) throw new CommandRejectedException(overflow);
+        if (s.orbitingBodyId != null) {
+            // An explorer in orbit has nowhere to load; it leaves now on its own tank.
+            String why = TransitPhase.departFromOrbit(w, s, ds.destSiteId(), ds.destBodyId());
+            if (why != null) throw new CommandRejectedException(why);
+            return;
+        }
         // Spec §3.7: reject up front if the ship clearly can't afford the trip. The
         // departure-time check still runs later, but this saves N ticks of LOADING.
         String shortfall = fuelShortfall(w, s, destBodyId, ds.manifest());
@@ -265,7 +272,15 @@ public final class CommandPhase {
     public static String fuelShortfall(World w, Ship s, String destBodyId,
                                        java.util.Map<Resource, Double> manifest) {
         Site originSite = w.findSite(s.currentSiteId);
-        if (originSite == null) return null;
+        if (originSite == null) {
+            // In orbit, an explorer flies on what's in its tank.
+            if (s.orbitingBodyId == null || destBodyId == null) return null;
+            double[] op = OrbitalGeometry.bodyPosition(w, s.orbitingBodyId, w.tick);
+            double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
+            double dist = s.orbitingBodyId.equals(destBodyId) ? 0.0 : Math.hypot(dp[0] - op[0], dp[1] - op[1]);
+            double est = FUEL_K * s.shipClass.dryMass() * dist * TechEffects.fuelCostMultiplier(w.tech);
+            return s.fuel + 1e-9 >= est ? null : TransitPhase.tankShortfall(s, est);
+        }
         double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
         double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
         double dx = dp[0] - op[0], dy = dp[1] - op[1];

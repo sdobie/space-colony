@@ -36,6 +36,7 @@ public final class DebugActions {
     public final Action runN;
     public final Action triggerEvent;
     public final Action finishConstruction;
+    public final Action surveyAll;
     public final Action dumpWorld;
     public final Action determinism;
     public final Action inspector;
@@ -49,6 +50,8 @@ public final class DebugActions {
         runN = action("Run N…", this::doRunN);
         triggerEvent = action("Trigger event…", () -> TriggerEventDialog.show(debug.frame(), engine));
         finishConstruction = action("Finish construction", this::doFinishConstruction);
+        surveyAll = action("Survey all bodies", () ->
+            engine.applyDebugEdit("survey all bodies", DebugActions::surveyAll));
         dumpWorld = action("Dump world", this::doDump);
         determinism = action("Determinism check", this::doDeterminism);
         inspector = action("Inspector", this::doInspect);
@@ -70,6 +73,12 @@ public final class DebugActions {
         step.setEnabled(paused);
         triggerEvent.setEnabled(paused);
         finishConstruction.setEnabled(paused);
+        surveyAll.setEnabled(paused);
+    }
+
+    /** Surveys every body not yet surveyed, one event each. */
+    static void surveyAll(spacecolony.sim.World w) {
+        for (spacecolony.sim.Body b : w.bodies) w.survey(b.id, "Debug");
     }
 
     /** Selected colony's builds and upgrades all finish on the next tick. */

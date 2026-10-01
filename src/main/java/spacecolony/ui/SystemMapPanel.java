@@ -125,10 +125,10 @@ public class SystemMapPanel extends JPanel {
         for (Ship ship : engine.world().ships) {
             if (ship.state != ShipState.IN_TRANSIT) continue;
             var t = ship.transit;
-            var originSite = engine.world().findSite(t.originSiteId());
+            String originBody = t.originBody(engine.world());
             String destBody = t.destBody(engine.world());
-            if (originSite == null || destBody == null) continue;
-            int[] op = screenPoint(originSite.bodyId, t.departureTick(), cx, cy);
+            if (originBody == null || destBody == null) continue;
+            int[] op = screenPoint(originBody, t.departureTick(), cx, cy);
             int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
             long now = engine.world().tick;
             double progress = (double)(now - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
@@ -139,7 +139,7 @@ public class SystemMapPanel extends JPanel {
             g2.fillRect(x - 2, y - 2, 4, 4);
         }
 
-        // Colonizers waiting in orbit: a ship dot just up and right of the body.
+        // Ships waiting in orbit (colonizers and explorers): a ship dot just up and right of the body.
         for (Ship ship : engine.world().ships) {
             if (ship.orbitingBodyId == null) continue;
             int[] p = screenPoint(ship.orbitingBodyId, engine.world().tick, cx, cy);
@@ -253,10 +253,10 @@ public class SystemMapPanel extends JPanel {
         for (Ship ship : world.ships) {
             if (ship.state != ShipState.IN_TRANSIT) continue;
             var t = ship.transit;
-            var originSite = world.findSite(t.originSiteId());
+            String originBody = t.originBody(world);
             String destBody = t.destBody(world);
-            if (originSite == null || destBody == null) continue;
-            int[] op = screenPoint(originSite.bodyId, t.departureTick(), cx, cy);
+            if (originBody == null || destBody == null) continue;
+            int[] op = screenPoint(originBody, t.departureTick(), cx, cy);
             int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
             double progress = (double) (world.tick - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
             progress = Math.max(0, Math.min(1, progress));
@@ -271,11 +271,8 @@ public class SystemMapPanel extends JPanel {
             g2.drawOval(dx - 4, dy - 4, 8, 8);
             double mass = 0;
             for (double v : t.cargoSnapshot().values()) mass += v;
-            double fuel = t.destSiteId() != null
-                ? TransitPhase.fuelCost(world, ship.shipClass, mass,
-                    t.originSiteId(), t.destSiteId(), t.departureTick(), t.arrivalTick())
-                : TransitPhase.fuelCostToBody(world, ship.shipClass, mass,
-                    t.originSiteId(), t.destBodyId(), t.departureTick(), t.arrivalTick());
+            double fuel = TransitPhase.fuelCostBodies(world, ship.shipClass, mass,
+                originBody, destBody, t.departureTick(), t.arrivalTick());
             g2.drawString(String.format("t=%d  ≈%.1f fuel", t.arrivalTick(), fuel), dx + 6, dy - 6);
         }
     }

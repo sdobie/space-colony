@@ -1,7 +1,7 @@
 # Plan 9 — Explorer Ships and Surveys
 
 **Date:** 2026-10-01
-**Status:** Design, awaiting Steve's approval. Nothing is implemented yet.
+**Status:** Implemented (Plan 9) with the §9.3 defaults. Deviations: `Transit.originBodyId` is the record's last component, not its second, so existing call sites keep their constructor; a colonizer's unsettled destinations still read "Mars (unsettled)" (the tutorial names that label); FUEL appears in a survey only on gas giants, since only gas-giant mines extract it; the overlay greys the terrain and uses an indigo-teal-yellow ramp, because an amber ramp vanished on Mars; the unsurveyed body text is two lines to fit the column. The play-test is `./gradlew surveyPlayTest` (`playtest/SurveyDriver`) rather than an addition to `PlayTestDriver`.
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–8 merged to `main` (last: Plan 8 building costs, PRs #24 and #25), plus play-tester and UI PRs through #28. About 450 tests.
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.2 (bodies carry per-resource yield maps baked at world-gen), §3.4 (ship classes), §7 (detail panel, body view).

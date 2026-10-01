@@ -27,14 +27,16 @@ public final class TransitPhase {
         for (Ship s : w.ships) {
             if (s.state == ShipState.IN_TRANSIT && w.tick >= s.transit.arrivalTick()
                     && s.transit.destBodyId() != null) {
-                // A colonizer's trip to a body: wait in orbit with the cargo aboard.
+                // A trip to a body: wait in orbit (a colonizer with its cargo aboard).
                 s.state = ShipState.IDLE;
                 s.orbitingBodyId = s.transit.destBodyId();
                 s.transit = null;
                 Body b = w.findBody(s.orbitingBodyId);
                 String bodyName = b != null ? b.name : s.orbitingBodyId;
+                String noun = s.shipClass == ShipClass.EXPLORER ? "Explorer " : "Colonizer ";
                 w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_ARRIVED,
-                    "Colonizer " + s.name + " is orbiting " + bodyName, s.orbitingBodyId, null, s.id));
+                    noun + s.name + " is orbiting " + bodyName, s.orbitingBodyId, null, s.id));
+                if (s.shipClass == ShipClass.EXPLORER) w.survey(s.orbitingBodyId, s.name);
             } else if (s.state == ShipState.IN_TRANSIT && w.tick >= s.transit.arrivalTick()) {
                 s.state = ShipState.UNLOADING;
                 s.currentSiteId = s.transit.destSiteId();
@@ -43,6 +45,7 @@ public final class TransitPhase {
                 String destName = dest != null ? dest.name : s.currentSiteId;
                 w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_ARRIVED,
                     "Ship " + s.name + " arrived at " + destName, null, s.currentSiteId, s.id));
+                if (s.shipClass == ShipClass.EXPLORER && dest != null) w.survey(dest.bodyId, s.name);
             }
         }
     }
@@ -102,10 +105,20 @@ public final class TransitPhase {
                         s.transit = null;
                         continue;
                     }
+                    if (s.shipClass.tankCap() > 0) {
+                        // An explorer departs with a full tank, this trip included, so it can fly on from orbit.
+                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
+                        double topUp = Math.min(s.shipClass.tankCap() - s.fuel, have);
+                        if (topUp > 0) {
+                            origin.stockpile.merge(Resource.FUEL, -topUp, Double::sum);
+                            s.fuel += topUp;
+                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -topUp);
+                        }
+                    }
                     s.fuel -= cost;
                     s.transit = new Transit(s.transit.originSiteId(), s.transit.destSiteId(),
                                             s.transit.destBodyId(), depart, arrival,
-                                            Transit.snapshot(s.cargo));
+                                            Transit.snapshot(s.cargo), null);
                     s.currentSiteId = null;
                     s.state = ShipState.IN_TRANSIT;
                     w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_DEPARTED,
@@ -139,6 +152,44 @@ public final class TransitPhase {
     }
 
     /**
+     * Sends a ship idling in orbit (an explorer) straight into transit toward {@code destSiteId}
+     * or {@code destBodyId}, paying the trip from its tank. Returns why it can't go, or null
+     * once it has left.
+     */
+    public static String departFromOrbit(World w, Ship s, String destSiteId, String destBodyId) {
+        String originBody = s.orbitingBodyId;
+        String destBody;
+        if (destSiteId != null) {
+            Site d = w.findSite(destSiteId);
+            destBody = d == null ? null : d.bodyId;
+        } else {
+            destBody = destBodyId;
+        }
+        if (originBody == null || destBody == null) return "No route from orbit";
+        Transit planned = new Transit(null, destSiteId, destBodyId, w.tick, Transit.PENDING_ARRIVAL_TICK,
+                                      Transit.snapshot(s.cargo), originBody);
+        long arrival = arrivalTick(w, s.shipClass, planned, w.tick);
+        double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(), originBody, destBody, w.tick, arrival);
+        if (s.fuel + 1e-9 < cost) return tankShortfall(s, cost);
+        s.fuel = Math.max(0.0, s.fuel - cost);
+        s.transit = new Transit(null, destSiteId, destBodyId, w.tick, arrival, Transit.snapshot(s.cargo), originBody);
+        s.orbitingBodyId = null;
+        s.currentSiteId = null;
+        s.state = ShipState.IN_TRANSIT;
+        Body db = w.findBody(destBody);
+        w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_DEPARTED,
+            "Ship " + s.name + " departed for " + (destSiteId != null ? destSiteId : (db != null ? db.name : destBody)),
+            null, null, s.id));
+        return null;
+    }
+
+    /** The message for a trip of {@code cost} that {@code s}'s tank can't cover. */
+    public static String tankShortfall(Ship s, double cost) {
+        return String.format("Not enough fuel in %s's tank: need ≈%.0f, have %.0f. Send it to a colony to refuel.",
+                             s.name, cost, s.fuel);
+    }
+
+    /**
      * Fuel a ship of class {@code c} carrying {@code cargoMass} burns flying from the origin
      * site's body at {@code t0} to the destination site's body at {@code t1}, under the
      * world's current tech. Used at departure and (as an estimate) by the debug map overlay.
@@ -155,6 +206,12 @@ public final class TransitPhase {
         return fuelCostBetweenBodies(w, c, cargoMass, bodyOfSite(w, originSiteId), destBodyId, t0, t1);
     }
 
+    /** As {@link #fuelCost}, between two bodies; for trips that start in orbit. */
+    public static double fuelCostBodies(World w, ShipClass c, double cargoMass,
+                                        String originBodyId, String destBodyId, long t0, long t1) {
+        return fuelCostBetweenBodies(w, c, cargoMass, originBodyId, destBodyId, t0, t1);
+    }
+
     private static double fuelCostBetweenBodies(World w, ShipClass c, double cargoMass,
                                                 String originBodyId, String destBodyId, long t0, long t1) {
         double dist = distanceBetweenBodiesAtTicks(w, originBodyId, destBodyId, t0, t1);
@@ -162,9 +219,13 @@ public final class TransitPhase {
     }
 
     private static long computeArrivalTick(World w, Ship s, long depart) {
-        double speed = s.shipClass.speed();
-        String originBody = bodyOfSite(w, s.transit.originSiteId());
-        String destBody = s.transit.destBody(w);
+        return arrivalTick(w, s.shipClass, s.transit, depart);
+    }
+
+    private static long arrivalTick(World w, ShipClass c, Transit transit, long depart) {
+        double speed = c.speed();
+        String originBody = transit.originBody(w);
+        String destBody = transit.destBody(w);
         // A hop between sites on one body takes a day and ignores the body's own orbital motion.
         if (originBody == null || destBody == null || originBody.equals(destBody)) return depart + 1;
         double[] op = OrbitalGeometry.bodyPosition(w, originBody, depart);

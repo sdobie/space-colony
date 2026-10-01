@@ -26,6 +26,7 @@ public final class DebugMenu extends JMenu {
         add(item(a.runN, RUN_N_KEY));
         add(new JMenuItem(a.triggerEvent));
         add(new JMenuItem(a.finishConstruction));
+        add(new JMenuItem(a.surveyAll));
         addSeparator();
         add(new JMenuItem(a.dumpWorld));
         add(new JMenuItem(a.determinism));

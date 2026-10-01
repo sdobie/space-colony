@@ -23,4 +23,13 @@ class FinishConstructionTest {
         assertEquals(1, shipyard.level);
         assertEquals(2, hub.buildings.get(1).level);
     }
+
+    @Test
+    void surveyAll_surveysEveryBodyOnce() {
+        World w = WorldGenerator.generate(1L);
+        DebugActions.surveyAll(w);
+        assertEquals(w.bodies.size(), w.surveyedBodies.size());
+        long events = w.recentEvents.stream().filter(e -> e.kind() == spacecolony.sim.EventKind.BODY_SURVEYED).count();
+        assertEquals(w.bodies.size() - 1, events); // Earth was surveyed at start
+    }
 }
