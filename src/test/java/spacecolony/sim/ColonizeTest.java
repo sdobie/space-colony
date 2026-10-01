@@ -52,7 +52,7 @@ class ColonizeTest {
         sim.enqueue(new BuildShipCommand("h1", "H1", ShipClass.HAULER, "site-earth-hub"));
         sim.enqueue(DispatchShipCommand.toBody("h1", "mars", Map.of()));
         sim.advance(w);
-        assertTrue(rejected(w, "Only colonizers can travel to a body without a site"));
+        assertTrue(rejected(w, "Only colonizers and explorers can travel to a body without a site"));
         assertEquals(ShipState.IDLE, w.findShip("h1").state);
     }
 

@@ -25,13 +25,14 @@ import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 
-/** Save/load entry points. Schema version 3. */
+/** Save/load entry points. Schema version 4. */
 public final class SaveFile {
     /**
      * v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId.
      * v3 (Plan 8) adds building id and daysLeft.
+     * v4 (Plan 9) adds surveyedBodies and transit originBodyId.
      */
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
     /** Oldest schema {@link #fromJson} still reads; v1 files load with the v2 defaults. */
     public static final int MIN_READABLE_VERSION = 1;
     private SaveFile() {}
@@ -69,12 +70,19 @@ public final class SaveFile {
         root.put("tick",          num(w.tick));
         root.put("credits",       num(w.credits));
         root.put("randomEventsEnabled", new JsonValue.JsonBool(w.randomEventsEnabled));
+        root.put("surveyedBodies", buildSurveyed(w));
         root.put("bodies",        buildBodies(w));
         root.put("ships",         buildShips(w));
         root.put("tech",          buildTech(w));
         root.put("goals",         buildGoals(w));
         root.put("events",        buildEvents(w));
         return new JsonValue.JsonObject(root);
+    }
+
+    private static JsonValue buildSurveyed(World w) {
+        List<JsonValue> out = new ArrayList<>();
+        for (String id : new TreeSet<>(w.surveyedBodies)) out.add(str(id));
+        return new JsonValue.JsonArray(out);
     }
 
     private static JsonValue buildBodies(World w) {
@@ -131,7 +139,8 @@ public final class SaveFile {
             o.put("cargo", resourceMap(s.cargo));
             if (s.transit != null) {
                 Map<String, JsonValue> t = new LinkedHashMap<>();
-                t.put("originSiteId", str(s.transit.originSiteId()));
+                t.put("originSiteId", optStr(s.transit.originSiteId()));
+                t.put("originBodyId", optStr(s.transit.originBodyId()));
                 t.put("destSiteId",   optStr(s.transit.destSiteId()));
                 t.put("destBodyId",   optStr(s.transit.destBodyId()));
                 t.put("departureTick", num(s.transit.departureTick()));
@@ -228,6 +237,14 @@ public final class SaveFile {
             }
         }
 
+        // Before v4 there were no surveys: every settled body counts as surveyed.
+        w.surveyedBodies.clear();
+        if (root.values().get("surveyedBodies") instanceof JsonValue.JsonArray sa) {
+            for (JsonValue v : sa.values()) w.surveyedBodies.add(((JsonValue.JsonString) v).value());
+        } else {
+            for (Body b : w.bodies) if (!b.sites.isEmpty()) w.surveyedBodies.add(b.id);
+        }
+
         w.ships.clear();
         for (JsonValue sv : ((JsonValue.JsonArray) root.values().get("ships")).values()) {
             w.ships.add(loadShip((JsonValue.JsonObject) sv));
@@ -300,12 +317,13 @@ public final class SaveFile {
             Map<Resource, Double> snapshot = new EnumMap<>(Resource.class);
             loadResourceMap((JsonValue.JsonObject) to.values().get("cargoSnapshot"), snapshot);
             s.transit = new Transit(
-                ((JsonValue.JsonString) to.values().get("originSiteId")).value(),
+                optString(to, "originSiteId"),
                 optString(to, "destSiteId"),
                 optString(to, "destBodyId"),
                 ((JsonValue.JsonNumber) to.values().get("departureTick")).asLong(),
                 ((JsonValue.JsonNumber) to.values().get("arrivalTick")).asLong(),
-                snapshot);
+                snapshot,
+                optString(to, "originBodyId"));
         }
         return s;
     }

@@ -4,6 +4,8 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Root game state. Mutated only by {@link Simulator#advance(World)} (which itself runs
@@ -25,6 +27,8 @@ public class World {
      * world) or by {@code SetRandomEventsCommand}; forced events ignore it.
      */
     public boolean randomEventsEnabled = true;
+    /** Ids of bodies whose resources the player has seen (Plan 9). Sorted for stable saves. */
+    public final SortedSet<String> surveyedBodies = new TreeSet<>();
 
     public World(long seed) {
         this.seed = seed;
@@ -35,6 +39,34 @@ public class World {
     public void emit(Event e) {
         recentEvents.addLast(e);
         while (recentEvents.size() > MAX_RECENT_EVENTS) recentEvents.removeFirst();
+    }
+
+    public boolean isSurveyed(String bodyId) {
+        return bodyId != null && surveyedBodies.contains(bodyId);
+    }
+
+    /**
+     * Marks {@code bodyId} surveyed by {@code byWhom} and, if it wasn't already, emits a
+     * BODY_SURVEYED event naming its best ground. Returns whether the survey was new.
+     */
+    public boolean survey(String bodyId, String byWhom) {
+        Body b = findBody(bodyId);
+        if (b == null || !surveyedBodies.add(bodyId)) return false;
+        List<ResourceSurvey.Entry> entries = ResourceSurvey.of(b);
+        StringBuilder sb = new StringBuilder(byWhom + " surveyed " + b.name + ". ");
+        if (entries.isEmpty()) {
+            sb.append("No useful resources.");
+        } else {
+            sb.append("Best spots: ");
+            for (int i = 0; i < Math.min(3, entries.size()); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(entries.get(i).resource().name()).append(' ')
+                  .append(ResourceSurvey.fmt(entries.get(i).best()));
+            }
+            sb.append('.');
+        }
+        emit(new Event(tick, EventSeverity.INFO, EventKind.BODY_SURVEYED, sb.toString(), bodyId, null, null));
+        return true;
     }
 
     public Body findBody(String id) {

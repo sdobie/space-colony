@@ -33,6 +33,7 @@ public final class WorldGenerator {
         start.stockpile.put(Resource.FUEL, 400.0);
         start.stockpile.put(Resource.BIOMASS, 100.0);
         earth.sites.add(start);
+        w.surveyedBodies.add(earth.id);
         return w;
     }
 

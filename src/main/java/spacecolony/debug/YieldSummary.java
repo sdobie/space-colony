@@ -7,9 +7,10 @@ import java.util.List;
 import java.util.Map;
 import spacecolony.sim.Body;
 import spacecolony.sim.Resource;
+import spacecolony.sim.ResourceSurvey;
 
 /**
- * Per-body mean resource yields for the debug map labels. Samples an 8×16 lat/lon grid
+ * Per-body mean resource yields for the debug map labels. Samples {@link ResourceSurvey}'s 8×16 lat/lon grid
  * and caches by body id; clear on WorldReplaced, because yields depend on the seed.
  */
 public final class YieldSummary {
@@ -36,9 +37,9 @@ public final class YieldSummary {
             double sum = 0;
             int n = 0;
             for (int i = 0; i < 8; i++) {
-                double lat = -Math.PI / 2 + Math.PI / 16 + i * Math.PI / 8;
+                double lat = ResourceSurvey.gridLat(i);
                 for (int j = 0; j < 16; j++) {
-                    double lon = -Math.PI + Math.PI / 16 + j * Math.PI / 8;
+                    double lon = ResourceSurvey.gridLon(j);
                     sum += b.resourceYields.sample(r, lat, lon);
                     n++;
                 }

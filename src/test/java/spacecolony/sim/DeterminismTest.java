@@ -88,6 +88,34 @@ class DeterminismTest {
         assertTrue(a.findSite("site-earth-hub").buildings.stream().anyMatch(x -> x.type == BuildingType.FARM && x.level == 2));
     }
 
+    /** Plan 9: an explorer surveying Mars and hopping on replays identically across a save/load. */
+    @Test
+    void explorer_saveLoadReplay() throws Exception {
+        World a = WorldGenerator.generate(12345L);
+        World b = WorldGenerator.generate(12345L);
+        Simulator s1 = new Simulator();
+        Simulator s2 = new Simulator();
+        for (int t = 0; t < 200; t++) {
+            if (t == 40) b = spacecolony.save.SaveFile.fromJson(spacecolony.save.SaveFile.toJson(b));
+            for (Command c : explorerScript(a, t)) s1.enqueue(c);
+            for (Command c : explorerScript(b, t)) s2.enqueue(c);
+            s1.advance(a);
+            s2.advance(b);
+        }
+        assertEquals(spacecolony.save.SaveFile.toJson(a), spacecolony.save.SaveFile.toJson(b));
+        assertTrue(a.isSurveyed("mars"));
+    }
+
+    private static java.util.List<Command> explorerScript(World w, int t) {
+        java.util.List<Command> out = new java.util.ArrayList<>();
+        Ship x = w.findShip("x1");
+        if (t == 0) out.add(new spacecolony.sim.commands.BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, "site-earth-hub"));
+        if (t == 1) out.add(spacecolony.sim.commands.DispatchShipCommand.toBody("x1", "mars", java.util.Map.of()));
+        if (x != null && "mars".equals(x.orbitingBodyId))
+            out.add(new spacecolony.sim.commands.DispatchShipCommand("x1", "site-earth-hub", java.util.Map.of()));
+        return out;
+    }
+
     /** Build, upgrade, repair after a forced meteor, demolish; stays mid-construction across tick 150. */
     private static java.util.List<Command> script(World w, int t) {
         String hub = "site-earth-hub";
