@@ -29,19 +29,19 @@ public final class BodyAppearances {
         new Color(235, 242, 248)   // snow
     };
 
-    // Mars-ish red rocky body.
+    // Mars: rust and butterscotch dust over dark basalt, low to high; the caps come from latitude.
     private static final Color[] MARS_LAND = {
-        new Color(150, 95, 70),    // light dust
-        new Color(165, 95, 60),    // ochre
-        new Color(180, 100, 55),   // orange-red
-        new Color(155, 85, 50),    // rust
-        new Color(130, 70, 45),    // dark rust
-        new Color(115, 60, 40),    // basalt-red
-        new Color(95, 50, 35),     // shadow
-        new Color(180, 175, 165),  // polar dust
-        new Color(100, 70, 50),    // crater rim
-        new Color(120, 85, 65),    // crater floor
-        new Color(245, 240, 235)   // polar cap
+        new Color(178, 82, 44),    // lowland dust
+        new Color(186, 88, 46),    // rust plains
+        new Color(170, 76, 42),    // rust
+        new Color(140, 62, 38),    // dark basalt
+        new Color(124, 56, 36),    // basalt
+        new Color(160, 72, 40),    // dark rust
+        new Color(196, 100, 52),   // orange-red
+        new Color(210, 118, 62),   // butterscotch
+        new Color(200, 108, 58),   // highland ochre
+        new Color(182, 94, 54),    // volcano flank
+        new Color(166, 86, 54)     // summit
     };
 
     private static final Color[] ASTEROID_LAND = {
@@ -72,19 +72,19 @@ public final class BodyAppearances {
         new Color(250, 252, 255)   // bright ice
     };
 
-    // Gas giant: latitude-banded cloud palette.
+    // Gas giant (Jupiter): dark red-brown belts up to cream-white zones.
     private static final Color[] JOVIAN_BANDS = {
-        new Color(190, 150, 100),  // dark belt
-        new Color(215, 180, 130),  // dusty belt
-        new Color(230, 200, 150),  // pale zone
-        new Color(245, 220, 180),  // bright zone
-        new Color(250, 230, 200),
-        new Color(245, 220, 180),
-        new Color(230, 200, 150),
-        new Color(215, 180, 130),
-        new Color(195, 155, 105),
-        new Color(180, 140, 95),
-        new Color(165, 125, 85)
+        new Color(122, 76, 52),    // dark belt
+        new Color(148, 94, 62),
+        new Color(172, 116, 78),   // belt
+        new Color(194, 142, 98),
+        new Color(210, 166, 120),  // tan
+        new Color(222, 188, 145),
+        new Color(232, 206, 166),  // pale zone
+        new Color(240, 220, 186),
+        new Color(245, 232, 205),  // bright zone
+        new Color(246, 238, 218),
+        new Color(242, 238, 228)   // white zone
     };
 
     // Rocky moon (like our Moon / Io): same as asteroid but slightly lighter.
@@ -135,13 +135,13 @@ public final class BodyAppearances {
             case ROCKY     -> new BodyAppearance(new Color(100, 150, 255), EARTH_OCEAN, EARTH_LAND,    true,  false);
             case ASTEROID  -> new BodyAppearance(null,                     null,        ASTEROID_LAND, false, false);
             case ICE_BODY  -> new BodyAppearance(new Color(180, 220, 240), null,        ICE_LAND,      false, false);
-            case GAS_GIANT -> new BodyAppearance(new Color(220, 200, 150), null,        JOVIAN_BANDS,  false, true);
+            case GAS_GIANT -> new BodyAppearance(new Color(220, 200, 150), null,        JOVIAN_BANDS,  false, true, null, true);
             case MOON      -> new BodyAppearance(null,                     null,        MOON_LAND,     false, false);
         };
     }
 
     /** Mars-flavoured rocky variant, picked by {@link #forBody} for the body with id "mars". */
     public static BodyAppearance mars() {
-        return new BodyAppearance(new Color(220, 160, 110), null, MARS_LAND, false, false);
+        return new BodyAppearance(new Color(230, 150, 110), null, MARS_LAND, false, false, new Color(240, 236, 230), false);
     }
 }

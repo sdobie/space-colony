@@ -53,6 +53,7 @@ public class PlanetGenerator {
     }
 
     public BufferedImage generate(long seed) {
+        if (currentAppearance.latitudeBanded()) return generateBanded(seed);
         // Independent noise generators for each role
         SimplexNoise continentNoise = new SimplexNoise(seed);
         SimplexNoise warpNoise1     = new SimplexNoise(seed + 1000);
@@ -348,6 +349,12 @@ public class PlanetGenerator {
                 }
                 color = applyShading(color, shadeFactor);
 
+                // Polar ice: caps reach a little lower where the terrain is high.
+                if (currentAppearance.polarCap() != null) {
+                    double cap = smoothstep((absLat - 0.90 + (e - 0.5) * 0.12 + (roughness[px][py] - 0.5) * 0.05) / 0.04);
+                    if (cap > 0) color = lerpColor(color, applyShading(currentAppearance.polarCap(), 0.75 + hs * 0.35), cap);
+                }
+
                 // Draw rivers
                 double river = riverIntensity[px][py];
                 if (river > 0) {
@@ -369,6 +376,63 @@ public class PlanetGenerator {
     public BufferedImage generate(long seed, BodyAppearance appearance) {
         this.currentAppearance = appearance;
         return generate(seed);
+    }
+
+    /**
+     * Cloud-world map: alternating belts and zones by latitude, their edges stirred by
+     * longitude-stretched turbulence, darker hazy poles, and (with {@code storms}) a great red
+     * spot and white ovals. No hillshading: clouds have no relief.
+     */
+    private BufferedImage generateBanded(long seed) {
+        Color[] pal = currentAppearance.landPalette();
+        SimplexNoise turb = new SimplexNoise(seed + 500);
+        SimplexNoise streak = new SimplexNoise(seed + 600);
+        Random r = new Random(seed);
+        double p1 = r.nextDouble() * 2 * Math.PI, p2 = r.nextDouble() * 2 * Math.PI, p3 = r.nextDouble() * 2 * Math.PI;
+        double spotLon = r.nextDouble() * 2 * Math.PI;
+        double[] ovalLon = { r.nextDouble() * 2 * Math.PI, r.nextDouble() * 2 * Math.PI, r.nextDouble() * 2 * Math.PI };
+        Color pole = lerpColor(pal[0], new Color(150, 140, 130), 0.5);
+        Color spot = new Color(196, 98, 66);
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int py = 0; py < height; py++) {
+            double lat = Math.PI * (0.5 - (py + 0.5) / height);
+            double cosLat = Math.cos(lat), sinLat = Math.sin(lat);
+            for (int px = 0; px < width; px++) {
+                double lon = 2.0 * Math.PI * px / width;
+                double sx = cosLat * Math.cos(lon), sy = cosLat * Math.sin(lon), sz = sinLat;
+                // Stretching z (north-south) makes the noise vary fast across bands, slowly along them.
+                double t = turb.fractal(sx * 1.6, sy * 1.6, sz * 7.0, 4, 0.5, 2.0);
+                double latW = lat + t * 0.07;
+                double band = 0.55 * Math.sin(latW * 13 + p1) + 0.30 * Math.sin(latW * 23 + p2) + 0.15 * Math.sin(latW * 37 + p3);
+                band += streak.fractal(sx * 3.0, sy * 3.0, sz * 28.0, 3, 0.5, 2.0) * 0.35;
+                double v = Math.max(0, Math.min(1, 0.5 + band * 0.65));  // a touch of extra contrast
+                double idx = v * (pal.length - 1);
+                int i0 = (int) Math.floor(idx);
+                int i1 = Math.min(pal.length - 1, i0 + 1);
+                Color c = lerpColor(pal[i0], pal[i1], idx - i0);
+
+                c = lerpColor(c, pole, smoothstep((Math.abs(sinLat) - 0.80) / 0.20) * 0.65);
+
+                if (currentAppearance.storms()) {
+                    c = oval(c, lat, lon, -0.38, spotLon, 0.36, 0.14, spot, t);
+                    for (int k = 0; k < ovalLon.length; k++) {
+                        c = oval(c, lat, lon, -0.58, ovalLon[k], 0.07, 0.035, pal[pal.length - 1], t);
+                    }
+                }
+                image.setRGB(px, py, c.getRGB());
+            }
+        }
+        return image;
+    }
+
+    /** Blends {@code fill} into an elliptical storm with a soft, slightly ragged rim. */
+    private static Color oval(Color c, double lat, double lon, double lat0, double lon0, double a, double b, Color fill, double turb) {
+        double dLon = Math.atan2(Math.sin(lon - lon0), Math.cos(lon - lon0)) * Math.cos(lat0);
+        double d = Math.hypot(dLon / a, (lat - lat0) / b) + turb * 0.15;
+        if (d >= 1.15) return c;
+        Color inner = lerpColor(fill, applyShading(fill, 0.85), smoothstep(1 - d));  // darker core
+        return lerpColor(c, inner, smoothstep((1.15 - d) / 0.3));
     }
 
     /**

@@ -11,12 +11,22 @@ import java.awt.Color;
  * @param oceanPalette 4 colors from deep ocean to shore; null for bodies with no liquid surface
  * @param landPalette 11 colors keyed by elevation bucket (beach → snow); never null
  * @param computeRivers true to overlay rivers (rocky/Earth-like only)
- * @param latitudeBanded true for gas giants — pipeline ignores elevation and colors by latitude
+ * @param latitudeBanded true for gas giants — pipeline ignores elevation and paints cloud belts
+ *                       and zones, darkest palette entry = belt, brightest = zone
+ * @param polarCap ice color blended in near the poles; null for none
+ * @param storms true to paint a great red spot and a few white ovals on a banded body
  */
 public record BodyAppearance(
     Color atmosphereColor,
     Color[] oceanPalette,
     Color[] landPalette,
     boolean computeRivers,
-    boolean latitudeBanded
-) {}
+    boolean latitudeBanded,
+    Color polarCap,
+    boolean storms
+) {
+    public BodyAppearance(Color atmosphereColor, Color[] oceanPalette, Color[] landPalette,
+                          boolean computeRivers, boolean latitudeBanded) {
+        this(atmosphereColor, oceanPalette, landPalette, computeRivers, latitudeBanded, null, false);
+    }
+}
