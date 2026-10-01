@@ -1,7 +1,9 @@
 package spacecolony.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Rectangle;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -9,7 +11,10 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.Scrollable;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
 import spacecolony.engine.Selection;
@@ -34,7 +39,7 @@ import spacecolony.sim.economy.Limit;
 
 public class DetailPanel extends JPanel {
     private final Engine engine;
-    private final JPanel content = new JPanel();
+    private final JPanel content = new WidthTrackingPanel();
     private final SphereMiniRenderer miniRenderer;
     /** Kept across refreshes so open rows stay open as the days tick. */
     private final ResourceLedgerPanel ledger = new ResourceLedgerPanel();
@@ -194,22 +199,58 @@ public class DetailPanel extends JPanel {
 
     /** One building row: its label, and a ⋯ button that opens {@link BuildingMenu}. */
     private JPanel buildingRow(Site s, Building b, String text, java.awt.Color fg, String techs) {
-        JPanel row = new JPanel(new BorderLayout());
+        JPanel row = new JPanel(new BorderLayout()) {
+            // The text wraps, so the row's height follows its width; never stretch taller than that.
+            @Override public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         row.setOpaque(false);
         row.setAlignmentX(LEFT_ALIGNMENT);
-        JLabel label = new JLabel(text);
-        label.setForeground(fg);
-        if (!techs.isEmpty()) label.setToolTipText("Techs: " + techs);
-        row.add(label, BorderLayout.CENTER);
+        row.add(wrappingText(text, fg, techs.isEmpty() ? null : "Techs: " + techs), BorderLayout.CENTER);
         JButton more = new JButton("⋯");
         more.setName(TARGET_BUILDING_PREFIX + b.id);
         more.setToolTipText("Upgrade, repair or demolish");
         more.setMargin(new java.awt.Insets(0, 4, 0, 4));
         more.setFocusable(false);
         more.addActionListener(e -> BuildingMenu.create(engine, s, b).show(more, 0, more.getHeight()));
-        row.add(more, BorderLayout.EAST);
-        row.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        JPanel moreWrap = new JPanel(new BorderLayout());
+        moreWrap.setOpaque(false);
+        moreWrap.add(more, BorderLayout.NORTH); // stays on the first line when the text wraps
+        row.add(moreWrap, BorderLayout.EAST);
         return row;
+    }
+
+    /** Label-styled text that wraps at word boundaries to the column's width instead of widening it. */
+    static JTextArea wrappingText(String text, java.awt.Color fg, String tooltip) {
+        // The indent is a border, not the text's leading spaces, so wrapped lines line up with the first.
+        JTextArea area = new JTextArea(text.stripLeading());
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setEditable(false);
+        area.setFocusable(false);
+        area.setOpaque(false);
+        area.setBorder(BorderFactory.createEmptyBorder(0, 8 * (text.length() - text.stripLeading().length()) / 2, 0, 0));
+        area.setFont(javax.swing.UIManager.getFont("Label.font"));
+        area.setForeground(fg);
+        area.setToolTipText(tooltip);
+        return area;
+    }
+
+    /**
+     * The scroll pane's view: always exactly as wide as the column, so a long line wraps (building
+     * rows) or ends in "…" (labels) rather than pushing the column's right side out of the window.
+     */
+    private static final class WidthTrackingPanel extends JPanel implements Scrollable {
+        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
+        @Override public int getScrollableUnitIncrement(Rectangle r, int orientation, int direction) { return 16; }
+        @Override public int getScrollableBlockIncrement(Rectangle r, int orientation, int direction) {
+            return orientation == SwingConstants.VERTICAL ? r.height : r.width;
+        }
+        @Override public boolean getScrollableTracksViewportWidth() { return true; }
+        @Override public boolean getScrollableTracksViewportHeight() {
+            return getParent() != null && getParent().getHeight() > getPreferredSize().height;
+        }
     }
 
     /**

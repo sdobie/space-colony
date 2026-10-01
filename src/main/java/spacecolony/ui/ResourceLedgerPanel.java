@@ -133,7 +133,11 @@ public class ResourceLedgerPanel extends JPanel {
     }
 
     private void childLine(String text, Color fg) {
-        cell(label(text, fg), 0, 4, new Insets(0, 16, 0, 0));
+        JLabel l = label(text, fg);
+        // Let a long line end in "…" (full text in the tooltip) rather than widen the ledger past the column.
+        l.setMinimumSize(new Dimension(0, l.getPreferredSize().height));
+        l.setToolTipText(text);
+        cell(l, 0, 4, new Insets(0, 16, 0, 0));
         row++;
     }
 
