@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * so results are cached by body id and surface seed.
  */
 public final class ResourceSurvey {
-    /** Resources the economy reads from the ground (mines and farms). */
+    /** Resources the economy reads from the ground (mines and farms); FUEL only on gas giants. */
     public static final List<Resource> SURVEYED = List.of(
         Resource.ORE, Resource.SILICATE, Resource.ICE, Resource.BIOMASS, Resource.FUEL);
     /** A resource whose best spot is below this is "none" and left out. */
@@ -58,6 +58,7 @@ public final class ResourceSurvey {
         List<Entry> out = new ArrayList<>();
         if (b == null || b.resourceYields == null) return out;
         for (Resource r : SURVEYED) {
+            if (!minable(b, r)) continue;
             double y = b.resourceYields.sample(r, lat, lon);
             if (y >= NONE_BELOW) out.add(new Entry(r, y, y, lat, lon));
         }
@@ -73,11 +74,17 @@ public final class ResourceSurvey {
     /** Three-letter name, e.g. SIL for SILICATE. */
     public static String abbrev(Resource r) { return r.name().substring(0, 3); }
 
+    /** Only gas-giant mines extract FUEL, so a rocky body's trace FUEL yield isn't reported. */
+    private static boolean minable(Body b, Resource r) {
+        return r != Resource.FUEL || b.type == BodyType.GAS_GIANT;
+    }
+
     public static void clearCache() { CACHE.clear(); }
 
     private static List<Entry> compute(Body b) {
         List<Entry> all = new ArrayList<>();
         for (Resource r : SURVEYED) {
+            if (!minable(b, r)) continue;
             double sum = 0, best = -1, bestLat = 0, bestLon = 0;
             int n = 0;
             for (int i = 0; i < GRID_LAT; i++) {

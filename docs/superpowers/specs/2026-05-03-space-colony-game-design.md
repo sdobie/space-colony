@@ -103,7 +103,7 @@ Production chains are intentionally light: ORE → METAL, ICE → WATER, METAL+S
 
 A discrete fleet. Each ship is its own entity with:
 
-- `class` ∈ {HAULER, TANKER, COLONIZER}, defining `dryMass`, `cargoCap`, `thrust`
+- `class` ∈ {HAULER, TANKER, COLONIZER, EXPLORER}, defining `dryMass`, `cargoCap`, `thrust` (EXPLORER, added in Plan 9, surveys the bodies it reaches; see `2026-10-01-plan-9-explorer-and-surveys-design.md`)
 - `state` ∈ {IDLE, LOADING, IN_TRANSIT, UNLOADING}
 - `currentSiteId` when not in transit
 - `Transit` when in transit: `originSiteId`, `destSiteId`, `departureTick`, `arrivalTick`, `cargoSnapshot`

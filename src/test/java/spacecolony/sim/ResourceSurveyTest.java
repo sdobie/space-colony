@@ -11,7 +11,7 @@ class ResourceSurveyTest {
 
     @Test void earth_listsRockyResourcesBestFirst() {
         List<ResourceSurvey.Entry> e = ResourceSurvey.of(W.findBody("earth"));
-        assertEquals(List.of(Resource.ORE, Resource.SILICATE, Resource.BIOMASS, Resource.ICE, Resource.FUEL),
+        assertEquals(List.of(Resource.ORE, Resource.SILICATE, Resource.BIOMASS, Resource.ICE),
             e.stream().map(ResourceSurvey.Entry::resource).toList());
         for (int i = 1; i < e.size(); i++) assertTrue(e.get(i - 1).best() >= e.get(i).best());
     }
@@ -35,6 +35,13 @@ class ResourceSurveyTest {
         assertEquals(List.of(Resource.FUEL), ResourceSurvey.of(W.findBody("jovian")).stream()
             .map(ResourceSurvey.Entry::resource).toList());
         assertEquals(Resource.ICE, ResourceSurvey.of(W.findBody("europa")).get(0).resource());
+    }
+
+    @Test void fuel_onlyOnGasGiants() {
+        for (Body b : W.bodies) {
+            boolean fuel = ResourceSurvey.of(b).stream().anyMatch(e -> e.resource() == Resource.FUEL);
+            assertEquals(b.type == BodyType.GAS_GIANT, fuel, b.id);
+        }
     }
 
     @Test void nothingBelowTheNoneThreshold() {

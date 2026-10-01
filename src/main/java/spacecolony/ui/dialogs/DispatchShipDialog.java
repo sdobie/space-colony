@@ -34,8 +34,12 @@ public class DispatchShipDialog {
         JPanel form = new JPanel(new GridLayout(0, 2, 4, 4));
         form.add(new JLabel("Destination:"));
         form.add(dest);
+        if (ship.shipClass.cargoCap() <= 0) {
+            form.add(new JLabel(NO_CARGO_TEXT));
+            form.add(new JLabel(""));
+        }
         for (Resource r : Resource.values()) {
-            if (!r.isStockpileable()) continue;
+            if (!r.isStockpileable() || ship.shipClass.cargoCap() <= 0) continue;
             JTextField f = new JTextField("0");
             fields.put(r, f);
             form.add(new JLabel(r.name() + ":"));
@@ -89,12 +93,15 @@ public class DispatchShipDialog {
         return CommandPhase.fuelShortfall(w, ship, destBodyId, manifest);
     }
 
-    /** Where a combo label sends the ship: a site, or (colonizers only) a body with no site. */
+    static final String NO_CARGO_TEXT = "Explorers carry no cargo";
+
+    /** Where a combo label sends the ship: a site, or (colonizers and explorers) a body. */
     record Destination(String siteId, String bodyId) {}
 
     /**
      * Combo labels in order: every site id, then, for a colonizer, "&lt;Body&gt; (unsettled)" for
-     * each body without a site.
+     * each body without a site, or for an explorer, "&lt;Body&gt; (surveyed)" or "(unsurveyed)"
+     * for every body but the one it orbits.
      */
     static Map<String, Destination> destinations(World w, Ship ship) {
         Map<String, Destination> out = new LinkedHashMap<>();
@@ -104,6 +111,12 @@ public class DispatchShipDialog {
         if (ship.shipClass == ShipClass.COLONIZER) {
             for (var b : w.bodies)
                 if (b.sites.isEmpty()) out.put(b.name + " (unsettled)", new Destination(null, b.id));
+        } else if (ship.shipClass == ShipClass.EXPLORER) {
+            for (var b : w.bodies) {
+                if (b.id.equals(ship.orbitingBodyId)) continue;
+                String tag = w.isSurveyed(b.id) ? " (surveyed)" : " (unsurveyed)";
+                out.put(b.name + tag, new Destination(null, b.id));
+            }
         }
         return out;
     }

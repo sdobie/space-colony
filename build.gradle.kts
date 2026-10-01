@@ -82,6 +82,15 @@ tasks.register<JavaExec>("play") {
     if (project.hasProperty("debug")) args("--debug")
 }
 
+/** Plan 9: explorer survey, Resources section, ORE overlay and place-site yields. */
+tasks.register<JavaExec>("surveyPlayTest") {
+    group = "verification"
+    description = "Survey Mars with an explorer and found a colony on its best ORE spot."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.SurveyDriver"
+    jvmArgs("-ea")
+}
+
 tasks.register<JavaExec>("debugPlayTest") {
     group = "verification"
     description = "Drive debug mode (Ctrl+D, overlay, step, inspector, log viewer) in the real window."
