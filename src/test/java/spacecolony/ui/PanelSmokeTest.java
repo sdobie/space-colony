@@ -200,6 +200,40 @@ class PanelSmokeTest {
     }
 
     @Test
+    void detailPanel_longBuildingRowsWrapInsideTheColumn() throws Exception {
+        Edt.run(() -> {
+            Engine engine = new Engine(WorldGenerator.generate(42L));
+            engine.world().randomEventsEnabled = false;
+            var hub = engine.world().findSite("site-earth-hub");
+            hub.buildings.get(2).daysLeft = 3; // the mine, upgrading: its row is the longest
+            engine.tick();
+            DetailPanel p = new DetailPanel(engine);
+            engine.setSelection(Selection.site("site-earth-hub"));
+            p.setSize(330, 600);
+            layoutTree(p);
+            layoutTree(p); // wrapped text settles its height on the second pass
+            paintToImage(p, 330, 600);
+            javax.swing.JViewport viewport = find(p, javax.swing.JViewport.class, v -> true);
+            assertEquals(viewport.getWidth(), viewport.getView().getWidth(), "column content wider than the column");
+            javax.swing.JTextArea mine = find(p, javax.swing.JTextArea.class, a -> a.getText().startsWith("Mine L1"));
+            assertNotNull(mine, allText(p));
+            assertTrue(mine.getHeight() > mine.getFontMetrics(mine.getFont()).getHeight(), "mine row should wrap: " + mine.getText());
+            for (var b : hub.buildings) {
+                javax.swing.JButton more = find(p, javax.swing.JButton.class,
+                    x -> (DetailPanel.TARGET_BUILDING_PREFIX + b.id).equals(x.getName()));
+                java.awt.Rectangle r = javax.swing.SwingUtilities.convertRectangle(more.getParent(), more.getBounds(), p);
+                assertTrue(r.x >= 0 && r.x + r.width <= p.getWidth(), b.type + " ⋯ button outside the column: " + r);
+            }
+        });
+    }
+
+    private static void layoutTree(java.awt.Component c) {
+        if (!(c instanceof java.awt.Container k)) return;
+        k.doLayout();
+        for (java.awt.Component child : k.getComponents()) layoutTree(child);
+    }
+
+    @Test
     void bodyViewPanel_paintsWithoutCrashing() throws Exception {
         Edt.run(() -> {
             Engine engine = new Engine(WorldGenerator.generate(1L));
@@ -320,6 +354,7 @@ class PanelSmokeTest {
     static String allText(java.awt.Component c) {
         StringBuilder sb = new StringBuilder();
         if (c instanceof javax.swing.JLabel l && l.getText() != null) sb.append(l.getText()).append('\n');
+        if (c instanceof javax.swing.JTextArea a && a.getText() != null) sb.append(a.getText()).append('\n');
         if (c instanceof java.awt.Container k) for (java.awt.Component child : k.getComponents()) sb.append(allText(child));
         return sb.toString();
     }
