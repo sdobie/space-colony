@@ -166,18 +166,22 @@ public final class TransitPhase {
             destBody = destBodyId;
         }
         if (originBody == null || destBody == null) return "No route from orbit";
-        Transit planned = new Transit(null, destSiteId, destBodyId, w.tick, Transit.PENDING_ARRIVAL_TICK,
+        // Commands run before the clock advances, so the ship leaves on the tick being computed,
+        // the same tick a colony departure would. Otherwise ARRIVALS, which runs right after the
+        // clock advances, would land a one-day hop in the tick it was ordered.
+        long depart = w.tick + 1;
+        Transit planned = new Transit(null, destSiteId, destBodyId, depart, Transit.PENDING_ARRIVAL_TICK,
                                       Transit.snapshot(s.cargo), originBody);
-        long arrival = arrivalTick(w, s.shipClass, planned, w.tick);
-        double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(), originBody, destBody, w.tick, arrival);
+        long arrival = arrivalTick(w, s.shipClass, planned, depart);
+        double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(), originBody, destBody, depart, arrival);
         if (s.fuel + 1e-9 < cost) return tankShortfall(s, cost);
         s.fuel = Math.max(0.0, s.fuel - cost);
-        s.transit = new Transit(null, destSiteId, destBodyId, w.tick, arrival, Transit.snapshot(s.cargo), originBody);
+        s.transit = new Transit(null, destSiteId, destBodyId, depart, arrival, Transit.snapshot(s.cargo), originBody);
         s.orbitingBodyId = null;
         s.currentSiteId = null;
         s.state = ShipState.IN_TRANSIT;
         Body db = w.findBody(destBody);
-        w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_DEPARTED,
+        w.emit(new Event(depart, EventSeverity.INFO, EventKind.SHIP_DEPARTED,
             "Ship " + s.name + " departed for " + (destSiteId != null ? destSiteId : (db != null ? db.name : destBody)),
             null, null, s.id));
         return null;

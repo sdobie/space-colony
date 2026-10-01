@@ -95,6 +95,26 @@ class ExplorerTransitTest {
         assertTrue(w.isSurveyed("belt-a"));
     }
 
+    @Test void hopFromOrbit_leavesOnTheTickBeingComputed() {
+        // Colony departures leave in the DEPARTURES phase of the tick being computed; a hop
+        // from orbit must too, or a one-day moon hop lands in the same tick it was ordered.
+        World w = orbiting("jovian");
+        Ship x = w.findShip("x1");
+        Simulator sim = new Simulator();
+        sim.enqueue(DispatchShipCommand.toBody("x1", "io", Map.of()));
+        sim.advance(w);
+        assertEquals(ShipState.IN_TRANSIT, x.state, "a one-day hop is still under way after the tick it was ordered");
+        assertNull(x.orbitingBodyId);
+        assertEquals(w.tick, x.transit.departureTick());
+        assertTrue(x.transit.arrivalTick() > w.tick);
+        Event departed = w.recentEvents.stream().filter(e -> e.kind() == EventKind.SHIP_DEPARTED)
+            .reduce((a, b) -> b).orElseThrow();
+        assertEquals(w.tick, departed.tick());
+        sim.advance(w);
+        assertEquals("io", x.orbitingBodyId);
+        assertTrue(w.isSurveyed("io"));
+    }
+
     @Test void hopItCantAfford_isRejectedWithTheTankMessage() {
         World w = orbiting("mars");
         Ship x = w.findShip("x1");
