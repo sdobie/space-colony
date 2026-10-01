@@ -67,7 +67,7 @@ public class BodyViewPanel extends JPanel {
 
     private BufferedImage flatMap(Body b) {
         return flatCache.computeIfAbsent(b.id, id ->
-            new PlanetGenerator(FLAT_W, FLAT_H).generate(b.surfaceSeed, BodyAppearances.defaultFor(b.type)));
+            new PlanetGenerator(FLAT_W, FLAT_H).generate(b.surfaceSeed, BodyAppearances.forBody(b)));
     }
 
     private class SpherePanel extends JPanel {
@@ -103,7 +103,7 @@ public class BodyViewPanel extends JPanel {
             if (b == null) return;
             int size = Math.min(getWidth(), getHeight()) - 40;
             if (size < 64) return;
-            BodyAppearance app = BodyAppearances.defaultFor(b.type);
+            BodyAppearance app = BodyAppearances.forBody(b);
             double rotation = (engine.world().tick % 360) * 1.0;
             BufferedImage sphereImg = SphereRenderer.render(flatMap(b), size, rotation, 12.0, 1.0,
                 b.surfaceSeed, app.atmosphereColor());

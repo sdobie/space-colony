@@ -105,6 +105,39 @@ class PlanetGeneratorTest {
             "Gas giant: polar (high-index dark bands) should be markedly darker than the bright middle band. polar=" + polarLuma + " mid=" + midLuma);
     }
 
+    @Test
+    void gasGiant_bandsChangeAcrossLatitudeMoreThanAlongLongitude() {
+        BufferedImage img = new PlanetGenerator(256, 128).generate(7L, BodyAppearances.defaultFor(BodyType.GAS_GIANT));
+        double alongRow = 0, acrossRows = 0;
+        int n = 0;
+        for (int y = 10; y < img.getHeight() - 11; y++) {
+            for (int x = 0; x < img.getWidth() - 1; x++) {
+                alongRow += Math.abs(luma(img.getRGB(x + 1, y)) - luma(img.getRGB(x, y)));
+                acrossRows += Math.abs(luma(img.getRGB(x, y + 1)) - luma(img.getRGB(x, y)));
+                n++;
+            }
+        }
+        assertTrue(acrossRows / n > 2 * alongRow / n,
+            "belts and zones should run east-west: across=" + acrossRows / n + " along=" + alongRow / n);
+    }
+
+    @Test
+    void mars_isRedWithIcyPoles() {
+        BufferedImage img = new PlanetGenerator(256, 128).generate(7L, BodyAppearances.mars());
+        long r = 0, g = 0, n = 0;
+        for (int y = 20; y < img.getHeight() - 20; y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                int rgb = img.getRGB(x, y);
+                r += (rgb >> 16) & 0xff;
+                g += (rgb >> 8) & 0xff;
+                n++;
+            }
+        }
+        assertTrue(r / n > g / n + 50, "Mars should read red: R=" + r / n + " G=" + g / n);
+        int pole = img.getRGB(img.getWidth() / 2, 0);
+        assertTrue(luma(pole) > 150, "Mars should have a bright polar cap, got luma " + luma(pole));
+    }
+
     private static double luma(int rgb) {
         int r = (rgb >> 16) & 0xff, g = (rgb >> 8) & 0xff, b = rgb & 0xff;
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
