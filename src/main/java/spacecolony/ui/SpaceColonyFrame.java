@@ -115,6 +115,9 @@ public class SpaceColonyFrame extends JFrame {
         mainView.systemMap().setDebug(debugController);
 
         pack();
+        // On a screen smaller than 1280x800 (less the taskbar or dock), shrink to fit so the right column isn't off-screen.
+        java.awt.Rectangle usable = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        setSize(Math.min(getWidth(), usable.width), Math.min(getHeight(), usable.height));
         setLocationRelativeTo(null);
     }
 
