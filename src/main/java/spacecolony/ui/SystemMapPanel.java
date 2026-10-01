@@ -3,12 +3,16 @@ package spacecolony.ui;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JPanel;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
@@ -47,10 +51,8 @@ public class SystemMapPanel extends JPanel {
                 Body best = null;
                 double bestDist = 12.0;
                 for (Body b : engine.world().bodies) {
-                    double[] p = OrbitalGeometry.bodyPosition(engine.world(), b.id, engine.world().tick);
-                    int x = cxLocal + (int) (p[0] * scale * zoom + offsetX);
-                    int y = cyLocal + (int) (p[1] * scale * zoom + offsetY);
-                    double d = Math.hypot(x - e.getX(), y - e.getY());
+                    int[] s = screenPoint(b.id, engine.world().tick, cxLocal, cyLocal);
+                    double d = Math.hypot(s[0] - e.getX(), s[1] - e.getY());
                     if (d < bestDist) { bestDist = d; best = b; }
                 }
                 if (best != null && e.isShiftDown() && engine.debugEnabled()) {
@@ -84,12 +86,27 @@ public class SystemMapPanel extends JPanel {
             g2.drawOval(cx - r, cy - r, r * 2, r * 2);
         }
 
+        // Moon orbits (display rings around the parent; see moonRingRadius)
+        for (Body b : engine.world().bodies) {
+            if (b.orbit.parentBodyId() == null) continue;
+            int[] parent = screenPoint(b.orbit.parentBodyId(), engine.world().tick, cx, cy);
+            int r = (int) Math.round(moonRingRadius(b));
+            g2.drawOval(parent[0] - r, parent[1] - r, r * 2, r * 2);
+        }
+
         // Bodies
         Selection sel = engine.selection();
+        List<Rectangle> occupied = new ArrayList<>();
         for (Body b : engine.world().bodies) {
-            double[] p = OrbitalGeometry.bodyPosition(engine.world(), b.id, engine.world().tick);
-            int x = cx + (int) (p[0] * scale * zoom + offsetX);
-            int y = cy + (int) (p[1] * scale * zoom + offsetY);
+            int[] s = screenPoint(b.id, engine.world().tick, cx, cy);
+            int r = b.orbit.parentBodyId() == null ? 5 : 3;
+            occupied.add(new Rectangle(s[0] - r, s[1] - r, r * 2, r * 2));
+        }
+        FontMetrics fm = g2.getFontMetrics();
+        for (Body b : engine.world().bodies) {
+            int[] s = screenPoint(b.id, engine.world().tick, cx, cy);
+            int x = s[0];
+            int y = s[1];
             int radius = b.orbit.parentBodyId() == null ? 5 : 3;
             boolean selected = sel.kind() == Selection.Kind.BODY && b.id.equals(sel.id());
             if (selected) {
@@ -99,7 +116,9 @@ public class SystemMapPanel extends JPanel {
             g2.setColor(colorForBody(b));
             g2.fillOval(x - radius, y - radius, radius * 2, radius * 2);
             g2.setColor(UiColors.FOREGROUND_DIM);
-            g2.drawString(b.name, x + radius + 3, y + 4);
+            Rectangle label = placeLabel(fm, b.name, x, y, radius, occupied);
+            occupied.add(label);
+            g2.drawString(b.name, label.x, label.y + fm.getAscent());
         }
 
         // In-transit ships
@@ -109,15 +128,13 @@ public class SystemMapPanel extends JPanel {
             var originSite = engine.world().findSite(t.originSiteId());
             String destBody = t.destBody(engine.world());
             if (originSite == null || destBody == null) continue;
-            double[] op = OrbitalGeometry.bodyPosition(engine.world(), originSite.bodyId, t.departureTick());
-            double[] dp = OrbitalGeometry.bodyPosition(engine.world(), destBody, t.arrivalTick());
+            int[] op = screenPoint(originSite.bodyId, t.departureTick(), cx, cy);
+            int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
             long now = engine.world().tick;
             double progress = (double)(now - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
             progress = Math.max(0, Math.min(1, progress));
-            double sx = op[0] + (dp[0] - op[0]) * progress;
-            double sy = op[1] + (dp[1] - op[1]) * progress;
-            int x = cx + (int) (sx * scale * zoom + offsetX);
-            int y = cy + (int) (sy * scale * zoom + offsetY);
+            int x = (int) (op[0] + (dp[0] - op[0]) * progress);
+            int y = (int) (op[1] + (dp[1] - op[1]) * progress);
             g2.setColor(UiColors.SHIP_DOT);
             g2.fillRect(x - 2, y - 2, 4, 4);
         }
@@ -125,9 +142,9 @@ public class SystemMapPanel extends JPanel {
         // Colonizers waiting in orbit: a ship dot just up and right of the body.
         for (Ship ship : engine.world().ships) {
             if (ship.orbitingBodyId == null) continue;
-            double[] p = OrbitalGeometry.bodyPosition(engine.world(), ship.orbitingBodyId, engine.world().tick);
-            int x = cx + (int) (p[0] * scale * zoom + offsetX) + 6;
-            int y = cy + (int) (p[1] * scale * zoom + offsetY) - 6;
+            int[] p = screenPoint(ship.orbitingBodyId, engine.world().tick, cx, cy);
+            int x = p[0] + 6;
+            int y = p[1] - 6;
             g2.setColor(UiColors.SHIP_DOT);
             g2.fillRect(x - 2, y - 2, 4, 4);
         }
@@ -138,6 +155,72 @@ public class SystemMapPanel extends JPanel {
 
     public void setDebug(DebugController debug) { this.debug = debug; }
 
+    /** Smallest on-screen orbit radius for the innermost moon, in pixels. */
+    static final double MOON_RING_MIN = 14.0;
+    /** Extra on-screen radius for each further-out moon of the same parent, in pixels. */
+    static final double MOON_RING_STEP = 9.0;
+
+    /**
+     * Screen position of a body. Planets sit at their true scaled position. Moon orbits are a
+     * few thousandths of an AU, well under a pixel at map scale, so a moon is drawn along its
+     * true direction from the parent but on a ring at least {@link #moonRingRadius} out.
+     */
+    int[] screenPoint(String bodyId, long tick, int cx, int cy) {
+        var world = engine.world();
+        Body b = world.findBody(bodyId);
+        if (b == null || b.orbit.parentBodyId() == null) {
+            double[] p = OrbitalGeometry.bodyPosition(world, bodyId, tick);
+            return new int[] { cx + (int) (p[0] * scale * zoom + offsetX), cy + (int) (p[1] * scale * zoom + offsetY) };
+        }
+        int[] parent = screenPoint(b.orbit.parentBodyId(), tick, cx, cy);
+        double[] rel = b.orbit.position(tick);
+        double len = Math.hypot(rel[0], rel[1]);
+        double ring = moonRingRadius(b);
+        double ux = len == 0 ? 1 : rel[0] / len;
+        double uy = len == 0 ? 0 : rel[1] / len;
+        return new int[] { parent[0] + (int) Math.round(ux * ring), parent[1] + (int) Math.round(uy * ring) };
+    }
+
+    /** On-screen orbit radius of a moon: its true scaled radius, or a readable minimum ring by rank. */
+    double moonRingRadius(Body moon) {
+        int rank = 0;
+        for (Body other : engine.world().bodies) {
+            if (other != moon && moon.orbit.parentBodyId().equals(other.orbit.parentBodyId())
+                && other.orbit.semiMajorAxis() < moon.orbit.semiMajorAxis()) rank++;
+        }
+        double trueRadius = moon.orbit.semiMajorAxis() * scale * zoom;
+        return Math.max(trueRadius, MOON_RING_MIN + rank * MOON_RING_STEP);
+    }
+
+    /**
+     * Picks a spot for a body's name that does not cover another label or body dot, trying
+     * right, left, below and above the dot, then further out. Falls back to the right side.
+     */
+    static Rectangle placeLabel(FontMetrics fm, String text, int x, int y, int radius, List<Rectangle> occupied) {
+        int w = fm.stringWidth(text);
+        int h = fm.getAscent() + fm.getDescent();
+        int gap = radius + 3;
+        Rectangle first = null;
+        for (int extra = 0; extra <= 24; extra += 8) {
+            int g = gap + extra;
+            Rectangle[] candidates = {
+                new Rectangle(x + g, y - h / 2, w, h),
+                new Rectangle(x - g - w, y - h / 2, w, h),
+                new Rectangle(x - w / 2, y + g, w, h),
+                new Rectangle(x - w / 2, y - g - h, w, h),
+            };
+            for (Rectangle c : candidates) {
+                if (first == null) first = c;
+                boolean clear = true;
+                for (Rectangle o : occupied) {
+                    if (o.intersects(c)) { clear = false; break; }
+                }
+                if (clear) return c;
+            }
+        }
+        return first;
+    }
+
     /** Debug map layers (design §4.6): orbit periods, transit predictions, yield summaries. */
     private void paintDebugOverlays(Graphics2D g2, int cx, int cy) {
         var world = engine.world();
@@ -147,9 +230,9 @@ public class SystemMapPanel extends JPanel {
         orbitLabel = new Color(orbitLabel.getRed(), orbitLabel.getGreen(), orbitLabel.getBlue());
 
         for (Body b : world.bodies) {
-            double[] p = OrbitalGeometry.bodyPosition(world, b.id, world.tick);
-            int x = cx + (int) (p[0] * scale * zoom + offsetX);
-            int y = cy + (int) (p[1] * scale * zoom + offsetY);
+            int[] s = screenPoint(b.id, world.tick, cx, cy);
+            int x = s[0];
+            int y = s[1];
             g2.setColor(orbitLabel);
             if (b.orbit.parentBodyId() == null) {
                 int r = (int) (b.orbit.semiMajorAxis() * scale * zoom);
@@ -173,14 +256,14 @@ public class SystemMapPanel extends JPanel {
             var originSite = world.findSite(t.originSiteId());
             String destBody = t.destBody(world);
             if (originSite == null || destBody == null) continue;
-            double[] op = OrbitalGeometry.bodyPosition(world, originSite.bodyId, t.departureTick());
-            double[] dp = OrbitalGeometry.bodyPosition(world, destBody, t.arrivalTick());
+            int[] op = screenPoint(originSite.bodyId, t.departureTick(), cx, cy);
+            int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
             double progress = (double) (world.tick - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
             progress = Math.max(0, Math.min(1, progress));
-            int sx = cx + (int) ((op[0] + (dp[0] - op[0]) * progress) * scale * zoom + offsetX);
-            int sy = cy + (int) ((op[1] + (dp[1] - op[1]) * progress) * scale * zoom + offsetY);
-            int dx = cx + (int) (dp[0] * scale * zoom + offsetX);
-            int dy = cy + (int) (dp[1] * scale * zoom + offsetY);
+            int sx = (int) (op[0] + (dp[0] - op[0]) * progress);
+            int sy = (int) (op[1] + (dp[1] - op[1]) * progress);
+            int dx = dp[0];
+            int dy = dp[1];
             g2.setColor(UiColors.SHIP_DOT);
             g2.setStroke(dashed);
             g2.drawLine(sx, sy, dx, dy);
