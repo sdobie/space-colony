@@ -103,6 +103,9 @@ public class ColonyListPanel extends JPanel {
     /** Component name the tutorial highlights (Plan 6 §5.4). */
     public static final String TARGET = "colonylist";
 
+    /** Component name of the card for a colony or ship, e.g. the tutorial's Earth Hub target. */
+    public static String cardName(String id) { return TARGET + ".card:" + id; }
+
     private void refresh() {
         World w = engine.world();
         List<Object> keys = new ArrayList<>();
@@ -402,6 +405,7 @@ public class ColonyListPanel extends JPanel {
 
         Card(Selection sel, int height) {
             this.sel = sel;
+            setName(cardName(sel.id()));
             setPreferredSize(new Dimension(10, height));
             setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
             setAlignmentX(LEFT_ALIGNMENT);

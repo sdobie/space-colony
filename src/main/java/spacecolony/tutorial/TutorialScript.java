@@ -31,6 +31,8 @@ public final class TutorialScript {
     public static final String T_SPHERE = "bodyview.sphere";
 
     public static final String HUB = "site-earth-hub";
+    /** The Earth Hub card in the colony list (ColonyListPanel.cardName(HUB)). */
+    public static final String T_HUB_CARD = T_COLONY_LIST + ".card:" + HUB;
 
     private TutorialScript() {}
 
@@ -48,7 +50,7 @@ public final class TutorialScript {
                 c -> c.speed() != Speed.PAUSED),
             auto("select-hub", "Look at your base",
                 "<p>Click <b>Earth Hub</b> in the colony list on the left.</p>",
-                List.of(T_COLONY_LIST), null,
+                List.of(T_HUB_CARD, T_COLONY_LIST), null,
                 c -> Selection.site(HUB).equals(c.selection())),
             manual("read-dock", "Reading a colony",
                 "<p>The panel on the right shows the selected colony: population against its cap,"

@@ -3,6 +3,8 @@ package spacecolony.ui.tutorial;
 import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,6 +68,7 @@ class TutorialTargetsTest {
         assertEquals(TopBar.TARGET_TECH, TutorialScript.T_TECH);
         assertEquals(TopBar.TARGET_GOALS, TutorialScript.T_GOALS);
         assertEquals(ColonyListPanel.TARGET, TutorialScript.T_COLONY_LIST);
+        assertEquals(ColonyListPanel.cardName(TutorialScript.HUB), TutorialScript.T_HUB_CARD);
         assertEquals(DetailPanel.TARGET, TutorialScript.T_DETAIL);
         assertEquals(DetailPanel.TARGET_BUILD_BUILDING, TutorialScript.T_BUILD_BUILDING);
         assertEquals(DetailPanel.TARGET_BUILD_SHIP, TutorialScript.T_BUILD_SHIP);
@@ -81,8 +84,8 @@ class TutorialTargetsTest {
         expect("start-clock", TopBar.TARGET_X1, "1×");
 
         act(() -> engine.setSpeed(Speed.X1));
-        expect("select-hub", ColonyListPanel.TARGET, null);
-        act(() -> engine.setSelection(Selection.site(TutorialScript.HUB)));
+        expect("select-hub", TutorialScript.T_HUB_CARD, null);
+        act(() -> pressHighlightedTarget());
         expect("read-dock", DetailPanel.TARGET, null);
         Edt.run(() -> tutorial.next());
         flush();
@@ -175,6 +178,18 @@ class TutorialTargetsTest {
             assertFalse(tutorial.active());
             assertEquals(GameSession.Mode.NORMAL, frame.session().mode());
         });
+    }
+
+    /** Presses the mouse on whatever sits under the centre of the highlighted target, as a player would. */
+    private void pressHighlightedTarget() {
+        Component target = tutorial.highlight().target();
+        JLayeredPane layers = frame.getLayeredPane();
+        Point p = SwingUtilities.convertPoint(target, target.getWidth() / 2, target.getHeight() / 2, layers);
+        Component hit = SwingUtilities.getDeepestComponentAt(layers, p.x, p.y);
+        assertSame(target, hit);
+        Point q = SwingUtilities.convertPoint(layers, p, hit);
+        hit.dispatchEvent(new MouseEvent(hit, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+            InputEvent.BUTTON1_DOWN_MASK, q.x, q.y, 1, false, MouseEvent.BUTTON1));
     }
 
     private void act(Edt.Body body) throws Exception {
