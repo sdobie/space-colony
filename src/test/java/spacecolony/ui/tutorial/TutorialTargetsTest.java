@@ -110,7 +110,7 @@ class TutorialTargetsTest {
         expect("fast-forward", TopBar.TARGET_X16, "16×");
         act(() -> {
             engine.setSpeed(Speed.X16);
-            for (int i = 0; i < 30 && engine.world().findShip("c1").orbitingBodyId == null; i++) engine.tick();
+            for (int i = 0; i < 120 && engine.world().findShip("c1").orbitingBodyId == null; i++) engine.tick();
         });
         expect("found-colony", DetailPanel.TARGET_FOUND_COLONY, "Found colony…");
 

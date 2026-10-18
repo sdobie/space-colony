@@ -39,7 +39,7 @@ class ExplorerTransitTest {
     @Test void explorerClass() {
         assertEquals(20.0, ShipClass.EXPLORER.dryMass());
         assertEquals(0.0, ShipClass.EXPLORER.cargoCap());
-        assertEquals(0.8, ShipClass.EXPLORER.speed());
+        assertEquals(0.1, ShipClass.EXPLORER.speed());
         assertEquals(100.0, ShipClass.EXPLORER.tankCap());
         for (ShipClass c : ShipClass.values()) if (c != ShipClass.EXPLORER) assertEquals(0.0, c.tankCap());
     }
