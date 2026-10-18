@@ -36,6 +36,7 @@ import spacecolony.engine.Selection;
 import spacecolony.render.BodyAppearance;
 import spacecolony.render.BodyAppearances;
 import spacecolony.render.PlanetGenerator;
+import spacecolony.render.ShipSprites;
 import spacecolony.render.SphereRenderer;
 import spacecolony.sim.Body;
 import spacecolony.sim.Resource;
@@ -560,44 +561,9 @@ public class ColonyListPanel extends JPanel {
                 s.cargoMass(), s.shipClass.cargoCap(), s.fuel);
         }
 
-        /** Small top-down silhouette per ship class, nose pointing right. */
+        /** The ship's class drawing, nose up and to the right; flame lit while in flight. */
         private void hull(Graphics2D g, Ship s, double cx, double cy) {
-            Graphics2D h = (Graphics2D) g.create();
-            h.translate(cx, cy);
-            h.rotate(-Math.PI / 4);
-            h.setColor(UiColors.SHIP_DOT);
-            switch (s.shipClass) {
-                case HAULER -> {
-                    Path2D p = new Path2D.Double();
-                    p.moveTo(10, 0); p.lineTo(4, -5); p.lineTo(-9, -5); p.lineTo(-9, 5); p.lineTo(4, 5);
-                    p.closePath();
-                    h.fill(p);
-                    h.setColor(UiColors.STARFIELD_BG);
-                    h.fillRect(-6, -3, 3, 6);
-                    h.fillRect(-1, -3, 3, 6);
-                }
-                case TANKER -> {
-                    h.fill(new RoundRectangle2D.Double(-10, -4.5, 18, 9, 9, 9));
-                    Path2D nose = new Path2D.Double();
-                    nose.moveTo(7, -2.5); nose.lineTo(11, 0); nose.lineTo(7, 2.5); nose.closePath();
-                    h.fill(nose);
-                    h.setColor(UiColors.STARFIELD_BG);
-                    h.fillRect(-3, -4, 1, 8);
-                    h.fillRect(2, -4, 1, 8);
-                }
-                case COLONIZER -> {
-                    h.setStroke(new BasicStroke(2f));
-                    h.draw(new Ellipse2D.Double(-8, -8, 12, 12));
-                    h.fillRect(2, -1, 9, 2);
-                    h.fill(new Ellipse2D.Double(-4.5, -4.5, 5, 5));
-                }
-            }
-            if (s.state == ShipState.IN_TRANSIT) {
-                h.setComposite(AlphaComposite.SrcOver.derive(0.7f));
-                h.setColor(UiColors.INFO);
-                h.fill(new Ellipse2D.Double(-14, -2, 4, 4));
-            }
-            h.dispose();
+            ShipSprites.draw(g, s.shipClass, cx, cy, -Math.PI / 4, ICON - 10, s.state == ShipState.IN_TRANSIT);
         }
     }
 }

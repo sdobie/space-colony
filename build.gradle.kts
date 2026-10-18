@@ -91,6 +91,15 @@ tasks.register<JavaExec>("surveyPlayTest") {
     jvmArgs("-ea")
 }
 
+/** Every ship class on the system map and in the left column, for screenshots. */
+tasks.register<JavaExec>("shipGraphicsShot") {
+    group = "verification"
+    description = "Screenshot docked, orbiting and in-flight ships of every class."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.ShipGraphicsDriver"
+    jvmArgs("-ea")
+}
+
 tasks.register<JavaExec>("debugPlayTest") {
     group = "verification"
     description = "Drive debug mode (Ctrl+D, overlay, step, inspector, log viewer) in the real window."
