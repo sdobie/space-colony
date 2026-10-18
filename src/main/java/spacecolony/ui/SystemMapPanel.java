@@ -8,11 +8,16 @@ import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GradientPaint;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.JPanel;
 import spacecolony.engine.Engine;
 import spacecolony.engine.EngineEvent;
@@ -21,6 +26,8 @@ import spacecolony.sim.Body;
 import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
+import spacecolony.sim.Site;
+import spacecolony.render.ShipSprites;
 import spacecolony.debug.DebugController;
 import spacecolony.debug.ObjectInspectorDialog;
 import spacecolony.debug.YieldSummary;
@@ -48,6 +55,15 @@ public class SystemMapPanel extends JPanel {
             @Override public void mousePressed(MouseEvent e) {
                 int cxLocal = getWidth() / 2;
                 int cyLocal = getHeight() / 2;
+                ShipMark ship = shipAt(e.getX(), e.getY(), cxLocal, cyLocal);
+                if (ship != null && e.isShiftDown() && engine.debugEnabled()) {
+                    ObjectInspectorDialog.inspect(SystemMapPanel.this, engine, ship.ship(), "Ship " + ship.ship().id);
+                    return;
+                }
+                if (ship != null) {
+                    engine.setSelection(Selection.ship(ship.ship().id));
+                    return;
+                }
                 Body best = null;
                 double bestDist = 12.0;
                 for (Body b : engine.world().bodies) {
@@ -102,6 +118,12 @@ public class SystemMapPanel extends JPanel {
             int r = b.orbit.parentBodyId() == null ? 5 : 3;
             occupied.add(new Rectangle(s[0] - r, s[1] - r, r * 2, r * 2));
         }
+        // Ships are placed before the labels so body names steer clear of them.
+        List<ShipMark> ships = shipMarks(cx, cy);
+        for (ShipMark m : ships) {
+            int half = (int) Math.ceil(m.length() / 2);
+            occupied.add(new Rectangle((int) m.x() - half, (int) m.y() - half, half * 2, half * 2));
+        }
         FontMetrics fm = g2.getFontMetrics();
         for (Body b : engine.world().bodies) {
             int[] s = screenPoint(b.id, engine.world().tick, cx, cy);
@@ -121,39 +143,110 @@ public class SystemMapPanel extends JPanel {
             g2.drawString(b.name, label.x, label.y + fm.getAscent());
         }
 
-        // In-transit ships
-        for (Ship ship : engine.world().ships) {
-            if (ship.state != ShipState.IN_TRANSIT) continue;
-            var t = ship.transit;
-            String originBody = t.originBody(engine.world());
-            String destBody = t.destBody(engine.world());
-            if (originBody == null || destBody == null) continue;
-            int[] op = screenPoint(originBody, t.departureTick(), cx, cy);
-            int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
-            long now = engine.world().tick;
-            double progress = (double)(now - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
-            progress = Math.max(0, Math.min(1, progress));
-            int x = (int) (op[0] + (dp[0] - op[0]) * progress);
-            int y = (int) (op[1] + (dp[1] - op[1]) * progress);
-            g2.setColor(UiColors.SHIP_DOT);
-            g2.fillRect(x - 2, y - 2, 4, 4);
-        }
-
-        // Ships waiting in orbit (colonizers and explorers): a ship dot just up and right of the body.
-        for (Ship ship : engine.world().ships) {
-            if (ship.orbitingBodyId == null) continue;
-            int[] p = screenPoint(ship.orbitingBodyId, engine.world().tick, cx, cy);
-            int x = p[0] + 6;
-            int y = p[1] - 6;
-            g2.setColor(UiColors.SHIP_DOT);
-            g2.fillRect(x - 2, y - 2, 4, 4);
-        }
+        for (ShipMark m : ships) paintShip(g2, m, sel);
 
         if (debug != null && debug.mapOverlaysOn()) paintDebugOverlays(g2, cx, cy);
         g2.dispose();
     }
 
     public void setDebug(DebugController debug) { this.debug = debug; }
+
+    /** On-screen length of a ship in flight, in pixels. */
+    static final double FLYING_LENGTH = 22.0;
+    /** On-screen length of a ship docked at or orbiting a body, in pixels. */
+    static final double PARKED_LENGTH = 15.0;
+    /** How far the engine trail reaches behind a ship in flight, in pixels. */
+    private static final double TRAIL = 46.0;
+
+    /**
+     * Where a ship is drawn this frame. A ship in flight sits along the straight line from its
+     * origin (as it was at departure) to its destination (as it will be at arrival), nose toward
+     * the destination; {@code fromX}/{@code fromY} is that origin. A docked or orbiting ship sits
+     * on a small ring around its body, side by side with the others there.
+     */
+    record ShipMark(Ship ship, double x, double y, double heading, double length, boolean flying,
+                    double fromX, double fromY) {}
+
+    List<ShipMark> shipMarks(int cx, int cy) {
+        var world = engine.world();
+        List<ShipMark> out = new ArrayList<>();
+        Map<String, List<Ship>> parked = new LinkedHashMap<>();
+        for (Ship ship : world.ships) {
+            if (ship.state == ShipState.IN_TRANSIT) {
+                var t = ship.transit;
+                String originBody = t == null ? null : t.originBody(world);
+                String destBody = t == null ? null : t.destBody(world);
+                if (originBody == null || destBody == null) continue;
+                int[] op = screenPoint(originBody, t.departureTick(), cx, cy);
+                int[] dp = screenPoint(destBody, t.arrivalTick(), cx, cy);
+                double progress = (double) (world.tick - t.departureTick()) / Math.max(1, t.arrivalTick() - t.departureTick());
+                progress = Math.max(0, Math.min(1, progress));
+                double x = op[0] + (dp[0] - op[0]) * progress;
+                double y = op[1] + (dp[1] - op[1]) * progress;
+                double heading = dp[0] == op[0] && dp[1] == op[1] ? 0 : Math.atan2(dp[1] - op[1], dp[0] - op[0]);
+                out.add(new ShipMark(ship, x, y, heading, FLYING_LENGTH, true, op[0], op[1]));
+                continue;
+            }
+            String bodyId = ship.orbitingBodyId;
+            if (bodyId == null && ship.currentSiteId != null) {
+                Site site = world.findSite(ship.currentSiteId);
+                if (site != null) bodyId = site.bodyId;
+            }
+            if (bodyId != null) parked.computeIfAbsent(bodyId, k -> new ArrayList<>()).add(ship);
+        }
+        for (var e : parked.entrySet()) {
+            Body b = world.findBody(e.getKey());
+            if (b == null) continue;
+            int[] p = screenPoint(b.id, world.tick, cx, cy);
+            double ring = (b.orbit.parentBodyId() == null ? 5 : 3) + PARKED_LENGTH * 0.75;
+            List<Ship> here = e.getValue();
+            for (int i = 0; i < here.size(); i++) {
+                // Fan out from up-and-right of the body, noses pointing along the ring.
+                double a = -Math.PI / 4 - i * (Math.PI / 3.2);
+                double x = p[0] + Math.cos(a) * ring;
+                double y = p[1] + Math.sin(a) * ring;
+                out.add(new ShipMark(here.get(i), x, y, a - Math.PI / 2, PARKED_LENGTH, false, x, y));
+            }
+        }
+        return out;
+    }
+
+    /** The ship drawn under (x, y), if any; the nearest wins. */
+    ShipMark shipAt(int x, int y, int cx, int cy) {
+        ShipMark best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (ShipMark m : shipMarks(cx, cy)) {
+            double d = Math.hypot(m.x() - x, m.y() - y);
+            if (d <= m.length() / 2 + 2 && d < bestDist) { bestDist = d; best = m; }
+        }
+        return best;
+    }
+
+    private void paintShip(Graphics2D g2, ShipMark m, Selection sel) {
+        Color accent = ShipSprites.accent(m.ship().shipClass);
+        if (m.flying()) {
+            double back = Math.min(TRAIL, Math.hypot(m.x() - m.fromX(), m.y() - m.fromY()));
+            if (back > 1) {
+                double tx = m.x() - Math.cos(m.heading()) * back;
+                double ty = m.y() - Math.sin(m.heading()) * back;
+                Stroke prior = g2.getStroke();
+                g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.setPaint(new GradientPaint((float) m.x(), (float) m.y(),
+                    new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 150),
+                    (float) tx, (float) ty, new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 0)));
+                g2.draw(new Line2D.Double(m.x(), m.y(), tx, ty));
+                g2.setStroke(prior);
+            }
+        }
+        ShipSprites.draw(g2, m.ship().shipClass, m.x(), m.y(), m.heading(), m.length(), m.flying());
+        boolean selected = sel.kind() == Selection.Kind.SHIP && m.ship().id.equals(sel.id());
+        if (selected) {
+            double r = m.length() / 2 + 4;
+            g2.setColor(new Color(255, 240, 120));
+            g2.draw(new Ellipse2D.Double(m.x() - r, m.y() - r, r * 2, r * 2));
+            g2.drawString(m.ship().name, (float) (m.x() + r + 3), (float) (m.y() - r));
+        }
+    }
 
     /** Smallest on-screen orbit radius for the innermost moon, in pixels. */
     static final double MOON_RING_MIN = 14.0;
