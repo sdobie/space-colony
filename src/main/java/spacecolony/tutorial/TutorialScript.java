@@ -85,7 +85,7 @@ public final class TutorialScript {
                 List.of(T_DISPATCH), "Select your colonizer in the colony list.",
                 c -> colonizerHeadingOut(c.world()) || orbiting(c.world()) || settledBeyondEarth(c.world())),
             auto("fast-forward", "Speed things up",
-                "<p>Loading and the flight take a few days. Try <b>16×</b> while you wait.</p>",
+                "<p>Loading takes a few days and the flight several weeks. Try <b>16×</b> while you wait.</p>",
                 List.of(T_X16), null,
                 c -> orbiting(c.world()) || settledBeyondEarth(c.world())),
             auto("found-colony", "Found the colony",

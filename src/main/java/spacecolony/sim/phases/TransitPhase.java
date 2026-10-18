@@ -13,6 +13,7 @@ import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
+import java.util.Map;
 import spacecolony.sim.economy.FlowLine;
 import spacecolony.sim.economy.FlowSource.Shipping;
 
@@ -214,6 +215,20 @@ public final class TransitPhase {
     public static double fuelCostBodies(World w, ShipClass c, double cargoMass,
                                         String originBodyId, String destBodyId, long t0, long t1) {
         return fuelCostBetweenBodies(w, c, cargoMass, originBodyId, destBodyId, t0, t1);
+    }
+
+    /**
+     * Fuel a ship of class {@code c} carrying {@code cargoMass} would burn leaving
+     * {@code originBodyId} at {@code depart} for {@code destBodyId}, flying to where the
+     * destination will be when it gets there. Trips last weeks, so today's positions alone
+     * can be far off.
+     */
+    public static double estimateFuelBodies(World w, ShipClass c, double cargoMass,
+                                            String originBodyId, String destBodyId, long depart) {
+        Transit planned = new Transit(null, null, destBodyId, depart, Transit.PENDING_ARRIVAL_TICK,
+                                      Map.of(), originBodyId);
+        long arrival = arrivalTick(w, c, planned, depart);
+        return fuelCostBetweenBodies(w, c, cargoMass, originBodyId, destBodyId, depart, arrival);
     }
 
     private static double fuelCostBetweenBodies(World w, ShipClass c, double cargoMass,

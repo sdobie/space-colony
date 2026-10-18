@@ -72,7 +72,7 @@ class TutorialScriptTest {
             e.tick();
             assertStep(p, e, "fast-forward");
             e.setSpeed(Speed.X16);
-            for (int i = 0; i < 30 && e.world().findShip("c1").orbitingBodyId == null; i++) e.tick();
+            for (int i = 0; i < 120 && e.world().findShip("c1").orbitingBodyId == null; i++) e.tick();
             assertStep(p, e, "found-colony");
             e.enqueue(new BuildSiteCommand("site-mars-a", "Ares", "mars", 0.2, 1.0, "c1"));
             e.tick();

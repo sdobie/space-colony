@@ -11,7 +11,6 @@ import spacecolony.sim.Construction;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
-import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipClass;
@@ -20,7 +19,6 @@ import spacecolony.sim.Site;
 import spacecolony.sim.Tech;
 import spacecolony.sim.TechAvailability;
 import spacecolony.sim.TechCatalog;
-import spacecolony.sim.TechEffects;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.sim.commands.BuildBuildingCommand;
@@ -38,8 +36,6 @@ import spacecolony.sim.commands.UpgradeBuildingCommand;
 
 public final class CommandPhase {
     private CommandPhase() {}
-
-    private static final double FUEL_K = 0.5;
 
     public static void drain(World w, Deque<Command> queue) {
         while (!queue.isEmpty()) {
@@ -266,7 +262,7 @@ public final class CommandPhase {
 
     /**
      * Why {@code s} can't afford a trip from its site to {@code destBodyId} carrying
-     * {@code manifest}, estimated from current positions, or null if it can (or isn't at a
+     * {@code manifest}, estimated for a ship leaving now, or null if it can (or isn't at a
      * site). The dispatch dialog calls this too, so the player sees the problem right away.
      */
     public static String fuelShortfall(World w, Ship s, String destBodyId,
@@ -275,20 +271,13 @@ public final class CommandPhase {
         if (originSite == null) {
             // In orbit, an explorer flies on what's in its tank.
             if (s.orbitingBodyId == null || destBodyId == null) return null;
-            double[] op = OrbitalGeometry.bodyPosition(w, s.orbitingBodyId, w.tick);
-            double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
-            double dist = s.orbitingBodyId.equals(destBodyId) ? 0.0 : Math.hypot(dp[0] - op[0], dp[1] - op[1]);
-            double est = FUEL_K * s.shipClass.dryMass() * dist * TechEffects.fuelCostMultiplier(w.tech);
+            double est = TransitPhase.estimateFuelBodies(w, s.shipClass, 0.0, s.orbitingBodyId, destBodyId, w.tick + 1);
             return s.fuel + 1e-9 >= est ? null : TransitPhase.tankShortfall(s, est);
         }
-        double[] op = OrbitalGeometry.bodyPosition(w, originSite.bodyId, w.tick);
-        double[] dp = OrbitalGeometry.bodyPosition(w, destBodyId, w.tick);
-        double dx = dp[0] - op[0], dy = dp[1] - op[1];
-        double dist = Math.sqrt(dx * dx + dy * dy);
         double manifestMass = 0.0;
         for (Double v : manifest.values()) if (v != null) manifestMass += v;
-        double estCost = FUEL_K * (s.shipClass.dryMass() + manifestMass) * dist
-                       * TechEffects.fuelCostMultiplier(w.tech);
+        double estCost = TransitPhase.estimateFuelBodies(w, s.shipClass, manifestMass,
+                                                         originSite.bodyId, destBodyId, w.tick);
         // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
         double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
         Double mf = manifest.get(Resource.FUEL);
