@@ -193,7 +193,11 @@ public class PlayTestDriver {
 
         // Drive the real Tech modal: click the "Basic Mining" row.
         expect(dlg -> {
-            JLabel row = find(dlg, JLabel.class, l -> l.getText() != null && l.getText().startsWith("Basic Mining"));
+            JLabel title = find(dlg, JLabel.class, l -> l.getText() != null && l.getText().startsWith("Basic Mining"));
+            // The click handler sits on the tech's row panel, not on its title label.
+            Component row = title;
+            while (row != null && row.getMouseListeners().length == 0) row = row.getParent();
+            if (row == null) throw new IllegalStateException("Basic Mining row has no click handler");
             shotQuiet(((JDialog) dlg).getRootPane(), "04-tech-modal");
             for (java.awt.event.MouseListener ml : row.getMouseListeners()) {
                 ml.mousePressed(new java.awt.event.MouseEvent(row, java.awt.event.MouseEvent.MOUSE_PRESSED,
