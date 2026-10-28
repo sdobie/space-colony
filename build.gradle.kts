@@ -82,6 +82,18 @@ tasks.register<JavaExec>("play") {
     if (project.hasProperty("debug")) args("--debug")
 }
 
+/**
+ * Continuous play-tester: plays the real window one move per interval (a minute by default)
+ * and checks invariants, conservation, the save round trip and a headless replay every move.
+ */
+tasks.register<JavaExec>("continuousPlayTest") {
+    group = "verification"
+    description = "Play the game continuously on a random seed and report rule violations."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.ContinuousPlayTester"
+    jvmArgs("-ea")
+}
+
 /** Plan 9: explorer survey, Resources section, ORE overlay and place-site yields. */
 tasks.register<JavaExec>("surveyPlayTest") {
     group = "verification"
