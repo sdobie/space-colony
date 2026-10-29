@@ -359,6 +359,8 @@ public class ContinuousPlayTester {
 
     // ---------------------------------------------------------------- checks
 
+    static final Map<String, Integer> lastPop = new HashMap<>();
+
     static void checkInvariants(World w) {
         if (!Double.isFinite(w.credits)) violation("credits not finite: " + w.credits);
         Set<String> siteIds = new HashSet<>();
@@ -368,7 +370,11 @@ public class ContinuousPlayTester {
                 if (!siteIds.add(s.id)) violation("duplicate site id " + s.id);
                 if (!s.bodyId.equals(b.id)) violation(at + " bodyId " + s.bodyId + " but listed under " + b.id);
                 if (s.population < 0) violation(at + " population " + s.population);
-                if (s.population > s.populationCap) violation(at + " population " + s.population + " > cap " + s.populationCap);
+                // Losing housing (a damaged or demolished habitat) can leave population over the cap; the game
+                // only stops growth there, so the bug is population growing while already at or over the cap.
+                Integer prevPop = lastPop.put(s.id, s.population);
+                if (s.population > s.populationCap && prevPop != null && s.population > prevPop)
+                    violation(at + " population grew " + prevPop + "->" + s.population + " over cap " + s.populationCap);
                 double ceil = TechEffects.moraleCeiling(w.tech);
                 if (!(s.morale >= -EPS && s.morale <= ceil + EPS)) violation(at + " morale " + s.morale + " outside 0.." + ceil);
                 for (var e : s.stockpile.entrySet()) {
