@@ -24,11 +24,29 @@ import spacecolony.world.WorldGenerator;
  *
  * <p>Args (all optional): seed intervalSeconds runDir [maxMoves]; defaults are a random seed,
  * 60 seconds and build/continuous-playtest. Writes MOVE lines to stdout and VIOLATION lines to
- * runDir/violations.log. Starts a fresh seed after 30 moves with no population left. Run it
+ * runDir/violations.log. Starts a fresh seed after 30 moves with no population left. Each seed
+ * plays one {@link Style}, picked from the seed (or forced with -Dpt.style=NAME), so the same
+ * seed replays the same game while different seeds exercise different parts of the game. Run it
  * with {@code ./gradlew continuousPlayTest} (add {@code --args="SEED 0.02 DIR 1500"} for a
  * fast shake-out).
  */
 public class ContinuousPlayTester {
+
+    /** How the script plays a seed. */
+    enum Style {
+        /** Keep every colony fed, powered and growing; one colonizer at a time. */
+        BALANCED,
+        /** Ships before colony needs: two colonizers, three haulers, up to eight colonies. */
+        EXPANDER,
+        /** No colonizers; extra farms and power plants, and upgrades whenever it can. */
+        INDUSTRIALIST,
+        /** Research labs before anything else, up to three at the hub. */
+        SCIENTIST,
+        /** Never repairs or builds farms or habitats, so colonies run down and collapse. */
+        NEGLECTFUL,
+        /** Four moves in ten are random: any building anywhere, demolitions, cancels, research switches. */
+        CHAOTIC
+    }
 
     static final double EPS = 1e-6;
     static Engine engine;
@@ -36,6 +54,7 @@ public class ContinuousPlayTester {
     static Path runDir;
     static long seed;
     static Random rng;
+    static Style style;
     static int move = 0;
     static int deadMoves = 0;
     static int shipSeq = 0;
@@ -56,13 +75,14 @@ public class ContinuousPlayTester {
 
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> uncaught.add(t.getName() + ": " + stack(e)));
         rng = new Random(seed ^ 0x5eedL);
+        style = pickStyle(seed);
         SwingUtilities.invokeAndWait(() -> {
             engine = new Engine(WorldGenerator.generate(seed));
             frame = new SpaceColonyFrame(engine);
             frame.setSize(1400, 900);
             frame.setVisible(true);
         });
-        log("START seed=" + seed + " interval=" + interval + "s main=" + System.getProperty("pt.rev", "?"));
+        log("START seed=" + seed + " style=" + style + " interval=" + interval + "s main=" + System.getProperty("pt.rev", "?"));
 
         while (move < maxMoves) {
             long t0 = System.nanoTime();
@@ -131,16 +151,29 @@ public class ContinuousPlayTester {
 
         // 0. Repair broken buildings at populated sites.
         for (Site s : sites) {
-            if (s.population <= 0) continue;
+            if (s.population <= 0 || style == Style.NEGLECTFUL) continue;
             for (Building b : s.buildings) {
                 if (b.level > 0 && !b.enabled && Construction.whyNotRepair(s, b) == null)
                     return costed(new RepairBuildingCommand(s.id, b.id), "repair " + b.type + " #" + b.id + " at " + s.id,
                         s, Construction.repairCost(b.type).resources(), -1);
             }
         }
+        if (style == Style.CHAOTIC && rng.nextDouble() < 0.4) {
+            Plan p = chaos(w, sites);
+            if (p != null) return p;
+        }
+        if (style == Style.SCIENTIST && count(hub, BuildingType.RESEARCH_LAB) < 3
+                && underway(hub, BuildingType.RESEARCH_LAB) == 0) {
+            Plan p = build(hub, BuildingType.RESEARCH_LAB, "scientist wants labs");
+            if (p != null) return p;
+        }
         // 1. Hub refinery first: METAL only comes from refining.
         if (count(hub, BuildingType.REFINERY) == 0) {
             Plan p = build(hub, BuildingType.REFINERY, "METAL needs a refinery");
+            if (p != null) return p;
+        }
+        if (style == Style.EXPANDER) {
+            Plan p = ships(w, hub, sites);
             if (p != null) return p;
         }
         // 2. Keep each colony fed, watered and powered.
@@ -159,7 +192,7 @@ public class ContinuousPlayTester {
         Plan sp = ships(w, hub, sites);
         if (sp != null) return sp;
         // 5. Occasional exploration of the rest of the command set.
-        if (rng.nextDouble() < 0.06) {
+        if (rng.nextDouble() < (style == Style.INDUSTRIALIST ? 0.4 : 0.06)) {
             Plan p = explore(w, sites);
             if (p != null) return p;
         }
@@ -174,7 +207,7 @@ public class ContinuousPlayTester {
         double metalNet = day == null ? 0 : day.net(Resource.METAL);
         boolean powerShort = day != null && day.powerUsed > day.powerMade + EPS;
         int free = Construction.SLOTS - s.buildings.size();
-        if (powerShort && underway(s, BuildingType.POWER_PLANT) == 0 && count(s, BuildingType.POWER_PLANT) < 2) {
+        if (powerShort && underway(s, BuildingType.POWER_PLANT) == 0 && count(s, BuildingType.POWER_PLANT) < (style == Style.INDUSTRIALIST ? 4 : 2)) {
             Plan p = build(s, BuildingType.POWER_PLANT, "power short");
             if (p != null) return p;
         }
@@ -192,7 +225,9 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.FURNACE, "no METAL for a refinery");
             if (p != null) return p;
         }
-        if (foodNet < 0 && food < 200 && underway(s, BuildingType.FARM) == 0 && count(s, BuildingType.FARM) < 3) {
+        boolean neglect = style == Style.NEGLECTFUL;
+        if (!neglect && foodNet < 0 && food < 200 && underway(s, BuildingType.FARM) == 0
+                && count(s, BuildingType.FARM) < (style == Style.INDUSTRIALIST ? 4 : 3)) {
             Plan p = build(s, BuildingType.FARM, "FOOD falling");
             if (p != null) return p;
         }
@@ -208,7 +243,7 @@ public class ContinuousPlayTester {
                 }
             }
         }
-        if (free > 1 && s.population >= s.populationCap * 0.9 && underway(s, BuildingType.HABITAT) == 0 && food > 100 && water > 100) {
+        if (!neglect && free > 1 && s.population >= s.populationCap * 0.9 && underway(s, BuildingType.HABITAT) == 0 && food > 100 && water > 100) {
             Plan p = build(s, BuildingType.HABITAT, "near pop cap");
             if (p != null) return p;
         }
@@ -226,8 +261,11 @@ public class ContinuousPlayTester {
         long colonizers = w.ships.stream().filter(s -> s.shipClass == ShipClass.COLONIZER).count();
         if (yard) {
             if (explorers == 0) return newShip(w, hub, ShipClass.EXPLORER);
-            if (colonizers == 0 && sites.size() < 5 && stock(hub, Resource.FUEL) > 60) return newShip(w, hub, ShipClass.COLONIZER);
-            if (haulers < 2 && sites.size() > 1) return newShip(w, hub, ShipClass.HAULER);
+            boolean expand = style == Style.EXPANDER;
+            int maxColonizers = expand ? 2 : style == Style.INDUSTRIALIST ? 0 : 1;
+            if (colonizers < maxColonizers && sites.size() < (expand ? 8 : 5)
+                    && stock(hub, Resource.FUEL) > (expand ? 30 : 60)) return newShip(w, hub, ShipClass.COLONIZER);
+            if (haulers < (expand ? 3 : 2) && sites.size() > 1) return newShip(w, hub, ShipClass.HAULER);
         }
         for (Ship s : w.ships) {
             if (s.state != ShipState.IDLE) continue;
@@ -319,7 +357,7 @@ public class ContinuousPlayTester {
         Site s = sites.get(rng.nextInt(sites.size()));
         if (s.buildings.isEmpty()) return null;
         Building b = s.buildings.get(rng.nextInt(s.buildings.size()));
-        int pick = rng.nextInt(10);
+        int pick = style == Style.INDUSTRIALIST ? 0 : rng.nextInt(10);
         if (pick < 5 && Construction.whyNotUpgrade(s, b) == null)
             return costed(new UpgradeBuildingCommand(s.id, b.id), "explore: upgrade " + b.type + " #" + b.id + " at " + s.id + " to L" + (b.level + 1),
                 s, Construction.upgradeCost(b.type, b.level + 1).resources(), -1);
@@ -340,6 +378,30 @@ public class ContinuousPlayTester {
             }
         }
         return null;
+    }
+
+    /** A random command: any building at any colony, or demolishing any building, else an explore move. */
+    static Plan chaos(World w, List<Site> sites) {
+        Site s = sites.get(rng.nextInt(sites.size()));
+        int pick = rng.nextInt(3);
+        if (pick == 0) {
+            BuildingType t = BuildingType.values()[rng.nextInt(BuildingType.values().length)];
+            Plan p = build(s, t, "chaos");
+            if (p != null) return p;
+        }
+        if (pick == 1 && !s.buildings.isEmpty()) {
+            Building b = s.buildings.get(rng.nextInt(s.buildings.size()));
+            if (Construction.whyNotDemolish(b) == null)
+                return costed(new DemolishBuildingCommand(s.id, b.id), "chaos: demolish " + b.type + " #" + b.id + " at " + s.id,
+                    s, Construction.demolishRefund(b), +1);
+        }
+        return explore(w, sites);
+    }
+
+    static Style pickStyle(long seed) {
+        String forced = System.getProperty("pt.style");
+        if (forced != null) return Style.valueOf(forced.toUpperCase(Locale.ROOT));
+        return Style.values()[(int) Long.remainderUnsigned(seed, Style.values().length)];
     }
 
     static Plan newShip(World w, Site hub, ShipClass c) {
@@ -449,9 +511,11 @@ public class ContinuousPlayTester {
             String shadow = SaveFile.toJson(with);
             if (!shadow.equals(json1)) violation("headless replay differs from the live game: " + firstDiff(shadow, json1));
             if (plan != null && plan.costSite != null) {
-                World without = SaveFile.fromJson(json0);
-                new Simulator().advance(without);
-                Site a = with.findSite(plan.costSite.id), b = without.findSite(plan.costSite.id);
+                // Measure right after the command phase: once production runs, the building's own flows
+                // (a demolished refinery's metal) and stock-limited consumers (a factory fed by a refund) blur it.
+                World before = SaveFile.fromJson(json0), after = SaveFile.fromJson(json0);
+                CommandPhase.drain(after, new ArrayDeque<>(List.of(plan.cmd)));
+                Site a = after.findSite(plan.costSite.id), b = before.findSite(plan.costSite.id);
                 for (var e : plan.expectDelta.entrySet()) {
                     Resource r = e.getKey();
                     double va = a.stockpile.getOrDefault(r, 0.0), vb = b.stockpile.getOrDefault(r, 0.0);
@@ -486,9 +550,10 @@ public class ContinuousPlayTester {
             log("COLLAPSE seed=" + seed + " at tick " + w.tick + "; starting a new seed");
             seed = new Random().nextLong() & 0xffffffffL;
             rng = new Random(seed ^ 0x5eedL);
+            style = pickStyle(seed);
             deadMoves = 0;
             engine.reset(WorldGenerator.generate(seed));
-            log("START seed=" + seed + " (restart)");
+            log("START seed=" + seed + " style=" + style + " (restart)");
         }
     }
 
