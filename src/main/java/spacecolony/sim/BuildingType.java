@@ -5,6 +5,7 @@ public enum BuildingType {
     FARM,
     MINE,
     REFINERY,
+    FURNACE,
     FACTORY,
     POWER_PLANT,
     SHIPYARD,

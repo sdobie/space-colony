@@ -186,6 +186,12 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.REFINERY, "no refinery");
             if (p != null) return p;
         }
+        // Can't afford a refinery: a furnace makes metal slowly without costing any.
+        if (count(s, BuildingType.REFINERY) == 0 && count(s, BuildingType.FURNACE) == 0
+                && Construction.whyNotBuild(s, BuildingType.REFINERY) != null) {
+            Plan p = build(s, BuildingType.FURNACE, "no METAL for a refinery");
+            if (p != null) return p;
+        }
         if (foodNet < 0 && food < 200 && underway(s, BuildingType.FARM) == 0 && count(s, BuildingType.FARM) < 3) {
             Plan p = build(s, BuildingType.FARM, "FOOD falling");
             if (p != null) return p;

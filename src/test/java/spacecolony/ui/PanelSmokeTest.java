@@ -168,7 +168,8 @@ class PanelSmokeTest {
             paintToImage(p, 330, 900);
             String text = allText(p);
             assertTrue(text.contains("Research lab L1   damaged: repair 5 METAL, 3 COMPONENTS"), text);
-            assertTrue(text.contains("Refinery L1   65%: short of ICE"), text);
+            assertTrue(text.contains("Refinery L1   59%: short of ICE"), text);
+            assertTrue(text.contains("Furnace L1   idle: no ORE"), text);
         });
     }
 

@@ -34,6 +34,9 @@ public final class BuildingCatalog {
     public static final double REFINERY_METAL_PER_ORE = 0.8;
     public static final double REFINERY_ICE = 1.0;
     public static final double REFINERY_WATER_PER_ICE = 0.9;
+    /** Furnace: a refinery's ore intake at a quarter of its metal per ore; needs no METAL to build. */
+    public static final double FURNACE_ORE = REFINERY_ORE;
+    public static final double FURNACE_METAL_PER_ORE = REFINERY_METAL_PER_ORE * 0.25;
     public static final double LAB_POINTS = 1.0;
     public static final int HABITAT_CAP = 100;
     /** Factory: metal and silicate in, components out, per level per day. */
@@ -75,6 +78,13 @@ public final class BuildingCatalog {
                 new Rate(Resource.ICE, REFINERY_ICE, Kind.INPUT),
                 new Rate(Resource.WATER, REFINERY_ICE * REFINERY_WATER_PER_ICE, Kind.OUTPUT)),
             BuildCost.of(25, 10, 5));
+        add(BuildingType.FURNACE, "Furnace",
+            "Smelts ore into metal, at a quarter of a refinery's yield. It needs no metal to build,"
+                + " so a colony that has spent its metal can still make more.",
+            POWER_DRAW, List.of(
+                new Rate(Resource.ORE, FURNACE_ORE, Kind.INPUT),
+                new Rate(Resource.METAL, FURNACE_ORE * FURNACE_METAL_PER_ORE, Kind.OUTPUT)),
+            new BuildCost(Map.of(Resource.COMPONENTS, 5.0), 3));
         add(BuildingType.FACTORY, "Factory",
             "Assembles components from metal and silicate. Components pay for new buildings and"
                 + " upgrades.",
