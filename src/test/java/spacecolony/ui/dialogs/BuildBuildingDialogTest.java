@@ -59,7 +59,7 @@ class BuildBuildingDialogTest {
                 assertTrue(text.contains("15 METAL (have 100)"), text);
                 assertTrue(text.contains("3 days, ready in about 4"), text);
                 assertTrue(text.contains("5 of 10 used"), text);
-                assertEquals("Factory", list.getModel().getElementAt(4).displayName());
+                assertEquals("Furnace", list.getModel().getElementAt(4).displayName());
             } finally {
                 d.dispose();
             }

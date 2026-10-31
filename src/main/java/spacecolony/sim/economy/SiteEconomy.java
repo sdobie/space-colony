@@ -179,6 +179,17 @@ public final class SiteEconomy {
                     if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
                 }
+                case FURNACE -> {
+                    double oreAsked = bd.level * BuildingCatalog.FURNACE_ORE * powerFactor;
+                    double oreUsed = consume(stock, report, src, Resource.ORE, oreAsked,
+                        bd.level * BuildingCatalog.FURNACE_ORE);
+                    produce(stock, report, src, Resource.METAL, oreUsed * BuildingCatalog.FURNACE_METAL_PER_ORE,
+                        bd.level * BuildingCatalog.FURNACE_ORE * BuildingCatalog.FURNACE_METAL_PER_ORE);
+                    Limit limit = inputLimit(oreAsked, oreUsed);
+                    Resource limitRes = limit != null ? Resource.ORE : null;
+                    if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
+                    report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
+                }
                 case FACTORY -> {
                     double metalAsked = bd.level * BuildingCatalog.FACTORY_METAL * powerFactor;
                     double siAsked = bd.level * BuildingCatalog.FACTORY_SILICATE * powerFactor;

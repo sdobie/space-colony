@@ -136,6 +136,19 @@ class SiteEconomyTest {
     }
 
     @Test
+    void furnaceMakesAQuarterOfARefinerysMetal() {
+        DayReport f = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FURNACE).stock(Resource.ORE, 100).runOnCopy();
+        DayReport r = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, REFINERY).stock(Resource.ORE, 100).runOnCopy();
+        assertEquals(-1.5, f.net(Resource.ORE), EPS);
+        assertEquals(0.3, f.net(Resource.METAL), EPS);
+        assertEquals(0.25 * r.net(Resource.METAL), f.net(Resource.METAL), EPS);
+        assertNull(f.outcome(1).limit());
+        DayReport idle = TestWorlds.at1Au(Map.of()).with(POWER_PLANT, FURNACE).runOnCopy();
+        assertEquals(Limit.NO_INPUT, idle.outcome(1).limit());
+        assertEquals(Resource.ORE, idle.outcome(1).limitResource());
+    }
+
+    @Test
     void touchesOnlyTheStockItIsGiven() {
         TestWorlds t = TestWorlds.at1Au(Map.of(Resource.ORE, 1.0, Resource.SILICATE, 0.5))
             .with(POWER_PLANT, MINE, FARM, REFINERY).stock(Resource.BIOMASS, 20).stock(Resource.WATER, 20).stock(Resource.ICE, 5);

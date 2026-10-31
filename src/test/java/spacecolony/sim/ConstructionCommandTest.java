@@ -64,6 +64,14 @@ class ConstructionCommandTest {
         assertTrue(rejections().contains("Need 15 more METAL (have 0 of 15)"), rejections().toString());
     }
 
+    @Test void furnaceNeedsNoMetal() {
+        hub.stockpile.put(Resource.METAL, 0.0);
+        tick(new BuildBuildingCommand(HUB, FURNACE));
+        assertTrue(rejections().isEmpty(), rejections().toString());
+        assertEquals(45.0, stock(Resource.COMPONENTS), 1e-9);
+        assertEquals(FURNACE, hub.buildings.get(hub.buildings.size() - 1).type);
+    }
+
     @Test void eleventhBuildingIsRejected() {
         for (int i = 0; i < 5; i++) hub.addBuilding(new Building(HABITAT, 1));
         tick(new BuildBuildingCommand(HUB, FARM));
