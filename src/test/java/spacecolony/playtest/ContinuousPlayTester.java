@@ -57,6 +57,8 @@ public class ContinuousPlayTester {
     static Style style;
     static int move = 0;
     static int deadMoves = 0;
+    /** Game days after which a surviving colony gives way to a new seed (and style). */
+    static final int SEED_DAYS = Integer.getInteger("pt.seedDays", 720);
     static int shipSeq = 0;
     static int siteSeq = 0;
     static final List<String> uncaught = Collections.synchronizedList(new ArrayList<>());
@@ -546,8 +548,10 @@ public class ContinuousPlayTester {
     static void checkCollapse(World w) {
         int pop = allSites(w).stream().mapToInt(s -> s.population).sum();
         deadMoves = pop == 0 ? deadMoves + 1 : 0;
-        if (deadMoves >= 30) {
-            log("COLLAPSE seed=" + seed + " at tick " + w.tick + "; starting a new seed");
+        // A colony that settles down mostly ticks; move on so every style gets played.
+        boolean settled = w.tick >= SEED_DAYS;
+        if (deadMoves >= 30 || settled) {
+            log((settled ? "SURVIVED" : "COLLAPSE") + " seed=" + seed + " at tick " + w.tick + "; starting a new seed");
             seed = new Random().nextLong() & 0xffffffffL;
             rng = new Random(seed ^ 0x5eedL);
             style = pickStyle(seed);
