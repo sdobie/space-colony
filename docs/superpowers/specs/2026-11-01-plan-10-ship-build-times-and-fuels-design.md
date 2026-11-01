@@ -1,4 +1,4 @@
-# Plan 10 — Ship Build Times and Fuel Types
+# Plan 10 — Ship Build Times, Fuel Types and Progress
 
 **Date:** 2026-11-01
 **Status:** Design, awaiting Steve's approval.
@@ -19,6 +19,8 @@ Plan 10:
 
 1. **Ship build times by class.** A shipyard builds one ship at a time. An explorer takes 10 days, a hauler 20, a tanker 25 and a colonizer 40. Each shipyard level adds a day of work per day, so a level 4 shipyard builds a colonizer in 10 days. The ship shows in the colony list as "Building · 12 days left" and can't fly until it's done.
 2. **Two fuels.** The resource FUEL is renamed **HYDROGEN**: still mined from gas giants, and the best fuel, one unit burns for one unit of fuel value. A new resource **SYNFUEL** is made by a new **Fuel plant** building from BIOMASS, anywhere, from day one. A unit of synfuel is worth half a unit of hydrogen, so a trip needs twice as many units, and a tanker full of it carries half the range.
+
+3. **Progress you can see** (Steve's follow-up ask): a research lab shows how far the current tech has got, and a shipyard shows how far its current ship has got, both in the colony's building list and as small progress rings next to the colony on the system map.
 
 **Out of scope:** ship costs in METAL and COMPONENTS (Plan 8 left them for later, still later; see §9.3); a build queue; letting the player pick which fuel a trip burns; fuel mass counting towards a trip's mass; new techs for synfuel.
 
@@ -160,6 +162,21 @@ Schema v5:
 - **Dispatch.** The popup text from §4.2.
 - **Building menu.** Fuel plant appears with its cost and the Plan 7 preview ("+1.0 SYNFUEL/day, −1.0 BIOMASS/day").
 
+### 6.1 Lab and shipyard progress
+
+Steve: *in the main view, a lab should have a visual indicating progress of the current item it is researching; a shipyard should similarly show the progress of the current ship build.*
+
+The system map doesn't draw buildings today; colonies show as their body plus the colony cards and the right-hand building list. So progress shows in both places a player looks:
+
+- **Building rows (right column, colony selected).** A research lab or a shipyard row gets a thin progress bar under its text, full row width (it wraps with the row, so it fits 330 px):
+  - Lab: "Research lab L2   +2.0 research · Ion Drives 120 / 300" and a bar at 40%. Research is empire-wide, so every lab shows the same tech and bar; the text says what this lab adds. With nothing queued: "no research queued" and no bar; the row's tooltip says to pick a tech.
+  - Shipyard: "Shipyard L1   building Hauler 3, 12 days left" and a bar at the ship's share of work done. An idle shipyard reads "idle" with no bar. A damaged one shows the bar greyed with "paused: damaged".
+  - The same bar is drawn for buildings under construction or upgrade (Plan 8 already shows "building, 4 days left" as text), since it costs nothing extra and reads the same way.
+- **System map (main view).** Next to each body that has a colony doing either, small badges sit below the body's label: a flask for active research (only on colonies with an operational lab) and a hull for a ship build, each with a progress ring around it. Hovering a badge gives the same text as the row. Clicking it selects the colony. Badges are placed with the label-collision code from PR #29 so they don't overlap Io and Europa.
+- **Colony cards (left column).** No change; the ship card for a ship under construction already shows its countdown (§6).
+
+`ui.ProgressBadge` paints the ring badge; `ui.ProgressRow` (or a bar inside the existing wrapping row) paints the row bar. Both read `World` only.
+
 ## 7. Events, debug and tutorial
 
 - `SHIP_COMPLETED` INFO event, linked to the ship.
@@ -182,11 +199,13 @@ Schema v5:
 - `BuildShipDialog`: class labels with days; busy message disables OK.
 - `DetailPanel`: a BUILDING ship shows its progress and only *Cancel build*; a tank with both fuels lists both.
 - `ColonyListPanel`: a BUILDING ship card shows "Building · N days left"; the empire FUEL total is the fuel value.
+- `DetailPanel`: a lab row shows the active tech's name, points and a bar at the right fraction; a shipyard row shows its ship and days left; idle ones show no bar.
+- `SystemMapPanel`: with research active and a ship building at Earth Hub, Earth has a flask badge and a hull badge whose ring fractions match; hit-testing a badge selects Earth Hub; no badges when idle.
 - Tutorial: the new wait step; `startupPlayTest` and `playTest` drivers wait for the colonizer.
 
 ### 8.3 Test count estimate
 
-About 30 new tests.
+About 36 new tests.
 
 ### 8.4 Manual play-test checklist
 
@@ -196,6 +215,7 @@ About 30 new tests.
 4. Build a fuel plant at Earth Hub; synfuel starts to pile up, and Earth Hub's food is unaffected.
 5. Run Earth Hub's hydrogen to 0 and dispatch a hauler: it leaves on synfuel, using twice the units the old popup quoted.
 6. Save and reload mid-build: the ship is still building.
+7. Queue a tech: Earth Hub's lab row shows its progress bar, and Earth gets a flask badge on the system map; while a ship builds, the shipyard row and a hull badge fill up.
 
 ## 9. Risks, decisions and open choices
 
@@ -224,6 +244,7 @@ About 30 new tests.
 4. Fuel plant input: BIOMASS (default), ICE (makes icy moons fuel depots, but Earth Hub has none), or WATER?
 5. Synfuel worth half of hydrogen (default), or another ratio?
 6. Burn hydrogen first (default) or synfuel first, to save hydrogen?
+7. Progress visuals in both the building list and as system-map badges (default), or only one of them?
 
 ## 10. What's next
 

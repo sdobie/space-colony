@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ships take time to build, by class, at a shipyard that builds one at a time. FUEL becomes HYDROGEN (gas giants, the best fuel), and a new Fuel plant makes SYNFUEL from BIOMASS anywhere, worth half a unit of hydrogen.
+**Goal:** Ships take time to build, by class, at a shipyard that builds one at a time, and labs and shipyards show their progress. FUEL becomes HYDROGEN (gas giants, the best fuel), and a new Fuel plant makes SYNFUEL from BIOMASS anywhere, worth half a unit of hydrogen.
 
 **Architecture:** `ShipState.BUILDING` with `Ship.buildDaysLeft` and `Ship.yardBuildingId`, advanced in ProductionPhase step 9. `sim.Fuels` holds the fuel resources and their value per unit; trip costs are fuel value, so hydrogen-only numbers don't change. `Ship.fuel` becomes a per-fuel `tank`. Save schema v5.
 
@@ -49,7 +49,7 @@ src/test/java/spacecolony/sim/ShipBuildTest.java
 - `sim/phases/CommandPhase.java`, `ProductionPhase.java`, `TransitPhase.java`
 - `save/SaveFile.java`, `world/WorldGenerator.java`, `tutorial/TutorialScenario.java`, `tutorial/TutorialScript.java`
 - `debug/DebugActions.java`
-- `ui/ColonyListPanel.java`, `ui/DetailPanel.java`, `ui/SystemMapPanel.java`, `ui/BuildingInfoPanel.java`, `ui/dialogs/BuildShipDialog.java`, `ui/dialogs/DispatchShipDialog.java`
+- `ui/ColonyListPanel.java`, `ui/DetailPanel.java`, `ui/SystemMapPanel.java`, `ui/BuildingInfoPanel.java`, new `ui/ProgressBadge.java`, `ui/dialogs/BuildShipDialog.java`, `ui/dialogs/DispatchShipDialog.java`
 - Tests mentioning FUEL; `production-parity.txt`; play-test drivers.
 - Docs: the design doc's status line; game-design spec §3.4 (build days) and §3.5 (fuels).
 
@@ -155,11 +155,18 @@ public final class ShipYards {
 
 - [ ] `DispatchShipDialog` popup uses the new shortfall text; "bring more FUEL here" becomes "bring hydrogen or synfuel here, or build a Fuel plant". Commit `feat(ui): fuel popup names both fuels`.
 
+### Task 9b: Lab and shipyard progress (design §6.1)
+
+- [ ] **Step 1: Failing tests** (design §8.2: lab and shipyard rows, system-map badges and their hit-testing).
+- [ ] **Step 2:** `DetailPanel` building rows: add a bar under lab, shipyard and under-construction rows (`researchFraction = accumulatedPoints / tech.researchCost()`, ship fraction `1 − buildDaysLeft / buildDays`, construction `1 − daysLeft / cost.days`). Extract the text as static helpers next to `buildingText` for tests.
+- [ ] **Step 3:** `ui.ProgressBadge` (flask or hull glyph, ring arc for the fraction, 14 px). `SystemMapPanel` places badges under the body label through the PR #29 label placer, hit-tests them before ships, and shows a tooltip. Repaint on `WorldChanged` as today.
+- [ ] **Step 4:** Commit `feat(ui): progress for research labs and shipyards`.
+
 ## Part C — Drivers, docs, PR
 
 ### Task 10
 
 - [ ] `PlayTestDriver`, `StartupDriver`, `SurveyDriver`, `ShipGraphicsDriver`: after ordering a ship, run the clock (or use the debug finish) until it's ready. `ContinuousPlayTester`: wait on BUILDING ships; industrialist and expander styles build a fuel plant at Earth Hub once they have a second farm.
-- [ ] Screenshots: a ship card mid-build, the build dialog, the Fuel plant preview, a two-fuel tank. Save them under `/mnt/project-files/plan-10-ships-fuel/`.
+- [ ] Screenshots: a ship card mid-build, the lab and shipyard progress bars, the system-map badges, the build dialog, the Fuel plant preview, a two-fuel tank. Save them under `/mnt/project-files/plan-10-ships-fuel/`.
 - [ ] Update the design doc status line and the game-design spec §3.4 and §3.5.
 - [ ] Full `xvfb-run … ./gradlew test`, open the implementation PR, drive CI green.
