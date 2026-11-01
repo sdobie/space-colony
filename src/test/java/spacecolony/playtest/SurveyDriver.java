@@ -63,7 +63,7 @@ public class SurveyDriver {
         });
         Ship x = engine.world().findShip("x1");
         PlayTestDriver.check(engine.world().isSurveyed("mars"), "Explorer surveyed Mars",
-            "day " + engine.world().tick + ", tank " + Math.round(x.fuel));
+            "day " + engine.world().tick + ", tank " + Math.round(x.fuelValue()));
         onEdt(() -> engine.setSelection(Selection.body("mars")));
         Thread.sleep(300);
         PlayTestDriver.shot(frame.getRootPane(), "survey-02-mars-surveyed");

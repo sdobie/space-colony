@@ -18,6 +18,7 @@ class ColonizeTest {
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub"));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         return w;
     }
 
@@ -50,6 +51,8 @@ class ColonizeTest {
         World w = withColonizer();
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("h1", "H1", ShipClass.HAULER, "site-earth-hub"));
+        sim.advance(w);
+        TestShips.finishBuilds(w);
         sim.enqueue(DispatchShipCommand.toBody("h1", "mars", Map.of()));
         sim.advance(w);
         assertTrue(rejected(w, "Only colonizers and explorers can travel to a body without a site"));
@@ -120,7 +123,7 @@ class ColonizeTest {
     @Test void foundColonyFromOrbit_keepsLeftoverTankFuel() {
         Simulator sim = new Simulator();
         World w = orbitingMars(sim);
-        w.findShip("c1").fuel = 12.5;
+        w.findShip("c1").setTank(Resource.HYDROGEN, 12.5);
         sim.enqueue(new BuildSiteCommand("site-mars-a", "Ares", "mars", 0.3, 1.2, "c1"));
         sim.advance(w);
         assertEquals(12.5, w.findSite("site-mars-a").stockpile.getOrDefault(Resource.HYDROGEN, 0.0), 1e-9);
@@ -144,6 +147,7 @@ class ColonizeTest {
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub"));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         sim.enqueue(DispatchShipCommand.toBody("c1", "mars",
             Map.of(Resource.FOOD, 40.0, Resource.WATER, 40.0, Resource.METAL, 20.0)));
         for (int i = 0; i < 5 && w.findShip("c1").state != ShipState.IN_TRANSIT; i++) sim.advance(w);

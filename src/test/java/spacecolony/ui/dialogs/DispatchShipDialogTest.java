@@ -63,11 +63,11 @@ class DispatchShipDialogTest {
         World w = WorldGenerator.generate(1L);
         Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, null);
         x.orbitingBodyId = "mars";
-        x.fuel = 0.5;
+        x.setTank(Resource.HYDROGEN, 0.5);
         String msg = DispatchShipDialog.fuelShortfall(w, x, new DispatchShipDialog.Destination(null, "jovian"), Map.of());
         assertNotNull(msg);
         assertTrue(msg.startsWith("Not enough fuel in Scout-1's tank"), msg);
-        x.fuel = 100;
+        x.setTank(Resource.HYDROGEN, 100);
         assertNull(DispatchShipDialog.fuelShortfall(w, x, new DispatchShipDialog.Destination(null, "belt-a"), Map.of()));
     }
 }

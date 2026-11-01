@@ -43,6 +43,9 @@ public final class BuildingCatalog {
     public static final double FACTORY_METAL = 0.5;
     public static final double FACTORY_SILICATE = 0.5;
     public static final double FACTORY_COMPONENTS = 0.5;
+    /** Fuel plant: biomass in, synfuel out, per level per day; runs after the farms (Plan 10). */
+    public static final double FUEL_PLANT_BIOMASS = 1.0;
+    public static final double FUEL_PLANT_SYNFUEL = 1.0;
 
     private static final Map<BuildingType, BuildingSpec> SPECS = new EnumMap<>(BuildingType.class);
 
@@ -93,6 +96,13 @@ public final class BuildingCatalog {
                 new Rate(Resource.SILICATE, FACTORY_SILICATE, Kind.INPUT),
                 new Rate(Resource.COMPONENTS, FACTORY_COMPONENTS, Kind.OUTPUT)),
             BuildCost.of(30, 5, 5));
+        add(BuildingType.FUEL_PLANT, "Fuel plant",
+            "Brews synfuel from biomass. Synfuel burns at half the value of hydrogen, but any colony"
+                + " with biomass can make it. It only takes biomass the farms have left over.",
+            POWER_DRAW, List.of(
+                new Rate(Resource.BIOMASS, FUEL_PLANT_BIOMASS, Kind.INPUT),
+                new Rate(Resource.SYNFUEL, FUEL_PLANT_SYNFUEL, Kind.OUTPUT)),
+            BuildCost.of(20, 10, 4));
         add(BuildingType.POWER_PLANT, "Power plant",
             "Solar power for the other buildings. Output falls with distance from the sun; if"
                 + " demand outruns it, farms, mines, refineries and factories slow down.",

@@ -20,6 +20,7 @@ class RefuelTest {
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("h1", "H1", ShipClass.HAULER, HUB));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         return w;
     }
 
@@ -42,18 +43,18 @@ class RefuelTest {
         double cost = tripCost(w, h);
         assertTrue(cost > 0);
         assertEquals(1_000.0 - cost, w.findSite(HUB).stockpile.get(Resource.HYDROGEN), 1e-6);
-        assertEquals(0.0, h.fuel, 1e-6);
+        assertEquals(0.0, h.fuelValue(), 1e-6);
     }
 
     @Test void shipWithEnoughFuel_drawsNothing() {
         World w = world(1_000.0);
-        w.findShip("h1").fuel = 10_000.0;
+        w.findShip("h1").setTank(Resource.HYDROGEN, 10_000.0);
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("h1", "site-mars-1", Map.of(Resource.METAL, 10.0)));
         Ship h = departed(w, sim);
         assertEquals(ShipState.IN_TRANSIT, h.state);
         assertEquals(1_000.0, w.findSite(HUB).stockpile.get(Resource.HYDROGEN), 1e-9);
-        assertEquals(10_000.0 - tripCost(w, h), h.fuel, 1e-6);
+        assertEquals(10_000.0 - tripCost(w, h), h.fuelValue(), 1e-6);
     }
 
     @Test void originShort_rejectedAtCommandTime() {

@@ -26,6 +26,7 @@ import spacecolony.sim.BuildingCatalog;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Construction;
 import spacecolony.sim.PopCapBreakdown;
+import spacecolony.sim.Fuels;
 import spacecolony.sim.Resource;
 import spacecolony.sim.ResourceSurvey;
 import spacecolony.sim.ShipClass;
@@ -235,11 +236,7 @@ public class DetailPanel extends JPanel {
             }
             addLabel("→ " + dest + " (arrival t=" + s.transit.arrivalTick() + ")", UiColors.FOREGROUND_DIM);
         }
-        // Ships fly on their origin site's FUEL, drawn at departure, so an empty tank is normal.
-        String fuel = String.format("Fuel: %.1f", s.fuel);
-        if (s.shipClass.tankCap() > 0) fuel = String.format("Tank: %.0f / %.0f HYDROGEN", s.fuel, s.shipClass.tankCap());
-        else if (s.fuel < 1e-6 && s.currentSiteId != null) fuel += " (fills from site FUEL on departure)";
-        addLabel(fuel, UiColors.FOREGROUND_DIM);
+        addLabel(tankText(s), UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {
             addLabel("Cargo:", UiColors.FOREGROUND_DIM);
             for (Resource r : Resource.values()) {
@@ -338,6 +335,23 @@ public class DetailPanel extends JPanel {
         @Override public boolean getScrollableTracksViewportHeight() {
             return getParent() != null && getParent().getHeight() > getPreferredSize().height;
         }
+    }
+
+    /**
+     * "Tank: 64 / 100 (40 hydrogen, 48 synfuel)" for an explorer, "Fuel: 40 hydrogen, 48 synfuel
+     * (64 value)" otherwise; ships fly on their origin site's fuel, drawn at departure, so an
+     * empty tank is normal.
+     */
+    static String tankText(Ship s) {
+        double value = s.fuelValue();
+        boolean mixed = s.tank.getOrDefault(Resource.SYNFUEL, 0.0) >= 0.5;
+        String fuel;
+        if (s.shipClass.tankCap() > 0)
+            fuel = String.format("Tank: %.0f / %.0f (%s)", value, s.shipClass.tankCap(), Fuels.describe(s.tank));
+        else if (value < 1e-6)
+            fuel = "Fuel: none" + (s.currentSiteId != null ? " (fills from the colony's fuel on departure)" : "");
+        else fuel = "Fuel: " + Fuels.describe(s.tank) + (mixed ? String.format(" (%.0f value)", value) : "");
+        return fuel;
     }
 
     /**

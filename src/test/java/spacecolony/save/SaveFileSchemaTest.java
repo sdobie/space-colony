@@ -103,7 +103,7 @@ class SaveFileSchemaTest {
         w.survey("mars", "Scout-1");
         Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, null);
         x.state = ShipState.IN_TRANSIT;
-        x.fuel = 42.5;
+        x.setTank(Resource.HYDROGEN, 42.5);
         x.transit = new Transit(null, null, "belt-a", 3L, 9L, Transit.snapshot(x.cargo), "mars");
         w.ships.add(x);
 
@@ -116,7 +116,7 @@ class SaveFileSchemaTest {
         assertEquals(ShipClass.EXPLORER, bx.shipClass);
         assertNull(bx.transit.originSiteId());
         assertEquals("mars", bx.transit.originBodyId());
-        assertEquals(42.5, bx.fuel);
+        assertEquals(42.5, bx.fuelValue());
     }
 
     @Test void v3_loadsWithSettledBodiesSurveyed() throws Exception {
@@ -124,7 +124,7 @@ class SaveFileSchemaTest {
         w.findBody("belt-b").sites.add(new Site("site-b", "B Camp", "belt-b", 0.0, 0.0, 100));
         w.survey("mars", "Scout-1"); // dropped: v3 files carry no surveys
         String v3 = SaveFile.toJson(w)
-            .replace("\"schemaVersion\": 4", "\"schemaVersion\": 3")
+            .replace("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 3")
             .replaceAll("\"surveyedBodies\": \\[[^\\]]*\\],\\s*", "");
         assertFalse(v3.contains("surveyedBodies"));
         World back = SaveFile.fromJson(v3);
@@ -167,5 +167,41 @@ class SaveFileSchemaTest {
         assertNull(h.buildings.get(1).damagedBy);
         assertEquals(0, h.dustDays);
         assertEquals(1.0, h.dustFactor);
+    }
+
+    /** Plan 10 §5: v6 saves a ship under construction and a two-fuel tank. */
+    @Test void v6_roundTripsShipBuildsAndTanks() throws Exception {
+        World w = WorldGenerator.generate(5L);
+        Ship h = new Ship("h1", "Mule", ShipClass.HAULER, "site-earth-hub");
+        h.state = ShipState.BUILDING;
+        h.buildDaysLeft = 12;
+        h.yardBuildingId = 5;
+        h.setTank(Resource.HYDROGEN, 7.0);
+        h.setTank(Resource.SYNFUEL, 9.0);
+        w.ships.add(h);
+        String json = SaveFile.toJson(w);
+        World back = SaveFile.fromJson(json);
+        assertEquals(json, SaveFile.toJson(back));
+        Ship b = back.findShip("h1");
+        assertEquals(ShipState.BUILDING, b.state);
+        assertEquals(12, b.buildDaysLeft);
+        assertEquals(5, b.yardBuildingId);
+        assertEquals(9.0, b.tank.get(Resource.SYNFUEL));
+    }
+
+    /** Plan 10 §5: a v4 save's FUEL and ship "fuel" load as hydrogen. */
+    @Test void v4_fuelLoadsAsHydrogen() throws Exception {
+        World w = WorldGenerator.generate(5L);
+        w.ships.add(new Ship("h1", "Mule", ShipClass.HAULER, "site-earth-hub"));
+        String v4 = SaveFile.toJson(w)
+            .replace("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 4")
+            .replace("\"HYDROGEN\":", "\"FUEL\":")
+            .replaceAll("\"SYNFUEL\": [0-9.E-]+,\\s*", "")
+            .replaceAll("\"tank\": \\{[^}]*\\}", "\"fuel\": 30.0");
+        assertTrue(v4.contains("\"fuel\": 30.0"), v4);
+        World back = SaveFile.fromJson(v4);
+        assertEquals(400.0, back.findSite("site-earth-hub").stockpile.get(Resource.HYDROGEN));
+        assertEquals(30.0, back.findShip("h1").tank.get(Resource.HYDROGEN));
+        assertEquals(ShipState.IDLE, back.findShip("h1").state);
     }
 }

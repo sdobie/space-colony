@@ -35,6 +35,7 @@ class CommandTest {
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("ship-1", "Hauler 1", ShipClass.HAULER, "site-earth-hub"));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         Ship s = w.findShip("ship-1");
         assertNotNull(s);
         assertEquals(ShipState.IDLE, s.state);
@@ -56,7 +57,7 @@ class CommandTest {
         World w = WorldGenerator.generate(1L);
         Site hub = w.findSite("site-earth-hub");
         Ship s = new Ship("tanker", "Tanker", ShipClass.HAULER, "site-earth-hub");
-        s.fuel = 30.0;
+        s.setTank(Resource.HYDROGEN, 30.0);
         w.ships.add(s);
         double fuelBefore = hub.stockpile.getOrDefault(Resource.HYDROGEN, 0.0);
         Simulator sim = new Simulator();
@@ -145,7 +146,7 @@ class CommandTest {
     void dispatchShipCommand_unknownDest_isRejected() {
         World w = WorldGenerator.generate(1L);
         Ship h = new Ship("h-1", "H1", ShipClass.HAULER, "site-earth-hub");
-        h.fuel = 1000.0;
+        h.setTank(Resource.HYDROGEN, 1000.0);
         w.ships.add(h);
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("h-1", "site-doesnt-exist", java.util.Map.of()));

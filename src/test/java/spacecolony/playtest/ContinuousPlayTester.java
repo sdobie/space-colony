@@ -323,7 +323,7 @@ public class ContinuousPlayTester {
         Map<Resource, Double> none = Map.of();
         if (target != null && CommandPhase.fuelShortfall(w, s, target.id, none) == null) {
             // From orbit keep enough in the tank to reach some colony afterwards.
-            if (s.orbitingBodyId == null || s.fuel > s.shipClass.tankCap() * 0.6)
+            if (s.orbitingBodyId == null || s.fuelValue() > s.shipClass.tankCap() * 0.6)
                 return plain(DispatchShipCommand.toBody(s.id, target.id, none), "send explorer " + s.id + " to survey " + target.id);
         }
         if (s.orbitingBodyId != null) {
@@ -466,9 +466,9 @@ public class ContinuousPlayTester {
         for (Ship s : w.ships) {
             String at = s.id + "@t" + w.tick;
             if (!shipIds.add(s.id)) violation("duplicate ship id " + s.id);
-            if (!Double.isFinite(s.fuel) || s.fuel < -EPS) violation(at + " fuel " + s.fuel);
-            if (s.shipClass.tankCap() > 0 && s.fuel > s.shipClass.tankCap() + EPS && s.state == ShipState.IN_TRANSIT)
-                violation(at + " fuel " + s.fuel + " over tank " + s.shipClass.tankCap());
+            if (!Double.isFinite(s.fuelValue()) || s.fuelValue() < -EPS) violation(at + " fuel " + s.fuelValue());
+            if (s.shipClass.tankCap() > 0 && s.fuelValue() > s.shipClass.tankCap() + EPS && s.state == ShipState.IN_TRANSIT)
+                violation(at + " fuel " + s.fuelValue() + " over tank " + s.shipClass.tankCap());
             for (var e : s.cargo.entrySet())
                 if (!Double.isFinite(e.getValue()) || e.getValue() < -EPS) violation(at + " cargo " + e.getKey() + " = " + e.getValue());
             if (s.cargoMass() > s.shipClass.cargoCap() + 1e-3) violation(at + " cargo " + s.cargoMass() + " over cap " + s.shipClass.cargoCap());
