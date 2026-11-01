@@ -18,6 +18,7 @@ import spacecolony.sim.Site;
 import spacecolony.sim.World;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.phases.CommandPhase;
+import spacecolony.ui.GameIcons;
 
 public class DispatchShipDialog {
     public static void show(Component parent, Engine engine, String shipId) {
@@ -42,7 +43,9 @@ public class DispatchShipDialog {
             if (!r.isStockpileable() || ship.shipClass.cargoCap() <= 0) continue;
             JTextField f = new JTextField("0");
             fields.put(r, f);
-            form.add(new JLabel(r.name() + ":"));
+            JLabel label = new JLabel(r.name() + ":", GameIcons.resource(r, GameIcons.SMALL), JLabel.LEADING);
+            label.setIconTextGap(6);
+            form.add(label);
             form.add(f);
         }
         // Re-show the form (entries kept) until the cargo fits, the trip is affordable, or the

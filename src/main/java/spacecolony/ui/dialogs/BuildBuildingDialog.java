@@ -32,6 +32,7 @@ import spacecolony.sim.Site;
 import spacecolony.sim.commands.BuildBuildingCommand;
 import spacecolony.sim.economy.BuildForecast;
 import spacecolony.ui.BuildingInfoPanel;
+import spacecolony.ui.GameIcons;
 import spacecolony.ui.UiColors;
 
 /** Pick a building, see what it does and what it would do at this colony, then build it. */
@@ -75,12 +76,14 @@ public class BuildBuildingDialog {
                 super.getListCellRendererComponent(l, text, index, selected, focus);
                 // Entries that can't be built right now are drawn dim.
                 setForeground(f.blocker() == null ? UiColors.FOREGROUND : UiColors.FOREGROUND_DIM);
+                setIcon(GameIcons.building(spec.type(), GameIcons.MEDIUM));
+                setIconTextGap(8);
                 setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
                 return this;
             }
         });
         JScrollPane listScroll = new JScrollPane(list);
-        listScroll.setPreferredSize(new Dimension(170, 360));
+        listScroll.setPreferredSize(new Dimension(196, 360));
         listScroll.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, UiColors.PANEL_BORDER));
 
         BuildingInfoPanel info = new BuildingInfoPanel();

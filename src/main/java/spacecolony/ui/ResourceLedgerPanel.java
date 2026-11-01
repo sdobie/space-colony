@@ -11,6 +11,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.EnumSet;
 import java.util.Set;
+import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import spacecolony.sim.BuildingCatalog;
@@ -93,7 +94,9 @@ public class ResourceLedgerPanel extends JPanel {
         Outlook o = Outlook.of(stock, cap, net);
         boolean open = expanded.contains(r);
         Runnable click = () -> toggle(r);
-        JLabel name = label((open ? "▾ " : "▸ ") + r, UiColors.FOREGROUND);
+        JLabel name = label(r.name(), UiColors.FOREGROUND);
+        name.setIcon(GameIcons.disclosure(open, GameIcons.resource(r, GameIcons.SMALL), UiColors.FOREGROUND_DIM));
+        name.setIconTextGap(5);
         name.setName(ROW_PREFIX + r.name());
         clickable(cell(name, 0, 1, null), click);
         JLabel stockLabel = label(String.format("%.0f", stock), UiColors.FOREGROUND);
@@ -106,14 +109,18 @@ public class ResourceLedgerPanel extends JPanel {
         if (!open) return;
         var lines = report.linesFor(r);
         if (lines.isEmpty()) childLine("nothing made or used", UiColors.FOREGROUND_DIM);
-        for (FlowLine l : lines) childLine(lineText(l, report), l.shortfall() ? UiColors.WARNING : UiColors.FOREGROUND_DIM);
+        for (FlowLine l : lines)
+            childLine(lineText(l, report), l.shortfall() ? UiColors.WARNING : UiColors.FOREGROUND_DIM, sourceIcon(l.source()));
     }
 
     private void powerRow() {
         if (report.powerMade <= 1e-9 && report.powerUsed <= 1e-9) return;
         boolean brownout = report.powerFactor < 1.0 - 1e-9;
         Runnable click = this::togglePower;
-        JLabel name = label((powerExpanded ? "▾ " : "▸ ") + "Power", UiColors.FOREGROUND);
+        JLabel name = label("Power", UiColors.FOREGROUND);
+        name.setIcon(GameIcons.disclosure(powerExpanded, GameIcons.resource(Resource.ENERGY, GameIcons.SMALL),
+            UiColors.FOREGROUND_DIM));
+        name.setIconTextGap(5);
         name.setName(POWER_ROW);
         clickable(cell(name, 0, 1, null), click);
         JLabel balance = label(String.format("%.1f / %.1f", report.powerMade, report.powerUsed),
@@ -129,16 +136,30 @@ public class ResourceLedgerPanel extends JPanel {
         clickable(cell(state, 3, 1, null), click);
         row++;
         if (!powerExpanded) return;
-        for (FlowLine l : report.linesFor(Resource.ENERGY)) childLine(lineText(l, report), UiColors.FOREGROUND_DIM);
+        for (FlowLine l : report.linesFor(Resource.ENERGY))
+            childLine(lineText(l, report), UiColors.FOREGROUND_DIM, sourceIcon(l.source()));
     }
 
-    private void childLine(String text, Color fg) {
+    private void childLine(String text, Color fg) { childLine(text, fg, null); }
+
+    private void childLine(String text, Color fg, Icon icon) {
         JLabel l = label(text, fg);
+        l.setIcon(icon);
         // Let a long line end in "…" (full text in the tooltip) rather than widen the ledger past the column.
         l.setMinimumSize(new Dimension(0, l.getPreferredSize().height));
         l.setToolTipText(text);
-        cell(l, 0, 4, new Insets(0, 16, 0, 0));
+        l.setIconTextGap(4);
+        cell(l, 0, 4, new Insets(1, icon == null ? 30 : 10, 1, 0));
         row++;
+    }
+
+    /** The building's tile or a person, beside a source line; null for ships and spoilage. */
+    static Icon sourceIcon(FlowSource src) {
+        return switch (src) {
+            case FlowSource.Building b -> GameIcons.building(b.type(), 16);
+            case FlowSource.Population p -> GameIcons.population(GameIcons.SMALL);
+            default -> null;
+        };
     }
 
     /** "+1.5  Farm L1", "−0.0  Farm L1 (wants 0.5; no BIOMASS)", "+25.0  Mule unloading". */
@@ -240,7 +261,12 @@ public class ResourceLedgerPanel extends JPanel {
     /** All visible text, for tests. */
     String text() {
         StringBuilder sb = new StringBuilder();
-        for (Component c : getComponents()) if (c instanceof JLabel l) sb.append(l.getText()).append('\n');
+        for (Component c : getComponents()) {
+            if (!(c instanceof JLabel l)) continue;
+            String icon = l.getIcon() == null ? "" : l.getIcon().toString();
+            String arrow = icon.startsWith("open:") ? "▾ " : icon.startsWith("closed:") ? "▸ " : "";
+            sb.append(arrow).append(l.getText()).append('\n');
+        }
         return sb.toString();
     }
 
