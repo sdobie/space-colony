@@ -33,7 +33,7 @@ class EventDisplayTest {
 
     @Test void tooltipListsEachConsequenceAndARepairHint() {
         String t = EventStripPanel.tooltip(meteor("Meteor strike at Mars Base: Farm L2 damaged (repair 4 METAL, 1 COMPONENTS); 19 ICE destroyed"), true);
-        assertTrue(t.startsWith("<html><b>Meteor strike</b> · Y0 D40"), t);
+        assertTrue(t.startsWith("<html><b>Meteor strike at Mars Base</b> · Y0 D40"), t);
         assertTrue(t.contains("<br>• Farm L2 damaged (repair 4 METAL, 1 COMPONENTS)<br>• 19 ICE destroyed"), t);
         assertTrue(t.contains("Repair damaged buildings"), t);
         assertTrue(t.endsWith("<i>Click to select</i></html>"), t);

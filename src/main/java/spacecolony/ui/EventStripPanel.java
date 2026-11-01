@@ -154,9 +154,11 @@ public class EventStripPanel extends JPanel {
      * line (Plan 11 §5.2), then a repair hint when it damaged a building.
      */
     static String tooltip(Event ev, boolean clickable) {
-        StringBuilder sb = new StringBuilder("<html><b>").append(escape(prettyKind(ev.kind())))
-            .append("</b> · ").append(date(ev.tick()));
         List<String> lines = consequences(ev);
+        // A random event's headline names its size and colony: "Major meteor strike at Earth Hub".
+        String head = lines.isEmpty() ? prettyKind(ev.kind()) : ev.message().substring(0, ev.message().indexOf(": "));
+        StringBuilder sb = new StringBuilder("<html><b>").append(escape(head))
+            .append("</b> · ").append(date(ev.tick()));
         for (String l : lines) sb.append("<br>• ").append(escape(l));
         if (lines.stream().anyMatch(l -> l.contains(" damaged") || l.contains(" broke down")))
             sb.append("<br><i>Repair damaged buildings from their ⋯ menu in the colony panel</i>");

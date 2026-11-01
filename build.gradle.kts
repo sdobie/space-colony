@@ -121,6 +121,15 @@ tasks.register<JavaExec>("iconsShot") {
     jvmArgs("-ea")
 }
 
+/** Plan 11's event consequences in the event strip and colony panel, for screenshots. */
+tasks.register<JavaExec>("eventsShot") {
+    group = "verification"
+    description = "Screenshot one of each event and what it cost."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.EventsDriver"
+    jvmArgs("-ea")
+}
+
 tasks.register<JavaExec>("debugPlayTest") {
     group = "verification"
     description = "Drive debug mode (Ctrl+D, overlay, step, inspector, log viewer) in the real window."
