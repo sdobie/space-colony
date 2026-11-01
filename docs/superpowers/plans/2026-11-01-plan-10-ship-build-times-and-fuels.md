@@ -10,7 +10,7 @@
 
 **Spec reference:** `docs/superpowers/specs/2026-11-01-plan-10-ship-build-times-and-fuels-design.md` (sections 1–10).
 
-**Out of scope:** ship costs, a build queue, choosing a fuel per trip, fuel mass. See the design doc §1 and §9.
+**Out of scope:** a build queue, choosing a fuel per trip, fuel mass. See the design doc §1 and §9.
 
 ---
 
@@ -105,7 +105,7 @@ public final class Fuels {
 
 ### Task 4: Ships take time to build
 
-**Files:** `ShipClass` (+ `buildDays`), `ShipState` (+ BUILDING), `Ship` (+ `buildDaysLeft`, `yardBuildingId`), create `ShipYards`, `EventKind` (+ SHIP_COMPLETED), `CommandPhase`, `ProductionPhase`, `GoalCatalog`, `ShipBuildTest`.
+**Files:** `ShipClass` (+ `cost()`, a `BuildCost` with the days), `ShipState` (+ BUILDING), `Ship` (+ `buildDaysLeft`, `yardBuildingId`), create `ShipYards`, `EventKind` (+ SHIP_COMPLETED), `CommandPhase`, `ProductionPhase`, `GoalCatalog`, `ShipBuildTest`.
 
 - [ ] **Step 1: Failing tests** (design §8.1 `ShipBuildTest`).
 - [ ] **Step 2: Implement.**
@@ -123,7 +123,7 @@ public final class ShipYards {
 }
 ```
 
-`applyBuildShip` takes `freeYard`, creates the ship with `state = BUILDING`, `buildDaysLeft = shipClass.buildDays()`, `yardBuildingId = yard.id`. `applyDispatchShip` rejects BUILDING ships; `applyRetireShip` on one just removes it; `applyDemolish` rejects a shipyard with a ship on it. `ProductionPhase` step 9 calls `advanceShipBuilds(w, site)` after building construction: for each BUILDING ship docked at the site, find its yard; skip if missing or damaged; `buildDaysLeft -= yard.level`; at ≤ 0 set IDLE, `buildDaysLeft = 0` and emit SHIP_COMPLETED. *Fleet of 10* counts ships whose state isn't BUILDING. Check every `switch` on `ShipState` (the UI and tutorial use `==` today, so only new code paths need care).
+`applyBuildShip` checks `freeYard` and `Construction.shortfallText(cost, stock)`, pays the cost, takes the yard, creates the ship with `state = BUILDING`, `buildDaysLeft = shipClass.buildDays()`, `yardBuildingId = yard.id`. `applyDispatchShip` rejects BUILDING ships; `applyRetireShip` on one removes it and refunds its cost (Plan 8 refund rule); `applyDemolish` rejects a shipyard with a ship on it. `ProductionPhase` step 9 calls `advanceShipBuilds(w, site)` after building construction: for each BUILDING ship docked at the site, find its yard; skip if missing or damaged; `buildDaysLeft -= yard.level`; at ≤ 0 set IDLE, `buildDaysLeft = 0` and emit SHIP_COMPLETED. *Fleet of 10* counts ships whose state isn't BUILDING. Check every `switch` on `ShipState` (the UI and tutorial use `==` today, so only new code paths need care).
 - [ ] **Step 3:** Fix tests and helpers that build a ship and dispatch it right away: add a `testutil` helper `Ships.buildNow(World, …)` that creates a ready ship, and use it where a test isn't about building. Commit `feat(sim): ships take days to build at a shipyard`.
 
 ### Task 5: Save schema v5
@@ -142,7 +142,7 @@ public final class ShipYards {
 
 ### Task 7: Build ship dialog
 
-- [ ] Extract `BuildShipDialog.classLabel(World, Site, ShipClass)` ("HAULER · 20 days") and `statusLine(World, Site)` for tests. Disable OK when `ShipYards.whyNotBuild` is non-null. Commit `feat(ui): build ship dialog shows build days and busy shipyards`.
+- [ ] Extract `BuildShipDialog.classLabel(World, Site, ShipClass)` ("HAULER · 30 METAL, 10 COMPONENTS · 20 days") and `statusLine(World, Site)` for tests. Disable OK when `ShipYards.whyNotBuild` or the cost shortfall is non-null. Commit `feat(ui): build ship dialog shows build days and busy shipyards`.
 
 ### Task 8: Ship cards, detail panel, system map
 

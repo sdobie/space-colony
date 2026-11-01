@@ -1,7 +1,7 @@
 # Plan 10 — Ship Build Times, Fuel Types and Progress
 
 **Date:** 2026-11-01
-**Status:** Design, awaiting Steve's approval.
+**Status:** Approved by Steve 2026-11-01 with the §9.3 defaults, except ships now cost METAL and COMPONENTS (§3.5).
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–9 merged to `main` (last: Plan 9 explorers and surveys, PRs #30 and #31), plus PRs through #40 (slower clock and travel #35, furnace #38, play-tester styles #39 and #40).
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.4 (ship classes), §3.5 (resources and buildings).
@@ -17,12 +17,12 @@ Two problems today:
 
 Plan 10:
 
-1. **Ship build times by class.** A shipyard builds one ship at a time. An explorer takes 10 days, a hauler 20, a tanker 25 and a colonizer 40. Each shipyard level adds a day of work per day, so a level 4 shipyard builds a colonizer in 10 days. The ship shows in the colony list as "Building · 12 days left" and can't fly until it's done.
+1. **Ship build times and costs by class.** Ordering a ship pays METAL and COMPONENTS from the colony up front (§3.5). A shipyard builds one ship at a time. An explorer takes 10 days, a hauler 20, a tanker 25 and a colonizer 40. Each shipyard level adds a day of work per day, so a level 4 shipyard builds a colonizer in 10 days. The ship shows in the colony list as "Building · 12 days left" and can't fly until it's done.
 2. **Two fuels.** The resource FUEL is renamed **HYDROGEN**: still mined from gas giants, and the best fuel, one unit burns for one unit of fuel value. A new resource **SYNFUEL** is made by a new **Fuel plant** building from BIOMASS, anywhere, from day one. A unit of synfuel is worth half a unit of hydrogen, so a trip needs twice as many units, and a tanker full of it carries half the range.
 
 3. **Progress you can see** (Steve's follow-up ask): a research lab shows how far the current tech has got, and a shipyard shows how far its current ship has got, both in the colony's building list and as small progress rings next to the colony on the system map.
 
-**Out of scope:** ship costs in METAL and COMPONENTS (Plan 8 left them for later, still later; see §9.3); a build queue; letting the player pick which fuel a trip burns; fuel mass counting towards a trip's mass; new techs for synfuel.
+**Out of scope:** a build queue; letting the player pick which fuel a trip burns; fuel mass counting towards a trip's mass; new techs for synfuel.
 
 ## 2. Architecture overview
 
@@ -84,9 +84,26 @@ Unchanged. All new state is on `Ship` and in stockpiles and changes only in the 
 ### 3.3 The ship while it's being built
 
 - A new `ShipState.BUILDING`. The ship is in `World.ships` from the moment it's ordered, docked at the shipyard's colony (`currentSiteId`), with `buildDaysLeft > 0`.
-- It can't be dispatched ("Hauler 3 is still being built: 12 days left"). Retiring it **cancels the build** and removes it; ships are free (Plan 8 §9.1), so there is nothing to refund.
+- It can't be dispatched ("Hauler 3 is still being built: 12 days left"). Retiring it **cancels the build**, removes it and refunds its full cost (capped at free room, Plan 8's cancel rule).
 - Ships still count towards the *Fleet of 10* goal only once built.
 - When `buildDaysLeft` reaches 0 in ProductionPhase step 9 the ship becomes IDLE at the colony and a `SHIP_COMPLETED` INFO event fires: "Hauler 3 is ready at Earth Hub". Clicking the event selects the ship.
+
+### 3.5 Ship costs
+
+Steve's call on review: ships cost METAL and COMPONENTS, paid from the ordering colony's stock when the build starts, like buildings (Plan 8).
+
+| Class | METAL | COMPONENTS | Days |
+|---|---|---|---|
+| Explorer | 15 | 5 | 10 |
+| Hauler | 30 | 10 | 20 |
+| Tanker | 35 | 10 | 25 |
+| Colonizer | 60 | 20 | 40 |
+
+- `ShipClass.cost()` returns a `BuildCost` (Plan 8's record, so `describe()` and `shortfall()` come free). Build days live in it.
+- A colony that can't pay is rejected with Plan 8's text: "Need 12 more METAL (have 48 of 60)". The build dialog shows the cost per class and disables OK with that text.
+- Earth Hub starts with 100 METAL and 50 COMPONENTS, so a colonizer (60 / 20) is affordable on day one, with 40 METAL left for a building. The tutorial is unaffected.
+- Cancelling a build refunds the full cost; retiring a built ship refunds nothing (its cargo and fuel go to the dock, as today).
+- The play-tester's script must handle "can't afford" rejections and the wait for METAL.
 
 ### 3.4 Commands
 
@@ -155,7 +172,7 @@ Schema v5:
 
 ## 6. UI
 
-- **Build ship dialog.** The class combo reads "HAULER · 20 days" (days at this colony's free shipyard's level). Below it, a line: "Built by Shipyard L1, ready in 20 days" or, when all are busy, the busy text with OK disabled.
+- **Build ship dialog.** The class combo reads "HAULER · 30 METAL, 10 COMPONENTS · 20 days" (days at this colony's free shipyard's level). Below it, a line: "Built by Shipyard L1, ready in 20 days" or, when all are busy, the busy text with OK disabled.
 - **Ship card (left column).** A ship under construction shows its drawing dimmed with a thin progress bar and "Building · 12 days left".
 - **Detail panel, ship.** "Under construction at Earth Hub (Shipyard L1): 12 of 20 days left". Buttons: *Cancel build* (the retire command) only. A built ship's fuel line shows each fuel it holds: "Tank: 40 hydrogen, 48 synfuel (64 value)"; empty fuels are left out.
 - **System map.** Ships under construction aren't drawn (they aren't flying and the docked marker would suggest a ready ship).
@@ -188,7 +205,7 @@ The system map doesn't draw buildings today; colonies show as their body plus th
 
 ### 8.1 Sim (JUnit, headless)
 
-- `ShipBuildTest`: ordering a hauler at Earth Hub creates a BUILDING ship with 20 days left; after 19 days it's still BUILDING, on day 20 it's IDLE and one `SHIP_COMPLETED` event fired; a level 2 shipyard finishes a tanker in 13 days; a damaged shipyard pauses it; a second order while the only shipyard is busy is rejected with the busy text; two shipyards build two ships at once; retiring a BUILDING ship removes it; dispatching one is rejected; demolishing its shipyard is rejected; *Fleet of 10* ignores BUILDING ships.
+- `ShipBuildTest`: ordering a hauler at Earth Hub creates a BUILDING ship with 20 days left and takes 30 METAL and 10 COMPONENTS; a colony short of METAL is rejected with the shortfall text and nothing is paid; cancelling refunds the cost; after 19 days it's still BUILDING, on day 20 it's IDLE and one `SHIP_COMPLETED` event fired; a level 2 shipyard finishes a tanker in 13 days; a damaged shipyard pauses it; a second order while the only shipyard is busy is rejected with the busy text; two shipyards build two ships at once; retiring a BUILDING ship removes it; dispatching one is rejected; demolishing its shipyard is rejected; *Fleet of 10* ignores BUILDING ships.
 - `FuelsTest`: values; a hydrogen-only trip draws exactly what it drew before (`RefuelTest` and `TransitFuelCostTest` pass with FUEL renamed); a colony with 0 hydrogen and 300 synfuel sends a trip of value 100 using 200 synfuel; a mixed colony uses hydrogen first; the explorer tank fills to 100 value; retire and found drain each fuel; the fuel shortfall text.
 - `FuelPlantTest`: 1 BIOMASS in, 1 SYNFUEL out per level; with too little biomass, farms are fed first and the plant reports "Needs BIOMASS"; power brownout slows it like other producers; `BuildForecast` preview numbers.
 - Save: v5 round-trips a mixed tank and a BUILDING ship; the v1 fixture and a v4 save load with FUEL as HYDROGEN and ships built.
@@ -227,7 +244,7 @@ About 36 new tests.
 - **The Fuel plant uses BIOMASS** and runs after farms.
 - **No queue:** one ship per shipyard, more shipyards for more at once.
 - **Shipyard level speeds builds** (work-days drop by the level each day).
-- **Ships stay free.** Build time is the only new cost.
+- **Ships cost METAL and COMPONENTS** (§3.5), Steve's change on review.
 
 ### 9.2 Risks
 
@@ -240,7 +257,7 @@ About 36 new tests.
 
 1. Build days: explorer 10, hauler 20, tanker 25, colonizer 40 (default), or other numbers?
 2. One ship per shipyard (default), or a queue per colony that builds them in order?
-3. Should ships also cost METAL and COMPONENTS now (default: no, build time only)?
+3. ~~Should ships also cost METAL and COMPONENTS now?~~ Yes (Steve), see §3.5.
 4. Fuel plant input: BIOMASS (default), ICE (makes icy moons fuel depots, but Earth Hub has none), or WATER?
 5. Synfuel worth half of hydrogen (default), or another ratio?
 6. Burn hydrogen first (default) or synfuel first, to save hydrogen?
@@ -248,4 +265,4 @@ About 36 new tests.
 
 ## 10. What's next
 
-Ship costs; a shipyard build queue; a per-colony fuel preference; a synfuel tech (better yield, or ICE as a second recipe); fuel depots and automatic tanker routes.
+A shipyard build queue; a per-colony fuel preference; a synfuel tech (better yield, or ICE as a second recipe); fuel depots and automatic tanker routes.
