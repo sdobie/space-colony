@@ -74,7 +74,8 @@ public class DispatchShipDialog {
             String shortfall = fuelShortfall(engine.world(), ship, d, manifest);
             if (shortfall != null) {
                 JOptionPane.showMessageDialog(parent,
-                    shortfall + ".\nCarry less cargo, pick a closer destination, or bring more FUEL here.",
+                    shortfall + ".\nCarry less cargo, pick a closer destination, bring hydrogen or synfuel here,"
+                        + " or build a Fuel plant.",
                     "Not enough fuel", JOptionPane.WARNING_MESSAGE);
                 continue;
             }

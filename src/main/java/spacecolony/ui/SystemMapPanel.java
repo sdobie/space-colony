@@ -45,6 +45,7 @@ public class SystemMapPanel extends JPanel {
     public SystemMapPanel(Engine engine) {
         this.engine = engine;
         setBackground(UiColors.STARFIELD_BG);
+        javax.swing.ToolTipManager.sharedInstance().registerComponent(this);
         engine.addListener(e -> {
             if (e instanceof EngineEvent.WorldReplaced) yields.clear();
             if (e instanceof EngineEvent.WorldChanged
@@ -55,6 +56,11 @@ public class SystemMapPanel extends JPanel {
             @Override public void mousePressed(MouseEvent e) {
                 int cxLocal = getWidth() / 2;
                 int cyLocal = getHeight() / 2;
+                Badge badge = badgeAt(e.getX(), e.getY());
+                if (badge != null) {
+                    engine.setSelection(Selection.site(badge.siteId()));
+                    return;
+                }
                 ShipMark ship = shipAt(e.getX(), e.getY(), cxLocal, cyLocal);
                 if (ship != null && e.isShiftDown() && engine.debugEnabled()) {
                     ObjectInspectorDialog.inspect(SystemMapPanel.this, engine, ship.ship(), "Ship " + ship.ship().id);
@@ -143,6 +149,19 @@ public class SystemMapPanel extends JPanel {
             g2.drawString(b.name, label.x, label.y + fm.getAscent());
         }
 
+        List<Badge> badges = new ArrayList<>();
+        for (BadgeSpec spec : badgeSpecs()) {
+            int[] p = screenPoint(spec.bodyId(), engine.world().tick, cx, cy);
+            Body b = engine.world().findBody(spec.bodyId());
+            int radius = b != null && b.orbit.parentBodyId() == null ? 5 : 3;
+            Rectangle box = placeBox(ProgressBadge.SIZE, ProgressBadge.SIZE, p[0], p[1], radius, occupied);
+            occupied.add(box);
+            Badge badge = new Badge(spec, box);
+            badges.add(badge);
+            ProgressBadge.paint(g2, spec.kind(), box.getCenterX(), box.getCenterY(), spec.fraction());
+        }
+        lastBadges = List.copyOf(badges);
+
         for (ShipMark m : ships) paintShip(g2, m, sel);
 
         if (debug != null && debug.mapOverlaysOn()) paintDebugOverlays(g2, cx, cy);
@@ -150,6 +169,60 @@ public class SystemMapPanel extends JPanel {
     }
 
     public void setDebug(DebugController debug) { this.debug = debug; }
+
+    /** What a badge shows, before it has a place on screen. */
+    record BadgeSpec(ProgressBadge.Kind kind, String bodyId, String siteId, double fraction, String tooltip) {}
+
+    /** A badge as last painted. */
+    record Badge(BadgeSpec spec, Rectangle box) {
+        String siteId() { return spec.siteId(); }
+    }
+
+    private List<Badge> lastBadges = List.of();
+
+    /** Badges from the last paint, for hit-testing and tests. */
+    List<Badge> badges() { return lastBadges; }
+
+    /**
+     * One badge per colony doing each job (Plan 10 §6.1): research while a tech is queued and
+     * the colony has a working lab, and a ship build while one of its shipyards has a ship.
+     */
+    List<BadgeSpec> badgeSpecs() {
+        var w = engine.world();
+        List<BadgeSpec> out = new ArrayList<>();
+        Double research = DetailPanel.researchFraction(w);
+        for (Body b : w.bodies) {
+            for (Site s : b.sites) {
+                boolean lab = s.buildings.stream().anyMatch(x -> x.type == spacecolony.sim.BuildingType.RESEARCH_LAB && x.isOperational());
+                if (lab && research != null)
+                    out.add(new BadgeSpec(ProgressBadge.Kind.RESEARCH, b.id, s.id, research,
+                        s.name + ": researching " + DetailPanel.researchNote(w)));
+                Ship building = null;
+                for (Ship sh : w.ships)
+                    if (sh.state == ShipState.BUILDING && s.id.equals(sh.currentSiteId)
+                        && (building == null || sh.buildDaysLeft < building.buildDaysLeft)) building = sh;
+                if (building != null)
+                    out.add(new BadgeSpec(ProgressBadge.Kind.SHIP, b.id, s.id, spacecolony.sim.ShipYards.progress(building),
+                        s.name + ": building " + building.name + ", " + spacecolony.sim.ShipYards.daysLeftText(w, building)));
+            }
+        }
+        return out;
+    }
+
+    /** The badge under (x, y) as last painted, or null. */
+    Badge badgeAt(int x, int y) {
+        for (Badge b : lastBadges) {
+            Rectangle hit = new Rectangle(b.box());
+            hit.grow(2, 2);
+            if (hit.contains(x, y)) return b;
+        }
+        return null;
+    }
+
+    @Override public String getToolTipText(MouseEvent e) {
+        Badge b = badgeAt(e.getX(), e.getY());
+        return b == null ? null : b.spec().tooltip();
+    }
 
     /** On-screen length of a ship in flight, in pixels. */
     static final double FLYING_LENGTH = 22.0;
@@ -172,6 +245,7 @@ public class SystemMapPanel extends JPanel {
         List<ShipMark> out = new ArrayList<>();
         Map<String, List<Ship>> parked = new LinkedHashMap<>();
         for (Ship ship : world.ships) {
+            if (ship.state == ShipState.BUILDING) continue; // on the slipway: shown as a badge instead
             if (ship.state == ShipState.IN_TRANSIT) {
                 var t = ship.transit;
                 String originBody = t == null ? null : t.originBody(world);
@@ -290,8 +364,11 @@ public class SystemMapPanel extends JPanel {
      * right, left, below and above the dot, then further out. Falls back to the right side.
      */
     static Rectangle placeLabel(FontMetrics fm, String text, int x, int y, int radius, List<Rectangle> occupied) {
-        int w = fm.stringWidth(text);
-        int h = fm.getAscent() + fm.getDescent();
+        return placeBox(fm.stringWidth(text), fm.getAscent() + fm.getDescent(), x, y, radius, occupied);
+    }
+
+    /** As {@link #placeLabel}, for any w × h box (progress badges). */
+    static Rectangle placeBox(int w, int h, int x, int y, int radius, List<Rectangle> occupied) {
         int gap = radius + 3;
         Rectangle first = null;
         for (int extra = 0; extra <= 24; extra += 8) {

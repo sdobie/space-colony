@@ -194,7 +194,9 @@ public class DetailPanel extends JPanel {
         for (int i = 0; i < s.buildings.size(); i++) {
             Building b = s.buildings.get(i);
             BuildingOutcome o = day.outcome(i);
-            content.add(buildingRow(s, b, buildingText(b, o, day, tech), buildingColor(b, o), techNote(b.type, tech).trim()));
+            World w = engine.world();
+            content.add(buildingRow(s, b, rowText(w, s, b, buildingText(b, o, day, tech)), buildingColor(b, o),
+                techNote(b.type, tech).trim(), progressFraction(w, s, b), progressColor(b)));
         }
         content.add(Box.createVerticalStrut(8));
         JButton build = new JButton("Build building...");
@@ -217,6 +219,8 @@ public class DetailPanel extends JPanel {
     public static final String TARGET_BUILD_SHIP = "detail.buildShip";
     public static final String TARGET_DISPATCH = "detail.dispatch";
     public static final String TARGET_FOUND_COLONY = "detail.foundColony";
+    /** A building row's progress bar is named this plus the building id. */
+    public static final String TARGET_PROGRESS_PREFIX = "detail.progress.";
     /** Each building row's ⋯ button is named this plus the building id. */
     public static final String TARGET_BUILDING_PREFIX = "detail.building.";
     /** Each building row's tile icon is named this plus the building id. */
@@ -226,6 +230,10 @@ public class DetailPanel extends JPanel {
         if (s == null) { renderNone(); return; }
         addLabel(s.name + "  (" + s.shipClass + ")", UiColors.FOREGROUND);
         Body orbiting = s.orbitingBodyId == null ? null : engine.world().findBody(s.orbitingBodyId);
+        if (s.state == ShipState.BUILDING) {
+            renderShipUnderConstruction(s);
+            return;
+        }
         addLabel(orbiting != null ? "Orbiting " + orbiting.name : "State: " + s.state, UiColors.FOREGROUND_DIM);
         if (s.currentSiteId != null) addLabel("At: " + s.currentSiteId, UiColors.FOREGROUND_DIM);
         if (s.transit != null && s.state == ShipState.IN_TRANSIT) {
@@ -270,8 +278,92 @@ public class DetailPanel extends JPanel {
         }
     }
 
-    /** One building row: its label, and a ⋯ button that opens {@link BuildingMenu}. */
-    private JPanel buildingRow(Site s, Building b, String text, java.awt.Color fg, String techs) {
+    private void renderShipUnderConstruction(Ship s) {
+        World w = engine.world();
+        content.add(wrappingText(underConstructionText(w, s), UiColors.FOREGROUND_DIM, null));
+        ProgressBar bar = new ProgressBar(spacecolony.sim.ShipYards.progress(s), UiColors.WARNING);
+        bar.setName(TARGET_PROGRESS_PREFIX + "ship");
+        content.add(bar);
+        addLabel("Cost: " + s.shipClass.cost().describe(), UiColors.FOREGROUND_DIM);
+        content.add(Box.createVerticalStrut(6));
+        JButton cancel = new JButton("Cancel build");
+        cancel.setToolTipText("Stop building " + s.name + " and get its METAL and COMPONENTS back");
+        cancel.addActionListener(e -> engine.enqueue(new spacecolony.sim.commands.RetireShipCommand(s.id)));
+        content.add(cancel);
+    }
+
+    /** "Under construction at Earth Hub (Shipyard L1): 12 days left", or paused when the yard is damaged. */
+    static String underConstructionText(World w, Ship s) {
+        Site at = w.findSite(s.currentSiteId);
+        Building yard = spacecolony.sim.ShipYards.yardOf(w, s);
+        String where = (at != null ? at.name : s.currentSiteId) + (yard != null ? " (Shipyard L" + yard.level + ")" : "");
+        if (yard == null || !yard.isOperational())
+            return "Under construction at " + where + ": paused, the shipyard is damaged";
+        return "Under construction at " + where + ": " + spacecolony.sim.ShipYards.daysLeftText(w, s);
+    }
+
+    /**
+     * A building row's text with its progress note (Plan 10 §6.1): a lab adds the tech under
+     * research, a shipyard says what it's building.
+     */
+    static String rowText(World w, Site s, Building b, String base) {
+        if (b.level == 0 || !b.enabled && b.type != BuildingType.SHIPYARD) return base;
+        return switch (b.type) {
+            case RESEARCH_LAB -> base + " · " + researchNote(w);
+            case SHIPYARD -> {
+                Ship ship = spacecolony.sim.ShipYards.building(w, s, b);
+                String name = BuildingCatalog.displayName(b.type) + " L" + b.level;
+                String upgrading = b.isUnderConstruction() && b.enabled ? "  (upgrading, " + b.daysLeft + " d)" : "";
+                if (ship == null) yield b.enabled ? "  " + name + "   idle" + upgrading : base;
+                if (!b.enabled) yield "  " + name + "   paused: damaged (" + ship.name + ")";
+                yield "  " + name + "   building " + ship.name + ", " + spacecolony.sim.ShipYards.daysLeftText(w, ship) + upgrading;
+            }
+            default -> base;
+        };
+    }
+
+    /** "Ion Drives 120 / 300", or "no research queued". */
+    static String researchNote(World w) {
+        if (w.tech.activeId == null) return "no research queued";
+        spacecolony.sim.Tech t = spacecolony.sim.TechCatalog.get(w.tech.activeId);
+        if (t == null) return "no research queued";
+        return String.format("%s %.0f / %d", t.name(), Math.floor(w.tech.accumulatedPoints), t.researchCost());
+    }
+
+    /** How far along a building's current job is, 0..1, or null when it has none to show. */
+    static Double progressFraction(World w, Site s, Building b) {
+        if (b.isUnderConstruction()) {
+            int total = (b.level == 0 ? Construction.buildCost(b.type) : Construction.upgradeCost(b.type, b.level + 1)).days();
+            return total <= 0 ? null : Math.max(0.0, Math.min(1.0, 1.0 - b.daysLeft / (double) total));
+        }
+        if (b.level == 0) return null;
+        return switch (b.type) {
+            case SHIPYARD -> {
+                Ship ship = spacecolony.sim.ShipYards.building(w, s, b);
+                yield ship == null ? null : spacecolony.sim.ShipYards.progress(ship);
+            }
+            case RESEARCH_LAB -> researchFraction(w);
+            default -> null;
+        };
+    }
+
+    /** The active tech's share done, 0..1, or null when nothing is queued. */
+    static Double researchFraction(World w) {
+        if (w.tech.activeId == null) return null;
+        spacecolony.sim.Tech t = spacecolony.sim.TechCatalog.get(w.tech.activeId);
+        if (t == null || t.researchCost() <= 0) return null;
+        return Math.max(0.0, Math.min(1.0, w.tech.accumulatedPoints / t.researchCost()));
+    }
+
+    private static java.awt.Color progressColor(Building b) {
+        if (!b.enabled) return UiColors.FOREGROUND_DIM;
+        if (b.isUnderConstruction()) return UiColors.FOREGROUND_DIM;
+        return b.type == BuildingType.RESEARCH_LAB ? UiColors.INFO : UiColors.WARNING;
+    }
+
+    /** One building row: its label, a progress bar when it has one, and a ⋯ button that opens {@link BuildingMenu}. */
+    private JPanel buildingRow(Site s, Building b, String text, java.awt.Color fg, String techs,
+                               Double progress, java.awt.Color barColor) {
         JPanel row = new JPanel(new BorderLayout()) {
             // The text wraps, so the row's height follows its width; never stretch taller than that.
             @Override public Dimension getMaximumSize() {
@@ -292,6 +384,13 @@ public class DetailPanel extends JPanel {
         iconWrap.add(icon, BorderLayout.NORTH);
         row.add(iconWrap, BorderLayout.WEST);
         row.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
+        if (progress != null) {
+            // Under the text, across the row (not nested, so the wrapped text keeps its layout).
+            ProgressBar bar = new ProgressBar(progress, barColor);
+            bar.setName(TARGET_PROGRESS_PREFIX + b.id);
+            bar.setToolTipText(String.format("%.0f%% done", progress * 100));
+            row.add(bar, BorderLayout.SOUTH);
+        }
         JButton more = new JButton("⋯");
         more.setName(TARGET_BUILDING_PREFIX + b.id);
         more.setToolTipText("Upgrade, repair or demolish");
