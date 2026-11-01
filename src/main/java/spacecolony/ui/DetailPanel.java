@@ -176,6 +176,9 @@ public class DetailPanel extends JPanel {
         addLabel(capBreakdown(cap), UiColors.FOREGROUND_DIM)
             .setToolTipText("Pop cap = (site base + 100 per enabled habitat level) × colony management techs");
         addLabel(moraleLine(s.morale, TechEffects.moraleCeiling(tech)), moraleColor(s.morale));
+        String dust = dustLine(s);
+        if (dust != null) addLabel(dust, UiColors.WARNING)
+            .setToolTipText("Dust from a meteor strike dims the sky: farms plant and drink as usual but grow less FOOD");
         content.add(Box.createVerticalStrut(6));
         if (!s.id.equals(ledgerSiteId)) {
             ledger.collapseAll();
@@ -352,15 +355,25 @@ public class DetailPanel extends JPanel {
 
     private static String days(int n) { return n + (n == 1 ? " day" : " days"); }
 
+    /** "Impact dust: farms at 75% for 14 more days", or null with clear skies. */
+    static String dustLine(Site s) {
+        if (s.dustDays <= 0) return null;
+        return String.format("Impact dust: farms at %.0f%% for %d more %s",
+            s.dustFactor * 100, s.dustDays, s.dustDays == 1 ? "day" : "days");
+    }
+
     /**
      * What a building did yesterday: "+2.4 ORE · +0.9 SILICATE", "idle: no BIOMASS",
      * "60%: short of ORE", "+100 cap", "(disabled)".
      */
     static String buildingResult(Building b, BuildingOutcome o, DayReport day, TechState tech) {
+        if (b.enabled && b.offlineDays > 0)
+            return "offline after solar flare, back in " + days(b.offlineDays);
         if (!b.enabled || (o != null && o.limit() == Limit.DISABLED)) {
-            // Power plants come back by themselves each day (ProductionPhase step 8).
-            if (b.type == BuildingType.POWER_PLANT) return "offline today";
-            return "damaged: repair " + BuildCost.describe(Construction.repairCost(b.type).resources());
+            String repair = "repair " + BuildCost.describe(Construction.repairCost(b.type).resources());
+            if (b.damagedBy == null) return "damaged: " + repair;
+            return "damaged by " + EventStripPanel.prettyKind(b.damagedBy).toLowerCase(java.util.Locale.ROOT)
+                + ", " + EventStripPanel.date(b.damagedTick) + ": " + repair;
         }
         if (o == null) return "";
         String made = switch (b.type) {
@@ -378,13 +391,15 @@ public class DetailPanel extends JPanel {
         };
         if (o.limit() == null) return made;
         String why = ResourceLedgerPanel.limitText(o);
+        // Dust's share is on the colony's dust line; the efficiency here would mix in the inputs.
+        if (o.limit() == Limit.DUST) return made.isEmpty() ? why : made + " (" + why + ")";
         if (o.efficiency() <= 1e-9) return "idle: " + why;
         if (o.efficiency() < 0.995) return String.format("%.0f%%: %s", o.efficiency() * 100, why);
         return made.isEmpty() ? why : made + " (" + why + ")";
     }
 
     private static java.awt.Color buildingColor(Building b, BuildingOutcome o) {
-        if (!b.enabled) return UiColors.WARNING;
+        if (!b.enabled || b.offlineDays > 0) return UiColors.WARNING;
         if (b.level == 0) return UiColors.FOREGROUND_DIM;
         if (o == null || o.limit() == null) return UiColors.FOREGROUND;
         return switch (o.limit()) {

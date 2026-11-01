@@ -1,7 +1,7 @@
 # Plan 11 — Event Consequences
 
 **Date:** 2026-11-01
-**Status:** Design, awaiting Steve's approval.
+**Status:** Implemented (Plan 11) with the §9.3 defaults, before Plan 10 (save schema v5). Deviations: `ProductionParityTest` does run events (its scenario keeps them on), so its fixture was regenerated; with events off, the old and new code give byte-identical numbers. Impact dust needs a farm at the colony as well as air. Destroyed stock also appears in the colony's ledger as "lost: meteor strike", so the ledger still adds up. A dusty farm's row reads "+1.1 FOOD (impact dust)" and the percentage is on the colony's dust line, because the row's efficiency mixes in the farm's inputs. A farm's repair is 4 METAL, 2 COMPONENTS (the examples below say 1).
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–9 merged to `main` (last: PR #40). Plan 10 (ship build times and fuels, PR #41) is in design; this plan is written to land after it (§9.2).
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.10 (events), Plan 5 (event strip), Plan 8 (repair).

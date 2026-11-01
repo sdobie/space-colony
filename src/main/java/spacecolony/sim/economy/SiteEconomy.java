@@ -38,7 +38,7 @@ public final class SiteEconomy {
         double powerDemand = 0;
         for (int i = 0; i < buildings.size(); i++) {
             Building bd = buildings.get(i);
-            if (!bd.enabled) continue;
+            if (!bd.enabled || bd.offlineDays > 0) continue;
             if (bd.level == 0) continue; // still under construction: draws nothing
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
             if (bd.type == BuildingType.POWER_PLANT) {
@@ -73,7 +73,7 @@ public final class SiteEconomy {
         for (int i = 0; i < buildings.size(); i++) {
             Building bd = buildings.get(i);
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
-            if (!bd.enabled) {
+            if (!bd.enabled || bd.offlineDays > 0) {
                 report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, false, 0.0, Limit.DISABLED, null));
                 continue;
             }
@@ -135,9 +135,11 @@ public final class SiteEconomy {
                     consume(stock, report, src, Resource.WATER, bd.level * BuildingCatalog.FARM_WATER * powerFactor * waterDemandFactor,
                         bd.level * BuildingCatalog.FARM_WATER * waterDemandFactor);
                     double foodMult = TechEffects.farmFoodMultiplier(w.tech);
+                    // Impact dust (Plan 11) dims the sky: full planting and watering, less FOOD.
+                    double dust = s.dustDays > 0 ? s.dustFactor : 1.0;
                     double foodProduced = bd.level * BuildingCatalog.FARM_FOOD * powerFactor *
                                           Math.min(1.0, biomassConsumed / Math.max(1e-6, bd.level * BuildingCatalog.FARM_BIOMASS))
-                                        * foodMult;
+                                        * foodMult * dust;
                     produce(stock, report, src, Resource.FOOD, foodProduced, bd.level * BuildingCatalog.FARM_FOOD * foodMult);
                     // Replanting: seed stock back from the harvest, plus what living soil grows. Scales
                     // with the biomass actually planted, so an idle farm regrows nothing.
@@ -149,6 +151,7 @@ public final class SiteEconomy {
                     Limit limit = inputLimit(biomassAsked, biomassConsumed);
                     Resource limitRes = limit != null ? Resource.BIOMASS : null;
                     if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
+                    if (limit == null && dust < 1.0) limit = Limit.DUST;
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
                 }
                 case REFINERY -> {

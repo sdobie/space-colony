@@ -1,6 +1,7 @@
 package spacecolony.sim.economy;
 
 import spacecolony.sim.BuildingType;
+import spacecolony.sim.EventKind;
 
 /** Who moved a resource in a colony's day. */
 public sealed interface FlowSource {
@@ -15,4 +16,7 @@ public sealed interface FlowSource {
 
     /** Output thrown away because the stockpile was at its cap. */
     record StorageFull() implements FlowSource {}
+
+    /** Stock destroyed by a random event (Plan 11), e.g. a meteor strike. */
+    record EventLoss(EventKind kind) implements FlowSource {}
 }

@@ -131,12 +131,14 @@ A list of optional achievements, e.g. "Found a self-sufficient colony beyond Mar
 
 ### 3.10 Events
 
-Random events fire per body per tick against a small base rate, weighted by body type and current state:
+Random events strike colonies (Plan 11). Meteor strikes, equipment failures and disease outbreaks roll per colony per day (0.004) and fire only when they can do something there; the solar flare rolls once a day for the system (0.0015):
 
-- METEOR_STRIKE — damages a building (more likely on airless bodies)
-- SOLAR_FLARE — temporary power loss across all sites
-- EQUIPMENT_FAILURE — building disabled until repaired
-- DISEASE_OUTBREAK — population loss + morale drop on populated sites
+- METEOR_STRIKE — minor (60%), major (30%) or catastrophic (10%): damages 1/2/3 buildings, destroys 10/20/30% of 1/2/3 stocks, kills 0/2/5% of the colonists, and major and catastrophic strikes raise impact dust (farms at 75% for 20 days, 50% for 60 days) where there is air. Twice as likely on airless bodies.
+- SOLAR_FLARE — every power plant offline for ceil(3/r²) days (1 to 6); they come back by themselves
+- EQUIPMENT_FAILURE — exactly one building damaged until repaired
+- DISEASE_OUTBREAK — population loss + morale drop at one colony
+
+Damaged buildings (power plants included) need Plan 8's repair. Each event's message lists what it cost.
 
 Effects are concrete state mutations and are emitted to the event log.
 

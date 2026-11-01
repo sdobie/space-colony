@@ -97,7 +97,7 @@ public final class CommandPhase {
         String why = Construction.whyNotRepair(s, b);
         if (why != null) throw new CommandRejectedException(why);
         pay(s, Construction.repairCost(b.type));
-        b.enabled = true;
+        b.repair();
     }
 
     private static void applyCancel(World w, CancelConstructionCommand c) {

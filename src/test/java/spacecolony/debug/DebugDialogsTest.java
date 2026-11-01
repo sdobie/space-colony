@@ -101,13 +101,23 @@ class DebugDialogsTest {
         });
     }
 
-    @Test void triggerDialog_listsBodiesWithSitesFirst() throws Exception {
+    @Test void triggerDialog_listsColonies() throws Exception {
         Edt.run(() -> {
             Engine e = new Engine(WorldGenerator.generate(1L));
-            var choices = TriggerEventDialog.bodyChoices(e);
-            assertEquals(e.world().bodies.size(), choices.size());
-            assertEquals("earth", choices.get(0).body().id);
-            assertEquals("Earth (earth)", choices.get(0).toString());
+            var choices = TriggerEventDialog.siteChoices(e);
+            assertEquals(1, choices.size());
+            assertEquals("Earth Hub (Earth)", choices.get(0).toString());
+        });
+    }
+
+    @Test void triggerAt_forcesAMeteorOfTheChosenSize() throws Exception {
+        Edt.run(() -> {
+            Engine e = new Engine(WorldGenerator.generate(1L));
+            String hub = e.world().findBody("earth").sites.get(0).id;
+            TriggerEventDialog.triggerAt(e, hub, EventKind.METEOR_STRIKE, spacecolony.sim.MeteorSize.CATASTROPHIC);
+            var ev = e.world().recentEvents.peekLast();
+            assertTrue(ev.message().startsWith("Catastrophic meteor strike at Earth Hub: "), ev.message());
+            assertEquals(hub, ev.siteId());
         });
     }
 

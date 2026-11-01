@@ -93,13 +93,13 @@ public class EventStripPanel extends JPanel {
             label.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             Selection target = targetOf(w, ev);
             if (target != null) {
-                label.setToolTipText(prettyKind(ev.kind()) + " at tick " + ev.tick() + " · click to select");
+                label.setToolTipText(tooltip(ev, true));
                 label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 label.addMouseListener(new MouseAdapter() {
                     @Override public void mousePressed(MouseEvent e) { engine.setSelection(target); }
                 });
             } else {
-                label.setToolTipText(prettyKind(ev.kind()) + " at tick " + ev.tick());
+                label.setToolTipText(tooltip(ev, false));
             }
             list.add(label);
             shown++;
@@ -141,7 +141,39 @@ public class EventStripPanel extends JPanel {
     static String format(Event ev) {
         String msg = ev.kind() == EventKind.COMMAND_REJECTED
             ? prettyKind(ev.kind()) + ": " + ev.message() : ev.message();
-        return String.format("Y%d D%d  %s", ev.tick() / 365, ev.tick() % 365 + 1, msg);
+        return date(ev.tick()) + "  " + msg;
+    }
+
+    /** "Y0 D12", the top bar's calendar. */
+    static String date(long tick) {
+        return String.format("Y%d D%d", tick / 365, tick % 365 + 1);
+    }
+
+    /**
+     * An HTML tooltip: the kind and date, then, for a random event, each consequence on its own
+     * line (Plan 11 §5.2), then a repair hint when it damaged a building.
+     */
+    static String tooltip(Event ev, boolean clickable) {
+        StringBuilder sb = new StringBuilder("<html><b>").append(escape(prettyKind(ev.kind())))
+            .append("</b> · ").append(date(ev.tick()));
+        List<String> lines = consequences(ev);
+        for (String l : lines) sb.append("<br>• ").append(escape(l));
+        if (lines.stream().anyMatch(l -> l.contains(" damaged") || l.contains(" broke down")))
+            sb.append("<br><i>Repair damaged buildings from their ⋯ menu in the colony panel</i>");
+        if (clickable) sb.append("<br><i>Click to select</i>");
+        return sb.append("</html>").toString();
+    }
+
+    /** A random event's consequences, one per entry; empty for other events. */
+    static List<String> consequences(Event ev) {
+        if (!spacecolony.sim.phases.EventPhase.randomKinds().contains(ev.kind())) return List.of();
+        int colon = ev.message().indexOf(": ");
+        if (colon < 0) return List.of();
+        return List.of(ev.message().substring(colon + 2).split(java.util.regex.Pattern.quote(spacecolony.sim.EventEffects.SEPARATOR)));
+    }
+
+    private static String escape(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     /** SHIP_OUT_OF_FUEL -> "Ship out of fuel". */

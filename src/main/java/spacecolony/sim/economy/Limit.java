@@ -10,6 +10,8 @@ public enum Limit {
     SHORT_INPUT,
     /** Power demand outran supply. */
     BROWNOUT,
+    /** A farm under impact dust from a meteor strike makes less FOOD. */
+    DUST,
     /** Could make more with a tech (gas-giant fuel without Atmospheric Mining). */
     NEEDS_TECH,
     /** The ground here has (almost) none of the resource. */

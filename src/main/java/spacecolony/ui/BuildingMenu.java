@@ -13,7 +13,6 @@ import spacecolony.engine.Engine;
 import spacecolony.sim.BuildCost;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingCatalog;
-import spacecolony.sim.BuildingType;
 import spacecolony.sim.Construction;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Site;
@@ -52,7 +51,7 @@ public final class BuildingMenu {
                 () -> engine.enqueue(new UpgradeBuildingCommand(s.id, b.id)));
             if (why == null) item.setToolTipText(upgradePreview(engine, s, b));
         }
-        if (!b.enabled && b.type != BuildingType.POWER_PLANT) {
+        if (!b.enabled) {
             item(menu, REPAIR, "Repair · " + Construction.repairCost(b.type).describe(),
                 Construction.whyNotRepair(s, b), () -> engine.enqueue(new RepairBuildingCommand(s.id, b.id)));
         }

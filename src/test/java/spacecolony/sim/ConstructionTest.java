@@ -82,7 +82,12 @@ class ConstructionTest {
         assertEquals("Not damaged", Construction.whyNotRepair(s, new Building(FARM, 1)));
         Building plant = new Building(POWER_PLANT, 1);
         plant.enabled = false;
-        assertEquals("Power plants come back on their own the next day", Construction.whyNotRepair(s, plant));
+        assertNull(Construction.whyNotRepair(s, plant), "a damaged power plant is repaired like any building");
+        Building offline = new Building(POWER_PLANT, 1);
+        offline.offlineDays = 2;
+        assertEquals("Offline after a solar flare: back in 2 days", Construction.whyNotRepair(s, offline));
+        offline.offlineDays = 1;
+        assertEquals("Offline after a solar flare: back in 1 day", Construction.whyNotRepair(s, offline));
         Building damaged = new Building(FARM, 1);
         damaged.enabled = false;
         assertNull(Construction.whyNotRepair(s, damaged));

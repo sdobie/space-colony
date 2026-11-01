@@ -130,4 +130,42 @@ class SaveFileSchemaTest {
         World back = SaveFile.fromJson(v3);
         assertEquals(java.util.List.of("belt-b", "earth"), java.util.List.copyOf(back.surveyedBodies));
     }
+
+    /** Plan 11 §6: v5 saves event damage causes, solar outages and impact dust. */
+    @Test void v5_roundTripsEventState() throws Exception {
+        World w = WorldGenerator.generate(4L);
+        Site hub = w.findSite("site-earth-hub");
+        hub.buildings.get(1).damage(spacecolony.sim.EventKind.METEOR_STRIKE, 77L);
+        hub.buildings.get(3).offlineDays = 2;
+        hub.dustDays = 14;
+        hub.dustFactor = 0.75;
+        String json = SaveFile.toJson(w);
+        World back = SaveFile.fromJson(json);
+        assertEquals(json, SaveFile.toJson(back));
+        Site h = back.findSite("site-earth-hub");
+        assertFalse(h.buildings.get(1).enabled);
+        assertEquals(spacecolony.sim.EventKind.METEOR_STRIKE, h.buildings.get(1).damagedBy);
+        assertEquals(77L, h.buildings.get(1).damagedTick);
+        assertEquals(2, h.buildings.get(3).offlineDays);
+        assertEquals(14, h.dustDays);
+        assertEquals(0.75, h.dustFactor);
+    }
+
+    @Test void olderSaves_disabledPowerPlantLoadsAsOneDayOffline() throws Exception {
+        World w = WorldGenerator.generate(4L);
+        Site hub = w.findSite("site-earth-hub");
+        Building plant = hub.buildings.get(3);
+        assertEquals(BuildingType.POWER_PLANT, plant.type);
+        plant.enabled = false;
+        hub.buildings.get(1).enabled = false;
+        String v4 = SaveFile.toJson(w).replace("\"schemaVersion\": " + SaveFile.SCHEMA_VERSION, "\"schemaVersion\": 4");
+        assertTrue(v4.contains("\"schemaVersion\": 4"));
+        Site h = SaveFile.fromJson(v4).findSite("site-earth-hub");
+        assertTrue(h.buildings.get(3).enabled);
+        assertEquals(1, h.buildings.get(3).offlineDays);
+        assertFalse(h.buildings.get(1).enabled, "other damage stays");
+        assertNull(h.buildings.get(1).damagedBy);
+        assertEquals(0, h.dustDays);
+        assertEquals(1.0, h.dustFactor);
+    }
 }
