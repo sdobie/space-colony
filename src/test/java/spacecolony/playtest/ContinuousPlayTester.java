@@ -135,9 +135,10 @@ public class ContinuousPlayTester {
         if (move % 50 == 0) {
             StringBuilder sb = new StringBuilder("STATUS move=" + move + " tick=" + w.tick + " ships=" + w.ships.size());
             for (Site s : allSites(w))
-                sb.append(String.format(" | %s pop=%d/%d F=%.0f W=%.0f I=%.0f M=%.0f O=%.0f FU=%.0f b=%d", s.id, s.population, s.populationCap,
+                sb.append(String.format(" | %s pop=%d/%d F=%.0f W=%.0f I=%.0f M=%.0f C=%.0f O=%.0f H2=%.0f SYN=%.0f b=%d", s.id, s.population, s.populationCap,
                     stock(s, Resource.FOOD), stock(s, Resource.WATER), stock(s, Resource.ICE), stock(s, Resource.METAL),
-                    stock(s, Resource.ORE), stock(s, Resource.HYDROGEN), s.buildings.size()));
+                    stock(s, Resource.COMPONENTS), stock(s, Resource.ORE), stock(s, Resource.HYDROGEN),
+                    stock(s, Resource.SYNFUEL), s.buildings.size()));
             log(sb.toString());
         }
         checkCollapse(w);
@@ -217,6 +218,13 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.MINE, "no mine");
             if (p != null) return p;
         }
+        // Ships cost COMPONENTS since Plan 10, and only a factory makes more: get one before the
+        // hub runs out of the 5 it costs, once METAL can spare its 30 (it eats METAL too).
+        if (isHub && count(s, BuildingType.FACTORY) == 0 && style != Style.NEGLECTFUL
+                && stock(s, Resource.COMPONENTS) < 30 && metal >= 45) {
+            Plan p = build(s, BuildingType.FACTORY, "COMPONENTS only come from a factory");
+            if (p != null) return p;
+        }
         if (count(s, BuildingType.REFINERY) == 0 && (waterNet < 0 || isHub)) {
             Plan p = build(s, BuildingType.REFINERY, "no refinery");
             if (p != null) return p;
@@ -251,6 +259,12 @@ public class ContinuousPlayTester {
         }
         if (metalNet <= 0 && metal < 50 && count(s, BuildingType.MINE) < 2 && underway(s, BuildingType.MINE) == 0) {
             Plan p = build(s, BuildingType.MINE, "METAL low");
+            if (p != null) return p;
+        }
+        // Plan 10: the industrialist and expander styles brew synfuel once they have two farms.
+        if ((style == Style.INDUSTRIALIST || style == Style.EXPANDER) && count(s, BuildingType.FARM) >= 2
+                && count(s, BuildingType.FUEL_PLANT) == 0 && underway(s, BuildingType.FUEL_PLANT) == 0) {
+            Plan p = build(s, BuildingType.FUEL_PLANT, "make synfuel");
             if (p != null) return p;
         }
         return null;
@@ -407,10 +421,12 @@ public class ContinuousPlayTester {
     }
 
     static Plan newShip(World w, Site hub, ShipClass c) {
+        // Ships cost METAL and COMPONENTS and wait for a free shipyard (Plan 10).
+        if (spacecolony.sim.ShipYards.whyNotBuild(w, hub, c) != null) return null;
         String id = "pt-ship-" + (++shipSeq);
         while (w.findShip(id) != null) id = "pt-ship-" + (++shipSeq);
-        return plain(new BuildShipCommand(id, c.name().charAt(0) + c.name().substring(1).toLowerCase() + " " + shipSeq, c, hub.id),
-            "build " + c + " " + id + " at " + hub.id);
+        return costed(new BuildShipCommand(id, c.name().charAt(0) + c.name().substring(1).toLowerCase() + " " + shipSeq, c, hub.id),
+            "build " + c + " " + id + " at " + hub.id, hub, c.cost().resources(), -1);
     }
 
     static Plan build(Site s, BuildingType t, String why) {

@@ -166,6 +166,13 @@ class ProgressVisualsTest {
         });
     }
 
+    @Test void empireFuelTile_isFuelValue() {
+        World w = WorldGenerator.generate(1L);
+        w.findSite(HUB).stockpile.put(Resource.HYDROGEN, 400.0);
+        w.findSite(HUB).stockpile.put(Resource.SYNFUEL, 160.0);
+        assertEquals(480.0, ColonyListPanel.EmpireTotals.of(w).fuelValue(), 1e-9);
+    }
+
     @Test void systemMap_noBadgesWhenIdle() throws Exception {
         Edt.run(() -> {
             SystemMapPanel p = new SystemMapPanel(new Engine(WorldGenerator.generate(1L)));

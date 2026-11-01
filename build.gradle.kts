@@ -154,3 +154,12 @@ tasks.register<JavaExec>("startupPlayTest") {
     systemProperty("user.home", File(dir, "home").absolutePath)
     doFirst { dir.deleteRecursively(); dir.mkdirs() }
 }
+
+/** Plan 10: ship builds, lab and shipyard progress, the fuel plant. */
+tasks.register<JavaExec>("shipsAndFuelShot") {
+    group = "verification"
+    description = "Screenshot a ship under construction, progress bars and badges, and a fuel plant."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.ShipsAndFuelDriver"
+    jvmArgs("-ea")
+}

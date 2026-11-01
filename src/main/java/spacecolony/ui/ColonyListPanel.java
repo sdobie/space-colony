@@ -211,7 +211,23 @@ public class ColonyListPanel extends JPanel {
 
     /** Summed population and FOOD/WATER/FUEL stock and yesterday's net across all colonies. */
     record EmpireTotals(int population, int populationCap, Map<Resource, Double> stock, Map<Resource, Double> net) {
-        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.HYDROGEN);
+        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.HYDROGEN, Resource.SYNFUEL);
+
+        /** Hydrogen plus half the synfuel (Plan 10 §4.4): what the FUEL tile shows. */
+        double fuelValue() { return spacecolony.sim.Fuels.valueOf(stock); }
+        double fuelNet() { return spacecolony.sim.Fuels.valueOf(positive(net)) - spacecolony.sim.Fuels.valueOf(negative(net)); }
+
+        private static Map<Resource, Double> positive(Map<Resource, Double> m) {
+            Map<Resource, Double> out = new java.util.EnumMap<>(Resource.class);
+            m.forEach((r, v) -> out.put(r, Math.max(0.0, v)));
+            return out;
+        }
+
+        private static Map<Resource, Double> negative(Map<Resource, Double> m) {
+            Map<Resource, Double> out = new java.util.EnumMap<>(Resource.class);
+            m.forEach((r, v) -> out.put(r, Math.max(0.0, -v)));
+            return out;
+        }
 
         static EmpireTotals of(World w) {
             int pop = 0, cap = 0;
@@ -372,8 +388,9 @@ public class ColonyListPanel extends JPanel {
                     dc = UiColors.FOREGROUND_DIM;
                 } else {
                     Resource r = EmpireTotals.SHOWN.get(i - 1);
-                    v = compact(t.stock().get(r));
-                    double n = t.net().get(r);
+                    boolean fuel = r == Resource.HYDROGEN;
+                    v = compact(fuel ? t.fuelValue() : t.stock().get(r));
+                    double n = fuel ? t.fuelNet() : t.net().get(r);
                     d = Math.abs(n) < 0.05 ? "steady" : (n > 0 ? "▲ " : "▼ ") + String.format("%.1f", Math.abs(n));
                     dc = Math.abs(n) < 0.05 ? UiColors.FOREGROUND_DIM : n > 0 ? FOOD_BAR : UiColors.ERROR;
                 }
@@ -405,11 +422,12 @@ public class ColonyListPanel extends JPanel {
         @Override
         public String getToolTipText(MouseEvent e) {
             EmpireTotals t = EmpireTotals.of(engine.world());
-            return String.format("Population %d / %d · FOOD %.0f (%+.1f/d) · WATER %.0f (%+.1f/d) · FUEL %.0f (%+.1f/d)",
+            return String.format("Population %d / %d · FOOD %.0f (%+.1f/d) · WATER %.0f (%+.1f/d) · FUEL value %.0f (%+.1f/d):"
+                    + " %.0f hydrogen, %.0f synfuel",
                 t.population(), t.populationCap(),
                 t.stock().get(Resource.FOOD), t.net().get(Resource.FOOD),
                 t.stock().get(Resource.WATER), t.net().get(Resource.WATER),
-                t.stock().get(Resource.HYDROGEN), t.net().get(Resource.HYDROGEN));
+                t.fuelValue(), t.fuelNet(), t.stock().get(Resource.HYDROGEN), t.stock().get(Resource.SYNFUEL));
         }
     }
 

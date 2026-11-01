@@ -58,6 +58,8 @@ public class SurveyDriver {
         onEdt(() -> {
             engine.enqueue(new BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, "site-earth-hub"));
             engine.tick();
+            for (int i = 0; i < 15 && engine.world().findShip("x1").state == spacecolony.sim.ShipState.BUILDING; i++)
+                engine.tick();
             engine.enqueue(DispatchShipCommand.toBody("x1", "mars", Map.of()));
             for (int i = 0; i < 120 && !engine.world().isSurveyed("mars"); i++) engine.tick();
         });
