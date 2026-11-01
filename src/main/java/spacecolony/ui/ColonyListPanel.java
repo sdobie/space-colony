@@ -34,6 +34,7 @@ import spacecolony.engine.Selection;
 import spacecolony.render.BodyAppearance;
 import spacecolony.render.BodyAppearances;
 import spacecolony.render.PlanetGenerator;
+import spacecolony.render.ResourceGlyphs;
 import spacecolony.render.ShipSprites;
 import spacecolony.render.SphereRenderer;
 import spacecolony.sim.Body;
@@ -373,11 +374,23 @@ public class ColonyListPanel extends JPanel {
                     d = Math.abs(n) < 0.05 ? "steady" : (n > 0 ? "▲ " : "▼ ") + String.format("%.1f", Math.abs(n));
                     dc = Math.abs(n) < 0.05 ? UiColors.FOREGROUND_DIM : n > 0 ? FOOD_BAR : UiColors.ERROR;
                 }
-                centered(g2, label, UiColors.INFO, labels[i], cx, 22);
+                withIcon(g2, label, labels[i], i == 0 ? null : EmpireTotals.SHOWN.get(i - 1), cx, 22);
                 centered(g2, value, UiColors.FOREGROUND, v, cx, 37);
                 centered(g2, sub, dc, d, cx, 48);
             }
             g2.dispose();
+        }
+
+        /** A tile's small-caps label with its glyph in front, the pair centred on cx. */
+        private void withIcon(Graphics2D g, Font f, String text, Resource r, int cx, int y) {
+            int icon = 11, gap = 3;
+            g.setFont(f);
+            int w = icon + gap + g.getFontMetrics().stringWidth(text);
+            int x = cx - w / 2;
+            if (r == null) ResourceGlyphs.drawPopulation(g, x, y - 9.5, icon);
+            else ResourceGlyphs.draw(g, r, x, y - 9.5, icon);
+            g.setColor(UiColors.INFO);
+            g.drawString(text, x + icon + gap, y);
         }
 
         private void centered(Graphics2D g, Font f, Color c, String text, int cx, int y) {
@@ -493,12 +506,9 @@ public class ColonyListPanel extends JPanel {
             title(g, s.name, status, null, x, 20);
             dim(g, (body != null ? body.name : s.bodyId) + " · pop " + s.population + "/" + s.populationCap, x, 35);
 
-            Font tiny = getFont().deriveFont(Font.BOLD, 8.5f);
-            g.setFont(tiny);
-            FontMetrics fm = g.getFontMetrics();
             int half = (getWidth() - x - 12 - 6) / 2;
-            gauge(g, fm, "FOOD", s, Resource.FOOD, FOOD_BAR, x, 49, half);
-            gauge(g, fm, "H₂O", s, Resource.WATER, WATER_BAR, x + half + 6, 49, half);
+            gauge(g, s, Resource.FOOD, FOOD_BAR, x, 49, half);
+            gauge(g, s, Resource.WATER, WATER_BAR, x + half + 6, 49, half);
         }
 
         @Override
@@ -509,10 +519,10 @@ public class ColonyListPanel extends JPanel {
                 s.stockpile.getOrDefault(Resource.WATER, 0.0), s.stockpileCap.getOrDefault(Resource.WATER, 0.0));
         }
 
-        private void gauge(Graphics2D g, FontMetrics fm, String label, Site s, Resource r, Color c, int x, int y, int w) {
-            g.setColor(UiColors.FOREGROUND_DIM);
-            g.drawString(label, x, y + 5);
-            int lw = fm.stringWidth(label) + 4;
+        /** The resource's glyph, then its fill bar. */
+        private void gauge(Graphics2D g, Site s, Resource r, Color c, int x, int y, int w) {
+            ResourceGlyphs.draw(g, r, x, y - 3.5, 11);
+            int lw = 11 + 4;
             double f = fill(s.stockpile.getOrDefault(r, 0.0), s.stockpileCap.getOrDefault(r, 1000.0));
             bar(g, x + lw, y, w - lw, f, f < 0.1 ? UiColors.WARNING : c);
         }

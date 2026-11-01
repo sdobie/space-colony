@@ -40,6 +40,8 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
         BuildingSpec spec = BuildingCatalog.get(f.type());
         JLabel title = label(spec.displayName(), UiColors.FOREGROUND);
         title.setFont(title.getFont().deriveFont(Font.BOLD, title.getFont().getSize2D() + 2f));
+        title.setIcon(GameIcons.building(f.type(), GameIcons.LARGE));
+        title.setIconTextGap(10);
         add(title);
         add(wrapped(spec.summary(), UiColors.FOREGROUND));
         add(Box.createVerticalStrut(8));
@@ -78,7 +80,8 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
             boolean ok = have + 1e-9 >= need;
             String text = String.format("%.0f %s (have %.0f)", need, r, Math.floor(have + 1e-9))
                 + (ok ? "" : String.format("   need %.0f more", Math.ceil(need - have - 1e-9)));
-            addRow(grid, c, row++, first ? "Cost" : "", text, ok ? UiColors.FOREGROUND : UiColors.ERROR);
+            addRow(grid, c, row++, first ? "Cost" : "", text, ok ? UiColors.FOREGROUND : UiColors.ERROR)
+                .setIcon(GameIcons.resource(r, GameIcons.SMALL));
             first = false;
         }
         int days = f.cost().days();
@@ -91,14 +94,16 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
         return grid;
     }
 
-    private static void addRow(JPanel grid, java.awt.GridBagConstraints c, int row, String key, String value, Color fg) {
+    private static JLabel addRow(JPanel grid, java.awt.GridBagConstraints c, int row, String key, String value, Color fg) {
         c.gridy = row;
         c.gridx = 0;
         c.weightx = 0;
         grid.add(label(key, UiColors.FOREGROUND_DIM), c);
         c.gridx = 1;
         c.weightx = 1;
-        grid.add(label(value, fg), c);
+        JLabel v = label(value, fg);
+        grid.add(v, c);
+        return v;
     }
 
     /** "uses 0.5 BIOMASS, 0.3 WATER, 2 energy" / "makes 1.5 FOOD" lines, with tech multipliers named. */
@@ -145,12 +150,16 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
             double before = f.before().net(r), after = f.after().net(r);
             if (Math.abs(before) < 0.005 && Math.abs(after) < 0.005) continue;
             double d = after - before;
-            grid.add(label("  " + r, UiColors.FOREGROUND_DIM));
+            JLabel name = label(r.name(), UiColors.FOREGROUND_DIM);
+            name.setIcon(GameIcons.resource(r, GameIcons.SMALL));
+            grid.add(name);
             grid.add(label(String.format("%+.1f", before), UiColors.FOREGROUND));
             grid.add(label(String.format("%+.1f", after), UiColors.FOREGROUND));
             grid.add(label(Math.abs(d) < 0.05 ? "—" : String.format("%+.1f", d), changeColor(d)));
         }
-        grid.add(label("  Power", UiColors.FOREGROUND_DIM));
+        JLabel power = label("Power", UiColors.FOREGROUND_DIM);
+        power.setIcon(GameIcons.resource(Resource.ENERGY, GameIcons.SMALL));
+        grid.add(power);
         grid.add(label(power(f.before().powerMade, f.before().powerUsed), UiColors.FOREGROUND));
         grid.add(label(power(f.after().powerMade, f.after().powerUsed),
             f.after().powerFactor < 1.0 - 1e-9 ? UiColors.ERROR : UiColors.FOREGROUND));

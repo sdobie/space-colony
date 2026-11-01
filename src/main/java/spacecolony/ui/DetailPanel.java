@@ -125,7 +125,10 @@ public class DetailPanel extends JPanel {
         for (ResourceSurvey.Entry e : entries) {
             java.awt.Color fg = e.rating() == ResourceSurvey.Rating.RICH ? UiColors.FOREGROUND : UiColors.FOREGROUND_DIM;
             // Short enough for the 330 px column on one line.
-            addLabel("  " + resourceRow(e), fg).setToolTipText("Best " + e.resource() + " at "
+            JLabel row = addLabel(resourceRow(e), fg);
+            row.setIcon(GameIcons.resource(e.resource(), GameIcons.SMALL));
+            row.setBorder(BorderFactory.createEmptyBorder(1, 8, 1, 0));
+            row.setToolTipText("Best " + e.resource() + " at "
                 + degrees(e.bestLat(), e.bestLon()) + ". The body view's overlay shows where.");
         }
     }
@@ -212,6 +215,8 @@ public class DetailPanel extends JPanel {
     public static final String TARGET_FOUND_COLONY = "detail.foundColony";
     /** Each building row's ⋯ button is named this plus the building id. */
     public static final String TARGET_BUILDING_PREFIX = "detail.building.";
+    /** Each building row's tile icon is named this plus the building id. */
+    public static final String TARGET_BUILDING_ICON_PREFIX = "detail.buildingIcon.";
 
     private void renderShip(Ship s) {
         if (s == null) { renderNone(); return; }
@@ -236,7 +241,10 @@ public class DetailPanel extends JPanel {
             addLabel("Cargo:", UiColors.FOREGROUND_DIM);
             for (Resource r : Resource.values()) {
                 double v = s.cargo.getOrDefault(r, 0.0);
-                if (v > 1e-6) addLabel("  " + r + ": " + String.format("%.0f", v), UiColors.FOREGROUND);
+                if (v <= 1e-6) continue;
+                JLabel line = addLabel(r + ": " + String.format("%.0f", v), UiColors.FOREGROUND);
+                line.setIcon(GameIcons.resource(r, GameIcons.SMALL));
+                line.setBorder(BorderFactory.createEmptyBorder(1, 8, 1, 0));
             }
         }
         if (orbiting != null && s.shipClass == ShipClass.EXPLORER) {
@@ -272,7 +280,18 @@ public class DetailPanel extends JPanel {
         };
         row.setOpaque(false);
         row.setAlignmentX(LEFT_ALIGNMENT);
-        row.add(wrappingText(text, fg, techs.isEmpty() ? null : "Techs: " + techs), BorderLayout.CENTER);
+        // The tile stands in for the text's indent.
+        row.add(wrappingText(text.stripLeading(), fg, techs.isEmpty() ? null : "Techs: " + techs), BorderLayout.CENTER);
+        // The building's tile, pinned to the first line like the ⋯ button.
+        JLabel icon = new JLabel(GameIcons.building(b.type, GameIcons.MEDIUM));
+        icon.setName(TARGET_BUILDING_ICON_PREFIX + b.id);
+        icon.setToolTipText(BuildingCatalog.displayName(b.type));
+        icon.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        JPanel iconWrap = new JPanel(new BorderLayout());
+        iconWrap.setOpaque(false);
+        iconWrap.add(icon, BorderLayout.NORTH);
+        row.add(iconWrap, BorderLayout.WEST);
+        row.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
         JButton more = new JButton("⋯");
         more.setName(TARGET_BUILDING_PREFIX + b.id);
         more.setToolTipText("Upgrade, repair or demolish");

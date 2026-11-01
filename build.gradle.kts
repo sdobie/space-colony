@@ -112,6 +112,15 @@ tasks.register<JavaExec>("shipGraphicsShot") {
     jvmArgs("-ea")
 }
 
+/** The resource and building icons in the panels and the build dialog, for screenshots. */
+tasks.register<JavaExec>("iconsShot") {
+    group = "verification"
+    description = "Screenshot the icon set, a colony, a ship's cargo and the build dialog."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "spacecolony.playtest.IconsDriver"
+    jvmArgs("-ea")
+}
+
 tasks.register<JavaExec>("debugPlayTest") {
     group = "verification"
     description = "Drive debug mode (Ctrl+D, overlay, step, inspector, log viewer) in the real window."
