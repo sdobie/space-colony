@@ -272,4 +272,25 @@ public class SphereRenderer {
         lon = ((lon + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
         return new double[] { lat, lon };
     }
+
+    /**
+     * Where a surface point lands on a sphere drawn by {@link #render}: the forward twin of
+     * {@link #unproject}. Returns {@code {px, py}} in the rendered image, or {@code null} when the
+     * point is on the far side of the globe.
+     */
+    public static double[] project(double lat, double lon, int size, double rotationDeg, double tiltDeg, double zoom) {
+        double radius = size * 0.45 * zoom;
+        double rel = lon - Math.toRadians(rotationDeg);
+        double cosLat = Math.cos(lat);
+        double nx = cosLat * Math.sin(rel);
+        double nz2 = cosLat * Math.cos(rel);
+        double ny2 = -Math.sin(lat);
+        double tiltRad = Math.toRadians(clamp(tiltDeg, -80, 80));
+        double cosT = Math.cos(tiltRad), sinT = Math.sin(tiltRad);
+        // Undo the tilt rotation about X (render: ny2 = ny·cosT − nz·sinT, nz2 = ny·sinT + nz·cosT).
+        double ny = ny2 * cosT + nz2 * sinT;
+        double nz = -ny2 * sinT + nz2 * cosT;
+        if (nz <= 0) return null;
+        return new double[] { size / 2.0 + nx * radius, size / 2.0 + ny * radius };
+    }
 }

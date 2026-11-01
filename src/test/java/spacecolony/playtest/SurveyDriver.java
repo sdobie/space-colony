@@ -121,6 +121,18 @@ public class SurveyDriver {
             });
             Thread.sleep(300);
             PlayTestDriver.shot(frame.getRootPane(), "survey-05-mars-colony-ground");
+
+            // Back on the globe a few weeks later: the best-spot star and the new colony's marker.
+            onEdt(() -> {
+                for (int i = 0; i < 40; i++) engine.tick();
+                engine.setSelection(Selection.body("mars"));
+                engine.setView(EngineEvent.ViewChanged.View.BODY_VIEW);
+                @SuppressWarnings("unchecked")
+                JComboBox<String> picker = find(view, JComboBox.class);
+                picker.setSelectedItem("ORE");
+            });
+            Thread.sleep(800);
+            PlayTestDriver.shot(frame.getRootPane(), "survey-06-mars-ore-colony-marker");
         }
 
         boolean failed = PlayTestDriver.report.stream().anyMatch(s -> s.startsWith("FAIL"));

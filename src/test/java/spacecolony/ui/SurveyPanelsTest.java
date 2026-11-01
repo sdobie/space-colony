@@ -1,6 +1,7 @@
 package spacecolony.ui;
 
 import java.awt.Component;
+import java.util.List;
 import java.awt.Container;
 import javax.swing.JButton;
 import org.junit.jupiter.api.Test;
@@ -112,6 +113,13 @@ class SurveyPanelsTest {
 
             view.overlayPicker().setSelectedItem("ORE");
             assertEquals(Resource.ORE, view.overlayFor(mars));
+            // Picking a resource turns its best spot toward the camera.
+            ResourceSurvey.Entry oreBest = ResourceSurvey.of(mars).stream()
+                .filter(e -> e.resource() == Resource.ORE).findFirst().orElseThrow();
+            double[] star = view.screenPointOf(oreBest.bestLat(), oreBest.bestLon());
+            assertNotNull(star, "best ORE spot on the near side");
+            Component globe = view.getComponent(1);
+            assertEquals(globe.getWidth() / 2.0, star[0], 2.0, "best spot centred left to right");
             // A tick doesn't reset the choice.
             engine.tick();
             assertEquals("ORE", view.overlayPicker().getSelectedItem());
@@ -121,6 +129,14 @@ class SurveyPanelsTest {
             String here = view.readoutText(mars, cx, cy);
             assertNotNull(here);
             assertTrue(here.startsWith("Here: ORE ."), here);
+            assertTrue(here.contains(" (Rich)") || here.contains(" (Good)") || here.contains(" (Fair)")
+                || here.contains(" (Poor)"), here);
+            view.overlayPicker().setSelectedItem("SILICATE");
+            assertTrue(view.readoutText(mars, cx, cy).startsWith("Here: SIL ."), "shown resource comes first");
+            List<String> legend = BodyViewPanel.legendLines(mars, Resource.ORE,
+                ResourceSurvey.of(mars).stream().filter(e -> e.resource() == Resource.ORE).findFirst().orElseThrow(), true);
+            assertEquals("ORE in the ground", legend.get(0));
+            assertTrue(legend.stream().anyMatch(l -> l.contains("Best spot 83%")), legend.toString());
             assertNull(view.readoutText(mars, 1, 1), "off the globe");
             view.overlayPicker().setSelectedItem(BodyViewPanel.SURFACE);
             assertNull(view.readoutText(mars, cx, cy), "no readout without an overlay");
