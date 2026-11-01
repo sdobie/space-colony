@@ -96,6 +96,11 @@ class TutorialTargetsTest {
         act(() -> { engine.enqueue(new QueueResearchCommand("basic-mining")); engine.tick(); });
         expect("build-colonizer", DetailPanel.TARGET_BUILD_SHIP, "Build ship...");
         act(() -> { engine.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, TutorialScript.HUB)); engine.tick(); });
+        expect("wait-colonizer", TopBar.TARGET_X16, "16×");
+        act(() -> {
+            for (int i = 0; i < 45 && engine.world().findShip("c1").state == spacecolony.sim.ShipState.BUILDING; i++)
+                engine.tick();
+        });
 
         // Dispatch step with the hub still selected: no Dispatch button, so the card shows its hint.
         assertEquals("dispatch", tutorial.progress().current().id());
@@ -130,7 +135,7 @@ class TutorialTargetsTest {
     }
 
     @Test void nextStep_isOnEveryStep_andAdvancesReadingAndActionSteps() throws Exception {
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < 12; i++) {
             int index = i;
             Edt.run(() -> {
                 assertEquals(index, tutorial.progress().index());
@@ -156,7 +161,7 @@ class TutorialTargetsTest {
     }
 
     @Test void lastStep_marksComplete_andKeepPlayingEndsTutorialMode() throws Exception {
-        Edt.run(() -> { for (int i = 0; i < 11; i++) tutorial.skip(); });
+        Edt.run(() -> { for (int i = 0; i < 12; i++) tutorial.skip(); });
         flush();
         Edt.run(() -> {
             assertTrue(tutorial.progress().onLastStep());

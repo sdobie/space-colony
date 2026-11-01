@@ -17,11 +17,23 @@ class FinishConstructionTest {
         Building shipyard = hub.addBuilding(new Building(BuildingType.SHIPYARD, 0));
         shipyard.daysLeft = 10;
         hub.buildings.get(1).daysLeft = 3;
-        DebugActions.finishConstruction(hub);
+        DebugActions.finishConstruction(w, hub);
         new Simulator().advance(w);
         assertTrue(hub.buildings.stream().noneMatch(Building::isUnderConstruction));
         assertEquals(1, shipyard.level);
         assertEquals(2, hub.buildings.get(1).level);
+    }
+
+    @Test
+    void shipsUnderConstructionFinishNextTick() {
+        World w = WorldGenerator.generate(1L);
+        Site hub = w.findSite("site-earth-hub");
+        Simulator sim = new Simulator();
+        sim.enqueue(new spacecolony.sim.commands.BuildShipCommand("c1", "Ark", spacecolony.sim.ShipClass.COLONIZER, hub.id));
+        sim.advance(w);
+        DebugActions.finishConstruction(w, hub);
+        sim.advance(w);
+        assertEquals(spacecolony.sim.ShipState.IDLE, w.findShip("c1").state);
     }
 
     @Test
