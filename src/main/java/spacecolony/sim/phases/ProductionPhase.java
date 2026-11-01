@@ -3,7 +3,6 @@ package spacecolony.sim.phases;
 import spacecolony.sim.Body;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingCatalog;
-import spacecolony.sim.BuildingType;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
@@ -49,9 +48,9 @@ public final class ProductionPhase {
                 updateMorale(s, w.tech);
                 updatePopulation(s);
 
-                // 8. Recover power plants knocked out by solar flare (Task 23): brownout
-                // applies for the tick they were offline, but they come back online for next tick.
-                for (Building bd : s.buildings) if (bd.type == BuildingType.POWER_PLANT) bd.enabled = true;
+                // 8. Event outages count down (Plan 11): solar-flare offline days and impact dust.
+                for (Building bd : s.buildings) if (bd.offlineDays > 0) bd.offlineDays--;
+                if (s.dustDays > 0 && --s.dustDays == 0) s.dustFactor = 1.0;
 
                 // 9. Construction: a day off every build and upgrade under way (damage pauses it).
                 advanceConstruction(w, b, s);

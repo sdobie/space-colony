@@ -42,6 +42,7 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
         int i = plus.indexOf(target);
         Building next = new Building(target.type, target.level + 1);
         next.enabled = target.enabled;
+        next.offlineDays = target.offlineDays;
         plus.set(i, next);
         return forecast(w, s, target.type, plus, i, true,
             Construction.upgradeCost(target.type, target.level + 1), Construction.whyNotUpgrade(s, target));

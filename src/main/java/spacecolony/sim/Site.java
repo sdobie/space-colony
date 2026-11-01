@@ -25,6 +25,12 @@ public class Site {
     /** Last computed net production rate per day; refreshed each tick. */
     public final Map<Resource, Double> productionRateCache = new EnumMap<>(Resource.class);
     public final List<Building> buildings = new ArrayList<>();
+    /**
+     * Impact dust from a major or catastrophic meteor strike (Plan 11 §4.1): while
+     * {@code dustDays > 0} every farm here makes only {@code dustFactor} of its FOOD.
+     */
+    public int dustDays;
+    public double dustFactor = 1.0;
     /** Yesterday's itemised economy; not saved, so null until the first tick after a load. */
     public DayReport lastDay;
 

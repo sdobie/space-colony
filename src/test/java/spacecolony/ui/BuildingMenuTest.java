@@ -72,6 +72,20 @@ class BuildingMenuTest {
     }
 
     @Test
+    void damagedPowerPlantOffersRepair_offlineOneDoesNot() throws Exception {
+        Edt.run(() -> {
+            Building plant = hub.buildings.stream().filter(b -> b.type == BuildingType.POWER_PLANT).findFirst().orElseThrow();
+            plant.offlineDays = 2;
+            assertNull(item(BuildingMenu.create(engine, hub, plant), BuildingMenu.REPAIR));
+            plant.offlineDays = 0;
+            plant.damage(spacecolony.sim.EventKind.METEOR_STRIKE, 3);
+            JMenuItem repair = item(BuildingMenu.create(engine, hub, plant), BuildingMenu.REPAIR);
+            assertNotNull(repair);
+            assertTrue(repair.isEnabled());
+        });
+    }
+
+    @Test
     void damagedBuildingOffersRepair_disabledWhenShort() throws Exception {
         Edt.run(() -> {
             Building mine = hub.buildings.stream().filter(b -> b.type == BuildingType.MINE).findFirst().orElseThrow();

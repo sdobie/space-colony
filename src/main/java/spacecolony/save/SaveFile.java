@@ -25,14 +25,15 @@ import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 
-/** Save/load entry points. Schema version 4. */
+/** Save/load entry points. Schema version 5. */
 public final class SaveFile {
     /**
      * v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId.
      * v3 (Plan 8) adds building id and daysLeft.
      * v4 (Plan 9) adds surveyedBodies and transit originBodyId.
+     * v5 (Plan 11) adds building offlineDays, damagedBy and damagedTick, and site dustDays and dustFactor.
      */
-    public static final int SCHEMA_VERSION = 4;
+    public static final int SCHEMA_VERSION = 5;
     /** Oldest schema {@link #fromJson} still reads; v1 files load with the v2 defaults. */
     public static final int MIN_READABLE_VERSION = 1;
     private SaveFile() {}
@@ -111,6 +112,8 @@ public final class SaveFile {
         o.put("morale", num(Double.toString(s.morale)));
         o.put("stockpile",    resourceMap(s.stockpile));
         o.put("stockpileCap", resourceMap(s.stockpileCap));
+        o.put("dustDays", num(s.dustDays));
+        o.put("dustFactor", num(Double.toString(s.dustFactor)));
         List<JsonValue> bldgs = new ArrayList<>();
         for (Building b : s.buildings) {
             Map<String, JsonValue> bo = new LinkedHashMap<>();
@@ -119,6 +122,11 @@ public final class SaveFile {
             bo.put("enabled", new JsonValue.JsonBool(b.enabled));
             bo.put("id", num(b.id));
             bo.put("daysLeft", num(b.daysLeft));
+            bo.put("offlineDays", num(b.offlineDays));
+            if (b.damagedBy != null) {
+                bo.put("damagedBy", str(b.damagedBy.name()));
+                bo.put("damagedTick", num(b.damagedTick));
+            }
             bldgs.add(new JsonValue.JsonObject(bo));
         }
         o.put("buildings", new JsonValue.JsonArray(bldgs));
@@ -233,7 +241,7 @@ public final class SaveFile {
             Body body = w.findBody(bodyId);
             if (body == null) continue; // body removed from layout — skip
             for (JsonValue sv : ((JsonValue.JsonArray) bo.values().get("sites")).values()) {
-                body.sites.add(loadSite(bodyId, (JsonValue.JsonObject) sv));
+                body.sites.add(loadSite(bodyId, (JsonValue.JsonObject) sv, version));
             }
         }
 
@@ -270,7 +278,7 @@ public final class SaveFile {
         return w;
     }
 
-    private static Site loadSite(String bodyId, JsonValue.JsonObject o) {
+    private static Site loadSite(String bodyId, JsonValue.JsonObject o, int version) {
         String id = ((JsonValue.JsonString) o.values().get("id")).value();
         String name = ((JsonValue.JsonString) o.values().get("name")).value();
         double lat = ((JsonValue.JsonNumber) o.values().get("lat")).asDouble();
@@ -282,6 +290,8 @@ public final class SaveFile {
         s.morale = ((JsonValue.JsonNumber) o.values().get("morale")).asDouble();
         loadResourceMap((JsonValue.JsonObject) o.values().get("stockpile"),    s.stockpile);
         loadResourceMap((JsonValue.JsonObject) o.values().get("stockpileCap"), s.stockpileCap);
+        if (o.values().get("dustDays") instanceof JsonValue.JsonNumber dd) s.dustDays = (int) dd.asLong();
+        if (o.values().get("dustFactor") instanceof JsonValue.JsonNumber df) s.dustFactor = df.asDouble();
         for (JsonValue bv : ((JsonValue.JsonArray) o.values().get("buildings")).values()) {
             JsonValue.JsonObject bo = (JsonValue.JsonObject) bv;
             BuildingType type = BuildingType.valueOf(
@@ -291,6 +301,17 @@ public final class SaveFile {
             b.enabled = ((JsonValue.JsonBool) bo.values().get("enabled")).value();
             // Before v3 there were no ids or construction: number the buildings in list order.
             if (bo.values().get("daysLeft") instanceof JsonValue.JsonNumber dl) b.daysLeft = (int) dl.asLong();
+            if (bo.values().get("offlineDays") instanceof JsonValue.JsonNumber od) b.offlineDays = (int) od.asLong();
+            String cause = optString(bo, "damagedBy");
+            if (cause != null) {
+                b.damagedBy = EventKind.valueOf(cause);
+                if (bo.values().get("damagedTick") instanceof JsonValue.JsonNumber dt) b.damagedTick = dt.asLong();
+            }
+            // Before v5 a disabled power plant was always a one-day outage that cleared itself.
+            if (version < 5 && type == BuildingType.POWER_PLANT && !b.enabled) {
+                b.enabled = true;
+                b.offlineDays = 1;
+            }
             if (bo.values().get("id") instanceof JsonValue.JsonNumber idn) {
                 b.id = (int) idn.asLong();
                 s.buildings.add(b);

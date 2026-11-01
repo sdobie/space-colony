@@ -180,6 +180,7 @@ public class ResourceLedgerPanel extends JPanel {
                 case RETURNED -> "returned cargo";
             };
             case FlowSource.StorageFull f -> "lost: storage full";
+            case FlowSource.EventLoss e -> "lost: " + EventStripPanel.prettyKind(e.kind()).toLowerCase(java.util.Locale.ROOT);
         };
     }
 
@@ -198,6 +199,7 @@ public class ResourceLedgerPanel extends JPanel {
             case NO_INPUT -> "no " + o.limitResource();
             case SHORT_INPUT -> "short of " + o.limitResource();
             case BROWNOUT -> "brownout";
+            case DUST -> "impact dust";
             case NEEDS_TECH -> "needs Atmospheric Mining";
             case NO_YIELD -> "no " + o.limitResource() + " here";
             case LOW_YIELD -> "poor " + o.limitResource() + " here";
@@ -227,7 +229,7 @@ public class ResourceLedgerPanel extends JPanel {
             case Outlook.EmptyIn e when vital && e.days() <= 10 -> UiColors.ERROR;
             case Outlook.EmptyIn e when e.days() <= 30 -> UiColors.WARNING;
             case Outlook.Full f when report.linesFor(r).stream()
-                .anyMatch(l -> l.source() instanceof FlowSource.StorageFull) -> UiColors.WARNING;
+                .anyMatch(l -> l.source() instanceof FlowSource.StorageFull || l.source() instanceof FlowSource.EventLoss) -> UiColors.WARNING;
             default -> UiColors.FOREGROUND_DIM;
         };
     }

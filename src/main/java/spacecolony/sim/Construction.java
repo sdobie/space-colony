@@ -73,8 +73,9 @@ public final class Construction {
     }
 
     public static String whyNotRepair(Site s, Building b) {
-        if (b.type == BuildingType.POWER_PLANT) return "Power plants come back on their own the next day";
-        if (b.enabled) return "Not damaged";
+        if (b.enabled) return b.offlineDays > 0
+            ? "Offline after a solar flare: back in " + b.offlineDays + (b.offlineDays == 1 ? " day" : " days")
+            : "Not damaged";
         return shortfallText(repairCost(b.type), s.stockpile);
     }
 
