@@ -60,7 +60,7 @@ spacecolony/
 
 Unchanged. All new state is on `Ship` and in stockpiles and changes only in the sim phases. The UI reads it and enqueues commands.
 
-## 3. Ship build times
+## 3. Ship build times and costs
 
 ### 3.1 Build days
 
@@ -88,6 +88,10 @@ Unchanged. All new state is on `Ship` and in stockpiles and changes only in the 
 - Ships still count towards the *Fleet of 10* goal only once built.
 - When `buildDaysLeft` reaches 0 in ProductionPhase step 9 the ship becomes IDLE at the colony and a `SHIP_COMPLETED` INFO event fires: "Hauler 3 is ready at Earth Hub". Clicking the event selects the ship.
 
+### 3.4 Commands
+
+No new commands. `BuildShipCommand` now starts a build instead of making a ready ship. `RetireShipCommand` on a BUILDING ship cancels it.
+
 ### 3.5 Ship costs
 
 Steve's call on review: ships cost METAL and COMPONENTS, paid from the ordering colony's stock when the build starts, like buildings (Plan 8).
@@ -104,10 +108,6 @@ Steve's call on review: ships cost METAL and COMPONENTS, paid from the ordering 
 - Earth Hub starts with 100 METAL and 50 COMPONENTS, so a colonizer (60 / 20) is affordable on day one, with 40 METAL left for a building. The tutorial is unaffected.
 - Cancelling a build refunds the full cost; retiring a built ship refunds nothing (its cargo and fuel go to the dock, as today).
 - The play-tester's script must handle "can't afford" rejections and the wait for METAL.
-
-### 3.4 Commands
-
-No new commands. `BuildShipCommand` now starts a build instead of making a ready ship. `RetireShipCommand` on a BUILDING ship cancels it.
 
 ## 4. Fuels
 
