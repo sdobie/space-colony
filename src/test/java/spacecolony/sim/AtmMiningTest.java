@@ -10,9 +10,9 @@ class AtmMiningTest {
     void withoutAtmMining_gasGiantMine_producesNoFuel() {
         World w = WorldGenerator.generate(1L);
         Site jovianMine = plantGasGiantMine(w);
-        double fuelBefore = jovianMine.stockpile.get(Resource.FUEL);
+        double fuelBefore = jovianMine.stockpile.get(Resource.HYDROGEN);
         new Simulator().advance(w);
-        assertEquals(fuelBefore, jovianMine.stockpile.get(Resource.FUEL), 1e-9,
+        assertEquals(fuelBefore, jovianMine.stockpile.get(Resource.HYDROGEN), 1e-9,
             "gas-giant MINE should produce 0 FUEL without atm-mining");
     }
 
@@ -21,9 +21,9 @@ class AtmMiningTest {
         World w = WorldGenerator.generate(1L);
         w.tech.researched.add("atm-mining");
         Site jovianMine = plantGasGiantMine(w);
-        double fuelBefore = jovianMine.stockpile.get(Resource.FUEL);
+        double fuelBefore = jovianMine.stockpile.get(Resource.HYDROGEN);
         new Simulator().advance(w);
-        assertTrue(jovianMine.stockpile.get(Resource.FUEL) > fuelBefore,
+        assertTrue(jovianMine.stockpile.get(Resource.HYDROGEN) > fuelBefore,
             "gas-giant MINE should produce FUEL with atm-mining researched");
     }
 
@@ -33,9 +33,9 @@ class AtmMiningTest {
         World w = WorldGenerator.generate(1L);
         w.tech.researched.add("atm-mining");
         Site earthHub = w.findSite("site-earth-hub");
-        double fuelBefore = earthHub.stockpile.get(Resource.FUEL);
+        double fuelBefore = earthHub.stockpile.get(Resource.HYDROGEN);
         new Simulator().advance(w);
-        assertEquals(fuelBefore, earthHub.stockpile.get(Resource.FUEL), 1e-9);
+        assertEquals(fuelBefore, earthHub.stockpile.get(Resource.HYDROGEN), 1e-9);
     }
 
     private static Site plantGasGiantMine(World w) {

@@ -29,7 +29,7 @@ class DispatchShipDialogTest {
         Ship ark = new Ship("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub");
         var toMars = new DispatchShipDialog.Destination(null, "mars");
         assertNull(DispatchShipDialog.fuelShortfall(w, ark, toMars, Map.of()));
-        w.findSite("site-earth-hub").stockpile.put(Resource.FUEL, 5.0);
+        w.findSite("site-earth-hub").stockpile.put(Resource.HYDROGEN, 5.0);
         String msg = DispatchShipDialog.fuelShortfall(w, ark, toMars, Map.of());
         assertNotNull(msg);
         assertTrue(msg.startsWith("Not enough fuel at Earth Hub for this trip"), msg);

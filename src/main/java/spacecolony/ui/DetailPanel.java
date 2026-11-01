@@ -237,7 +237,7 @@ public class DetailPanel extends JPanel {
         }
         // Ships fly on their origin site's FUEL, drawn at departure, so an empty tank is normal.
         String fuel = String.format("Fuel: %.1f", s.fuel);
-        if (s.shipClass.tankCap() > 0) fuel = String.format("Tank: %.0f / %.0f FUEL", s.fuel, s.shipClass.tankCap());
+        if (s.shipClass.tankCap() > 0) fuel = String.format("Tank: %.0f / %.0f HYDROGEN", s.fuel, s.shipClass.tankCap());
         else if (s.fuel < 1e-6 && s.currentSiteId != null) fuel += " (fills from site FUEL on departure)";
         addLabel(fuel, UiColors.FOREGROUND_DIM);
         if (s.cargoMass() > 0) {

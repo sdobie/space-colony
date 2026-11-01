@@ -33,7 +33,7 @@ public final class EconomyScenario {
         mars.stockpile.put(Resource.ORE, 100.0);
         mars.stockpile.put(Resource.FOOD, 60.0);
         mars.stockpile.put(Resource.WATER, 40.0);
-        mars.stockpile.put(Resource.FUEL, 900.0);
+        mars.stockpile.put(Resource.HYDROGEN, 900.0);
         world.findBody("mars").sites.add(mars);
         Site jov = new Site(JOVIAN, "Cloudtop", "jovian", 0.3, 0.4, 100);
         jov.buildings.add(new Building(BuildingType.POWER_PLANT, 2));

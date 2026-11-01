@@ -37,7 +37,7 @@ class TutorialScriptTest {
     @Test void scenario_hasEventsOff_andFuelForTheFlight() {
         World w = TutorialScenario.world();
         assertFalse(w.randomEventsEnabled);
-        assertEquals(400.0, w.findSite("site-earth-hub").stockpile.get(Resource.FUEL));
+        assertEquals(400.0, w.findSite("site-earth-hub").stockpile.get(Resource.HYDROGEN));
         assertEquals(TutorialScenario.TUTORIAL_SEED, w.seed);
     }
 

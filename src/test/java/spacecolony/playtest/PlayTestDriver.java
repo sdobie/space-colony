@@ -326,7 +326,7 @@ public class PlayTestDriver {
             w.ships.add(h);
             w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
             // The hauler draws its trip fuel from the hub at departure (Plan 6 §6.1).
-            w.findSite("site-earth-hub").stockpile.put(Resource.FUEL, 1_000.0);
+            w.findSite("site-earth-hub").stockpile.put(Resource.HYDROGEN, 1_000.0);
         });
 
         expect(dlg -> {

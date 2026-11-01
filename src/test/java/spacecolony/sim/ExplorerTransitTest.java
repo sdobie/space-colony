@@ -15,7 +15,7 @@ class ExplorerTransitTest {
     /** Seed 1, explorer x1 ("Scout-1") idle at Earth Hub with 1000 FUEL in stock. */
     static World withExplorer() {
         World w = WorldGenerator.generate(1L);
-        w.findSite(HUB).stockpile.put(Resource.FUEL, 1_000.0);
+        w.findSite(HUB).stockpile.put(Resource.HYDROGEN, 1_000.0);
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, HUB));
         sim.advance(w);
@@ -56,7 +56,7 @@ class ExplorerTransitTest {
         assertTrue(cost > 0);
         assertEquals(100.0 - cost, x.fuel, 1e-9);
         // The hub paid for exactly one full tank, this trip included.
-        assertEquals(1_000.0 - 100.0, w.findSite(HUB).stockpile.get(Resource.FUEL), 1e-6);
+        assertEquals(1_000.0 - 100.0, w.findSite(HUB).stockpile.get(Resource.HYDROGEN), 1e-6);
     }
 
     @Test void shortStock_leavesWithWhatThereIs() {
@@ -64,7 +64,7 @@ class ExplorerTransitTest {
         Site hub = w.findSite(HUB);
         Simulator sim = new Simulator();
         sim.enqueue(DispatchShipCommand.toBody("x1", "mars", Map.of()));
-        hub.stockpile.put(Resource.FUEL, 30.0);
+        hub.stockpile.put(Resource.HYDROGEN, 30.0);
         for (int i = 0; i < 5 && w.findShip("x1").state != ShipState.IN_TRANSIT; i++) sim.advance(w);
         Ship x = w.findShip("x1");
         assertEquals(ShipState.IN_TRANSIT, x.state);
@@ -72,7 +72,7 @@ class ExplorerTransitTest {
             x.transit.departureTick(), x.transit.arrivalTick());
         assertTrue(cost < 30.0, "trip " + cost);
         assertEquals(30.0 - cost, x.fuel, 1e-9);
-        assertEquals(0.0, hub.stockpile.get(Resource.FUEL), 1e-9);
+        assertEquals(0.0, hub.stockpile.get(Resource.HYDROGEN), 1e-9);
     }
 
     @Test void hopsFromOrbit_onItsTank() {

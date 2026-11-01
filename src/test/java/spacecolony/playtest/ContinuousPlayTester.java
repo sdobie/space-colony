@@ -137,7 +137,7 @@ public class ContinuousPlayTester {
             for (Site s : allSites(w))
                 sb.append(String.format(" | %s pop=%d/%d F=%.0f W=%.0f I=%.0f M=%.0f O=%.0f FU=%.0f b=%d", s.id, s.population, s.populationCap,
                     stock(s, Resource.FOOD), stock(s, Resource.WATER), stock(s, Resource.ICE), stock(s, Resource.METAL),
-                    stock(s, Resource.ORE), stock(s, Resource.FUEL), s.buildings.size()));
+                    stock(s, Resource.ORE), stock(s, Resource.HYDROGEN), s.buildings.size()));
             log(sb.toString());
         }
         checkCollapse(w);
@@ -266,7 +266,7 @@ public class ContinuousPlayTester {
             boolean expand = style == Style.EXPANDER;
             int maxColonizers = expand ? 2 : style == Style.INDUSTRIALIST ? 0 : 1;
             if (colonizers < maxColonizers && sites.size() < (expand ? 8 : 5)
-                    && stock(hub, Resource.FUEL) > (expand ? 30 : 60)) return newShip(w, hub, ShipClass.COLONIZER);
+                    && stock(hub, Resource.HYDROGEN) > (expand ? 30 : 60)) return newShip(w, hub, ShipClass.COLONIZER);
             if (haulers < (expand ? 3 : 2) && sites.size() > 1) return newShip(w, hub, ShipClass.HAULER);
         }
         for (Ship s : w.ships) {
@@ -338,7 +338,7 @@ public class ContinuousPlayTester {
     static Plan hauler(World w, Ship s, List<Site> sites, Site hub) {
         Site at = w.findSite(s.currentSiteId);
         if (at == null || sites.size() < 2) return null;
-        for (Resource r : List.of(Resource.ICE, Resource.WATER, Resource.FOOD, Resource.METAL, Resource.FUEL)) {
+        for (Resource r : List.of(Resource.ICE, Resource.WATER, Resource.FOOD, Resource.METAL, Resource.HYDROGEN)) {
             double have = stock(at, r);
             if (have < 150) continue;
             for (Site d : sites) {

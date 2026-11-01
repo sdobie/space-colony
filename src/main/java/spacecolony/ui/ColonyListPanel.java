@@ -208,7 +208,7 @@ public class ColonyListPanel extends JPanel {
 
     /** Summed population and FOOD/WATER/FUEL stock and yesterday's net across all colonies. */
     record EmpireTotals(int population, int populationCap, Map<Resource, Double> stock, Map<Resource, Double> net) {
-        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.FUEL);
+        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.HYDROGEN);
 
         static EmpireTotals of(World w) {
             int pop = 0, cap = 0;
@@ -406,7 +406,7 @@ public class ColonyListPanel extends JPanel {
                 t.population(), t.populationCap(),
                 t.stock().get(Resource.FOOD), t.net().get(Resource.FOOD),
                 t.stock().get(Resource.WATER), t.net().get(Resource.WATER),
-                t.stock().get(Resource.FUEL), t.net().get(Resource.FUEL));
+                t.stock().get(Resource.HYDROGEN), t.net().get(Resource.HYDROGEN));
         }
     }
 

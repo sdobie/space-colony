@@ -78,7 +78,7 @@ class SurveyPanelsTest {
             DetailPanel p = new DetailPanel(engine);
             p.setSize(330, 600);
             engine.setSelection(Selection.ship("x1"));
-            assertTrue(PanelSmokeTest.allText(p).contains("Tank: 64 / 100 FUEL"));
+            assertTrue(PanelSmokeTest.allText(p).contains("Tank: 64 / 100 HYDROGEN"));
             assertNotNull(button(p, "Dispatch..."));
             assertNull(button(p, DetailPanel.FOUND_COLONY_LABEL));
             engine.setSelection(Selection.ship("c1"));

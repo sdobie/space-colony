@@ -82,12 +82,12 @@ public final class TransitPhase {
                     if (s.fuel < cost) {
                         // Draw this trip's shortfall from the origin's FUEL stock (after the
                         // manifest loaded, so shipped FUEL is taken first).
-                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
+                        double have = origin.stockpile.getOrDefault(Resource.HYDROGEN, 0.0);
                         double draw = Math.min(cost - s.fuel, have);
                         if (draw > 0) {
-                            origin.stockpile.merge(Resource.FUEL, -draw, Double::sum);
+                            origin.stockpile.merge(Resource.HYDROGEN, -draw, Double::sum);
                             s.fuel += draw;
-                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -draw);
+                            ship(origin, s, Shipping.Kind.FUEL, Resource.HYDROGEN, -draw);
                         }
                     }
                     if (s.fuel < cost) {
@@ -108,12 +108,12 @@ public final class TransitPhase {
                     }
                     if (s.shipClass.tankCap() > 0) {
                         // An explorer departs with a full tank, this trip included, so it can fly on from orbit.
-                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
+                        double have = origin.stockpile.getOrDefault(Resource.HYDROGEN, 0.0);
                         double topUp = Math.min(s.shipClass.tankCap() - s.fuel, have);
                         if (topUp > 0) {
-                            origin.stockpile.merge(Resource.FUEL, -topUp, Double::sum);
+                            origin.stockpile.merge(Resource.HYDROGEN, -topUp, Double::sum);
                             s.fuel += topUp;
-                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -topUp);
+                            ship(origin, s, Shipping.Kind.FUEL, Resource.HYDROGEN, -topUp);
                         }
                     }
                     s.fuel -= cost;

@@ -37,7 +37,7 @@ class ResourceYieldMapTest {
     @Test
     void gasGiant_yieldsFuel() {
         ResourceYieldMap m = new ResourceYieldMap(1L, BodyType.GAS_GIANT);
-        assertTrue(m.sample(Resource.FUEL, 0.0, 0.0) > 0.0);
+        assertTrue(m.sample(Resource.HYDROGEN, 0.0, 0.0) > 0.0);
     }
 
     @Test

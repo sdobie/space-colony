@@ -58,13 +58,13 @@ class CommandTest {
         Ship s = new Ship("tanker", "Tanker", ShipClass.HAULER, "site-earth-hub");
         s.fuel = 30.0;
         w.ships.add(s);
-        double fuelBefore = hub.stockpile.getOrDefault(Resource.FUEL, 0.0);
+        double fuelBefore = hub.stockpile.getOrDefault(Resource.HYDROGEN, 0.0);
         Simulator sim = new Simulator();
         sim.enqueue(new RetireShipCommand("tanker"));
         sim.advance(w);
         assertNull(w.findShip("tanker"));
-        assertEquals(fuelBefore + 30.0 + hub.productionRateCache.getOrDefault(Resource.FUEL, 0.0),
-            hub.stockpile.getOrDefault(Resource.FUEL, 0.0), 1e-9);
+        assertEquals(fuelBefore + 30.0 + hub.productionRateCache.getOrDefault(Resource.HYDROGEN, 0.0),
+            hub.stockpile.getOrDefault(Resource.HYDROGEN, 0.0), 1e-9);
     }
 
     @Test

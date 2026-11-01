@@ -374,6 +374,9 @@ public final class SaveFile {
             JsonValue v = o.values().get(r.name());
             if (v instanceof JsonValue.JsonNumber jn) target.put(r, jn.asDouble());
         }
+        // Saves before schema v5 called hydrogen FUEL.
+        if (o.values().get("FUEL") instanceof JsonValue.JsonNumber jn && !o.values().containsKey("HYDROGEN"))
+            target.put(Resource.HYDROGEN, jn.asDouble());
     }
 
     // ===== helpers =====

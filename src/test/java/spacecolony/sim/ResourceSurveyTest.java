@@ -32,14 +32,14 @@ class ResourceSurveyTest {
     }
 
     @Test void gasGiant_onlyFuel_iceBody_iceFirst() {
-        assertEquals(List.of(Resource.FUEL), ResourceSurvey.of(W.findBody("jovian")).stream()
+        assertEquals(List.of(Resource.HYDROGEN), ResourceSurvey.of(W.findBody("jovian")).stream()
             .map(ResourceSurvey.Entry::resource).toList());
         assertEquals(Resource.ICE, ResourceSurvey.of(W.findBody("europa")).get(0).resource());
     }
 
     @Test void fuel_onlyOnGasGiants() {
         for (Body b : W.bodies) {
-            boolean fuel = ResourceSurvey.of(b).stream().anyMatch(e -> e.resource() == Resource.FUEL);
+            boolean fuel = ResourceSurvey.of(b).stream().anyMatch(e -> e.resource() == Resource.HYDROGEN);
             assertEquals(b.type == BodyType.GAS_GIANT, fuel, b.id);
         }
     }

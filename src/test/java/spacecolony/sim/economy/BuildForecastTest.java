@@ -95,7 +95,7 @@ class BuildForecastTest {
 
     @Test
     void gasGiantMineAsksForTheTech() {
-        TestWorlds t = new TestWorlds(5.0, BodyType.GAS_GIANT, Map.of(Resource.FUEL, 0.8)).with(POWER_PLANT);
+        TestWorlds t = new TestWorlds(5.0, BodyType.GAS_GIANT, Map.of(Resource.HYDROGEN, 0.8)).with(POWER_PLANT);
         t.site.buildings.get(0).level = 30;
         BuildForecast f = BuildForecast.of(t.world, t.site, MINE);
         assertTrue(has(f.warnings(), "Atmospheric Mining"), f.warnings().toString());

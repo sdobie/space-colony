@@ -41,7 +41,7 @@ public class IconsDriver {
             Simulator sim = new Simulator();
             for (int i = 0; i < 3; i++) sim.advance(w);
             Ship mule = new Ship("h1", "Mule-1", ShipClass.HAULER, "site-earth-hub");
-            mule.cargo.putAll(Map.of(Resource.WATER, 40.0, Resource.METAL, 25.0, Resource.FUEL, 30.0));
+            mule.cargo.putAll(Map.of(Resource.WATER, 40.0, Resource.METAL, 25.0, Resource.HYDROGEN, 30.0));
             w.ships.add(mule);
             engine[0] = new Engine(w);
             engine[0].setSelection(Selection.site("site-earth-hub"));

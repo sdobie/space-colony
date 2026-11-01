@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ColonizeTest {
     private static World withColonizer() {
         World w = WorldGenerator.generate(1L);
-        w.findSite("site-earth-hub").stockpile.put(Resource.FUEL, 1_000.0);
+        w.findSite("site-earth-hub").stockpile.put(Resource.HYDROGEN, 1_000.0);
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub"));
         sim.advance(w);
@@ -123,7 +123,7 @@ class ColonizeTest {
         w.findShip("c1").fuel = 12.5;
         sim.enqueue(new BuildSiteCommand("site-mars-a", "Ares", "mars", 0.3, 1.2, "c1"));
         sim.advance(w);
-        assertEquals(12.5, w.findSite("site-mars-a").stockpile.getOrDefault(Resource.FUEL, 0.0), 1e-9);
+        assertEquals(12.5, w.findSite("site-mars-a").stockpile.getOrDefault(Resource.HYDROGEN, 0.0), 1e-9);
     }
 
     /** Play-tester: a colonizer took a 150 FOOD manifest and kept loading past its 100 hold. */
@@ -153,7 +153,7 @@ class ColonizeTest {
     /** Earth Hub's starting FUEL covers an Earth→Mars colonizer run with a full hold at any alignment. */
     @Test void standardStart_fuelCoversWorstCaseMarsRun() {
         World w = WorldGenerator.generate(1L);
-        double stock = w.findSite("site-earth-hub").stockpile.get(Resource.FUEL);
+        double stock = w.findSite("site-earth-hub").stockpile.get(Resource.HYDROGEN);
         for (long t = 0; t < 800; t++) {
             double cost = TransitPhase.fuelCostToBody(w, ShipClass.COLONIZER, ShipClass.COLONIZER.cargoCap(),
                 "site-earth-hub", "mars", t, t + 8);

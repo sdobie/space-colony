@@ -107,21 +107,21 @@ public final class SiteEconomy {
                     // Atmospheric mining: gas-giant MINE buildings extract FUEL when the tech is researched.
                     boolean gasGiant = b.type == BodyType.GAS_GIANT;
                     boolean fuelTech = TechEffects.gasGiantFuelEnabled(w.tech);
-                    double fy = gasGiant ? yields.sample(Resource.FUEL, s.lat, s.lon) : 0.0;
+                    double fy = gasGiant ? yields.sample(Resource.HYDROGEN, s.lat, s.lon) : 0.0;
                     if (gasGiant && fuelTech) {
                         double fuel = bd.level * BuildingCatalog.MINE_GAS_FUEL * fy * powerFactor;
-                        produce(stock, report, src, Resource.FUEL, fuel, bd.level * BuildingCatalog.MINE_GAS_FUEL * fy);
+                        produce(stock, report, src, Resource.HYDROGEN, fuel, bd.level * BuildingCatalog.MINE_GAS_FUEL * fy);
                     }
                     // A fuel-mining gas-giant mine is judged by its fuel yield, an ice mine by its ice,
                     // any other by its ore.
                     boolean fuelMine = gasGiant && fuelTech;
                     boolean iceMine = !fuelMine && iy > y;
                     double mainYield = fuelMine ? fy : iceMine ? iy : y;
-                    Resource mainRes = fuelMine ? Resource.FUEL : iceMine ? Resource.ICE : Resource.ORE;
+                    Resource mainRes = fuelMine ? Resource.HYDROGEN : iceMine ? Resource.ICE : Resource.ORE;
                     Limit limit = null;
                     Resource limitRes = null;
                     if (powerFactor < 1.0) limit = Limit.BROWNOUT;
-                    else if (gasGiant && !fuelTech && fy >= NO_YIELD) { limit = Limit.NEEDS_TECH; limitRes = Resource.FUEL; }
+                    else if (gasGiant && !fuelTech && fy >= NO_YIELD) { limit = Limit.NEEDS_TECH; limitRes = Resource.HYDROGEN; }
                     else if (mainYield < NO_YIELD) { limit = Limit.NO_YIELD; limitRes = mainRes; }
                     else if (mainYield < LOW_YIELD) { limit = Limit.LOW_YIELD; limitRes = mainRes; }
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));

@@ -167,7 +167,7 @@ public final class CommandPhase {
                 if (entry.getValue() > 0) dock.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
             }
             // Its tank drains back into the dock's FUEL too.
-            if (s.fuel > 1e-9) dock.stockpile.merge(Resource.FUEL, s.fuel, Double::sum);
+            if (s.fuel > 1e-9) dock.stockpile.merge(Resource.HYDROGEN, s.fuel, Double::sum);
         }
         w.ships.remove(s);
     }
@@ -206,7 +206,7 @@ public final class CommandPhase {
             if (e.getValue() > 1e-9) s.stockpile.merge(e.getKey(), e.getValue(), Double::sum);
         }
         // So does whatever fuel is left in its tank.
-        if (colonizer.fuel > 1e-9) s.stockpile.merge(Resource.FUEL, colonizer.fuel, Double::sum);
+        if (colonizer.fuel > 1e-9) s.stockpile.merge(Resource.HYDROGEN, colonizer.fuel, Double::sum);
         w.ships.remove(colonizer); // colonizer is consumed
     }
 
@@ -279,8 +279,8 @@ public final class CommandPhase {
         double estCost = TransitPhase.estimateFuelBodies(w, s.shipClass, manifestMass,
                                                          originSite.bodyId, destBodyId, w.tick);
         // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
-        double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
-        Double mf = manifest.get(Resource.FUEL);
+        double originFuel = originSite.stockpile.getOrDefault(Resource.HYDROGEN, 0.0);
+        Double mf = manifest.get(Resource.HYDROGEN);
         double manifestFuel = mf == null ? 0.0 : mf;
         double available = s.fuel + Math.max(0.0, originFuel - manifestFuel);
         if (available >= estCost) return null;
