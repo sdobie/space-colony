@@ -26,8 +26,8 @@ So about nine events in ten are "Meteor strike on Belt-B" with no effect, and th
 ### 1.2 What Plan 11 does
 
 1. **Events strike colonies, not empty rocks.** Body events roll per colony; the solar flare rolls once for the system. An event that would do nothing doesn't fire.
-2. **Each event has a concrete, stated cost.** A meteor strike damages a building and destroys stored goods; an equipment failure always breaks one building; a solar flare blacks out solar power for several days, longest near the sun; a disease outbreak keeps its losses.
-3. **The event says what happened.** "Meteor strike at Mars Base: Farm L2 damaged (repair 4 METAL, 1 COMPONENTS); 38 ICE destroyed". Clicking it selects the colony; the damaged building's row says what damaged it.
+2. **Each event has a concrete, stated cost.** A meteor strike comes in three sizes, from one damaged building and some lost stores up to several buildings, many stores, deaths and months of reduced farm output; an equipment failure always breaks one building; a solar flare blacks out solar power for several days, longest near the sun; a disease outbreak keeps its losses.
+3. **The event says what happened.** "Major meteor strike at Mars Base: Farm L2 and Mine L1 damaged; 38 ICE and 12 METAL destroyed; 3 colonists died; impact dust: farms at 75% for 20 days". Clicking it selects the colony; the damaged building's row says what damaged it.
 
 **Out of scope:** new event kinds (dust storms, ship accidents, good events); events that hit ships; insurance or prevention buildings; new techs (Medicine stays the only event tech); a pause-on-event option.
 
@@ -39,12 +39,13 @@ So about nine events in ten are "Meteor strike on Belt-B" with no effect, and th
 spacecolony/
 ├── sim/
 │   ├── Building.java              (CHANGED: + offlineDays, + damagedBy; isOperational() checks both)
+│   ├── Site.java                  (CHANGED: + dustDays, dustFactor, for impact dust)
 │   ├── Construction.java          (CHANGED: power plants can be repaired like any building)
 │   ├── EventEffects.java          (NEW: the consequence list of one event, and its message text)
-│   ├── economy/SiteEconomy.java   (CHANGED: a building with offlineDays > 0 produces and draws nothing)
+│   ├── economy/SiteEconomy.java   (CHANGED: a building with offlineDays > 0 produces and draws nothing; impact dust scales farm FOOD)
 │   └── phases/
 │       ├── EventPhase.java        (CHANGED: per-colony rolls, applicable kinds only, new effects, effect text)
-│       ├── ProductionPhase.java   (CHANGED: step 8 counts offlineDays down instead of re-enabling power plants)
+│       ├── ProductionPhase.java   (CHANGED: step 8 counts offlineDays and dustDays down instead of re-enabling power plants)
 │       └── CommandPhase.java      (CHANGED: repair clears damagedBy)
 ├── save/SaveFile.java             (CHANGED: building offlineDays and damagedBy; one schema bump)
 ├── debug/TriggerEventDialog.java  (CHANGED: target is a colony; flare needs none)
@@ -70,11 +71,26 @@ Unchanged. Effects mutate the world only in `EventPhase`. `EventEffects` is a pl
 
 ## 4. Consequences
 
-### 4.1 Meteor strike (one colony)
+### 4.1 Meteor strike (one colony), in three sizes
 
-1. **A building is damaged.** One working building, chosen at random (level ≥ 1, not damaged). It stays off until repaired with Plan 8's repair (25% of its build cost, instant). A building under construction can't be hit; its scaffolding is too small a target.
-2. **Stored goods are destroyed.** 20% of one stockpiled resource the colony holds (chosen at random among those with at least 5 units), rounded down to whole units.
-3. If the colony has no working building, only the goods are lost; if it also has nothing stored, the strike misses and nothing fires (a forced one says "no damage").
+Steve: *meteor strikes should have multiple severity levels, which could include damaging multiple buildings and resources and killing some of the population. More severe ones may reduce farm output for some period of time.*
+
+Each strike first rolls its size, then applies that row:
+
+| Size | Chance | Buildings damaged | Stores destroyed | Colonists killed | Farm output |
+|---|---|---|---|---|---|
+| **Minor** | 60% | 1 | 10% of 1 resource | none | unchanged |
+| **Major** | 30% | 2 | 20% of 2 resources | 2% of the population | 75% for 20 days |
+| **Catastrophic** | 10% | 3 | 30% of 3 resources | 5% of the population | 50% for 60 days |
+
+- **Buildings.** Distinct working buildings, chosen at random (level ≥ 1, not damaged). Each stays off until repaired with Plan 8's repair (25% of its build cost, instant). A building under construction can't be hit; its scaffolding is too small a target. If the colony has fewer working buildings than the row says, all of them are damaged.
+- **Stores.** Distinct stockpiled resources the colony holds at least 5 units of, chosen at random; each loses its share, rounded down to whole units.
+- **Colonists.** The share of the population, rounded down, at least 1 when the share applies and anyone lives there. Morale drops 0.1 (major) or 0.2 (catastrophic), like a small outbreak.
+- **Farm output: impact dust.** Dust thrown up by a major or catastrophic strike dims the sky. For the given number of days every farm at that colony makes only 75% or 50% of its FOOD (it still plants its full BIOMASS and drinks its full WATER, so the loss is real). It applies only at the struck colony. A second strike during the dust keeps the lower factor and the longer remaining time. Stored as `Site.dustDays` and `Site.dustFactor`; `ProductionPhase` counts the days down; `SiteEconomy` multiplies farm FOOD by the factor and gives the farm the limit "Impact dust: 75%" so the ledger and the farm's row explain the shortfall.
+- **Airless bodies** (ASTEROID, MOON, ICE_BODY) are hit twice as often (§3), but no dust hangs over them: there is no air to hold it. Strikes there skip the farm row. That makes a belt colony's risk buildings and stores, and a Mars or Earth colony's risk food.
+- **Nothing to hit.** If the colony has no working building, nothing stored and nobody living there, the strike misses and nothing fires (a forced one says "no damage").
+
+The size also names the event: "Meteor strike", "Major meteor strike", "Catastrophic meteor strike". A catastrophic one is ERROR (red) even if, rarely, it kills no one.
 
 ### 4.2 Equipment failure (one colony)
 
@@ -96,7 +112,7 @@ Today a damaged power plant switches itself back on the next day, because the fl
 
 ### 4.6 Balance
 
-A meteor strike on Earth Hub's farm costs 25% of a farm (`BuildCost` × 0.25) plus a fifth of one stock. With the rate above a colony expects roughly 1.5 events a year, about a third of them meteors. That is a real tax but not a collapse: the play-tester's neglectful style, which never repairs, will show how fast an ignored colony decays, and the constants are one line each.
+A minor meteor strike on Earth Hub's farm costs 25% of a farm (`BuildCost` × 0.25) plus a tenth of one stock. With the rate above a colony expects roughly 1.5 events a year, about a third of them meteors, so a catastrophic strike comes about once every 20 years per colony. At a starting Earth Hub (one L1 farm making 1.5 FOOD a day, 100 people eating 1.0) 60 days at 50% turns +0.5 FOOD a day into −0.25: 45 FOOD less than without dust, 15 of it drawn from the 200 in store. Survivable with stock, but a big colony running near break-even, or one whose farm was also damaged, will go hungry. That is the point of the tier, and the number to watch. Overall it is a real tax but not a collapse: the play-tester's neglectful style, which never repairs, will show how fast an ignored colony decays, and the constants are one line each.
 
 ## 5. Showing the consequences
 
@@ -104,7 +120,8 @@ A meteor strike on Earth Hub's farm costs 25% of a farm (`BuildCost` × 0.25) pl
 
 `EventEffects` collects one line per consequence; the message is the kind and colony, a colon, and the lines joined with "; " (a repair cost already uses commas):
 
-- "Meteor strike at Mars Base: Farm L2 damaged (repair 4 METAL, 1 COMPONENTS); 38 ICE destroyed"
+- "Meteor strike at Mars Base: Farm L2 damaged (repair 4 METAL, 1 COMPONENTS); 19 ICE destroyed"
+- "Major meteor strike at Mars Base: Farm L2 and Mine L1 damaged (repair 4 METAL, 1 COMPONENTS and 5 METAL, 1 COMPONENTS); 38 ICE and 12 METAL destroyed; 3 colonists died; impact dust: farms at 75% for 20 days"
 - "Equipment failure at Earth Hub: Mine L1 broke down (repair 3 METAL)"
 - "Disease outbreak at Earth Hub: 12 colonists died; morale −20%"
 - "Solar flare: power plants offline at Earth Hub for 3 days, Mars Base for 2 days"
@@ -121,12 +138,13 @@ The repair cost in the text is the cost at the time; the row in the right column
 ### 5.3 Colony panel (right column)
 
 - A damaged building's row: "Farm L2   damaged by meteor strike, Y1 D40: repair 4 METAL, 1 COMPONENTS". `Building.damagedBy` (an `EventKind`, null when fine) and the event tick are stored on the building; repair clears them.
+- A colony under impact dust shows a line under its stockpile: "Impact dust: farms at 75% for 14 more days", and each farm's row reads "+1.1 FOOD (impact dust: 75%)".
 - An offline power plant: "Power plant L1   offline after solar flare, back in 2 days" (replaces today's "offline today").
 - Rows wrap within 330 px (PR #28).
 
 ## 6. Saving
 
-Building gains `"offlineDays"` (int, default 0) and `"damagedBy"` / `"damagedTick"` (optional). One schema bump (v5 → v6 if Plan 10's v5 has landed, else v4 → v5; §9.2). Older saves load with `offlineDays = 0` and no cause, except that a power plant saved disabled loads as offline for 1 day instead of damaged, since in old saves that was always the one-day flare (or a one-day hit), and no one should pay to repair it.
+Building gains `"offlineDays"` (int, default 0) and `"damagedBy"` / `"damagedTick"` (optional). Site gains `"dustDays"` and `"dustFactor"` (default 0 and 1). One schema bump (v5 → v6 if Plan 10's v5 has landed, else v4 → v5; §9.2). Older saves load with `offlineDays = 0` and no cause, except that a power plant saved disabled loads as offline for 1 day instead of damaged, since in old saves that was always the one-day flare (or a one-day hit), and no one should pay to repair it.
 
 ## 7. Debug and tutorial
 
@@ -140,30 +158,33 @@ Building gains `"offlineDays"` (int, default 0) and `"damagedBy"` / `"damagedTic
 
 - `EventRollTest`: over many days with one colony, body events fire only at colonies; empty bodies never get one; kinds that can't apply never fire (no disease at an empty outpost, no equipment failure with nothing working); a flare never fires with no power plants; the rate is within tolerance of 0.004 per colony-day.
 - `EventEffectsTest`:
-  - meteor damages exactly one working building (never one already damaged or under construction) and removes 20% of one stock, rounded down; with no buildings it only destroys goods; with nothing it misses;
+  - the size roll lands near 60/30/10 over many strikes;
+  - each size damages its number of distinct working buildings (never one already damaged or under construction; all of them when there are fewer), takes its share of its number of distinct stocks, rounded down, and kills its share of the population (at least 1 for major and catastrophic when anyone lives there); with nothing to hit it misses;
+  - impact dust: after a major strike a farm makes 75% of its FOOD for 20 production days, then 100%; a catastrophic strike during it sets 50% and the longer time; no dust on an airless body; the farm's outcome carries the dust limit;
   - equipment failure always breaks exactly one working building;
   - disease numbers unchanged from today (`EventTechEffectsTest` keeps passing);
   - flare sets `offlineDays = ceil(3/r²)` clamped to 1–6; a plant back online after that many production days; brownout on those days; a second flare keeps the longer count;
   - power plant damaged by a meteor stays off until repaired; repair cost charged; `damagedBy` cleared.
 - `EventMessageTest`: each message format in §5.1; killing colonists is ERROR.
-- Save round-trip of `offlineDays` and `damagedBy`; an old save with a disabled power plant loads as offline 1 day.
+- Save round-trip of `offlineDays`, `damagedBy` and a site's dust; an old save with a disabled power plant loads as offline 1 day.
 - `EventsTest` and `DeterminismTest` keep passing (seeds may need a colony for the first).
 - `ProductionParityTest` is unchanged (it doesn't run events).
 
 ### 8.2 UI
 
 - `EventStripPanel`: a meteor event row selects the colony on click; the tooltip lists each consequence; ERROR colour for a disease event.
-- `DetailPanel.buildingText`: damaged-by row and offline row texts.
+- `DetailPanel.buildingText`: damaged-by row, offline row and dusty farm texts; the colony's impact dust line.
 - `BuildingMenu`: *Repair* offered for a damaged power plant, not for an offline one.
 
 ### 8.3 Test count estimate
 
-About 22 new tests.
+About 28 new tests.
 
 ### 8.4 Manual play-test checklist
 
 1. New game, 16×. Within a few in-game years Earth Hub gets events; each says what it cost.
-2. Debug → *Trigger event…* → meteor strike at Earth Hub: a building row turns amber with "damaged by meteor strike", a stock drops by a fifth, and the event row says both.
+2. Debug → *Trigger event…* → meteor strike at Earth Hub, once per size (the dialog gets a size picker for meteors): the right number of building rows turn amber with "damaged by meteor strike", stocks drop, colonists die on major and catastrophic, and the event row says all of it.
+2b. After a catastrophic strike, the farm row and the ledger show 50% FOOD from impact dust, counting down from 60 days.
 3. Repair it from the building menu; the row clears.
 4. Trigger a solar flare: Earth Hub's power plant reads "offline after solar flare, back in 3 days", the ledger shows the brownout, and it comes back by itself.
 5. Trigger a disease outbreak: the row is red and gives the death toll.
@@ -173,7 +194,7 @@ About 22 new tests.
 ### 9.1 Decisions made here (defaults)
 
 - Body events roll **per colony**, 0.004 a day each; flares 0.0015 a day for the system.
-- Meteor: one building damaged **and** 20% of one stock destroyed.
+- Meteor sizes 60/30/10%: 1/2/3 buildings, 10/20/30% of 1/2/3 stocks, 0/2/5% of colonists, farms 100%/75% for 20 days/50% for 60 days; no dust on airless bodies.
 - Equipment failure: exactly one building, always.
 - Solar flare: `ceil(3/r²)` days offline, 1 to 6, no repair needed.
 - Power plants can be damaged and repaired like any building.
@@ -188,7 +209,7 @@ About 22 new tests.
 ### 9.3 Open choices for Steve
 
 1. Event rate per colony: 0.004 a day, about one per 250 days (default), or rarer/more frequent?
-2. Meteor strike: building **and** goods (default), or just the building?
+2. Meteor sizes as in §4.1 (default), or different chances, losses or dust lengths? In particular, is 60 days of half-rate farms after a catastrophic strike too harsh for a one-farm colony?
 3. Solar flare length by distance from the sun, 1–6 days (default), or a flat 3 days everywhere?
 4. Should power plants need repair after a meteor or failure (default: yes), or keep coming back on their own?
 5. Red (ERROR) for events that kill colonists (default), or keep every event amber?
