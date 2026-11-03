@@ -13,7 +13,7 @@ public final class TechCatalog {
         add(new Tech("solar-panels",   "Solar Panels",       "+25% output from POWER_PLANT.",     150,  List.of()));
         add(new Tech("ion-drives",     "Ion Drives",         "Reduces fuel cost by 20%.",         300,  List.of()));
         add(new Tech("fusion-drives",  "Fusion Drives",      "Reduces fuel cost by another 30%.", 800,  List.of("ion-drives")));
-        add(new Tech("atm-mining",     "Atmospheric Mining", "Enables FUEL extraction at gas giants.", 500, List.of()));
+        add(new Tech("atm-mining",     "Atmospheric Mining", "Enables HYDROGEN extraction at gas giants.", 500, List.of()));
         add(new Tech("hydroponics",    "Hydroponics",        "+30% farm output, less water use.", 250,  List.of("basic-farming")));
         add(new Tech("smelting",       "Smelting",           "+20% refinery output.",             200,  List.of()));
         add(new Tech("medicine",       "Medicine",           "Reduces disease severity by 50%.",  300,  List.of()));

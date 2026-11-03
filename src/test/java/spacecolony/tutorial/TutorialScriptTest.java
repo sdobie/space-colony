@@ -37,7 +37,7 @@ class TutorialScriptTest {
     @Test void scenario_hasEventsOff_andFuelForTheFlight() {
         World w = TutorialScenario.world();
         assertFalse(w.randomEventsEnabled);
-        assertEquals(400.0, w.findSite("site-earth-hub").stockpile.get(Resource.FUEL));
+        assertEquals(400.0, w.findSite("site-earth-hub").stockpile.get(Resource.HYDROGEN));
         assertEquals(TutorialScenario.TUTORIAL_SEED, w.seed);
     }
 
@@ -45,7 +45,7 @@ class TutorialScriptTest {
         Edt.run(() -> {
             Engine e = new Engine(TutorialScenario.world());
             TutorialProgress p = new TutorialProgress(TutorialScript.steps());
-            assertEquals(12, p.size());
+            assertEquals(13, p.size());
             assertEquals("welcome", p.current().id());
             p.next();
             assertStep(p, e, "start-clock");
@@ -65,6 +65,8 @@ class TutorialScriptTest {
             assertStep(p, e, "build-colonizer");
             e.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, "site-earth-hub"));
             e.tick();
+            assertStep(p, e, "wait-colonizer");
+            for (int i = 0; i < 45 && e.world().findShip("c1").state == spacecolony.sim.ShipState.BUILDING; i++) e.tick();
             assertStep(p, e, "dispatch");
             e.setSelection(Selection.ship("c1"));
             e.enqueue(DispatchShipCommand.toBody("c1", "mars",
@@ -103,7 +105,7 @@ class TutorialScriptTest {
             e.enqueue(new BuildBuildingCommand("site-earth-hub", BuildingType.RESEARCH_LAB));
             e.enqueue(new QueueResearchCommand("basic-mining"));
             e.tick();
-            assertStep(p, e, "dispatch");
+            assertStep(p, e, "wait-colonizer");
         });
     }
 

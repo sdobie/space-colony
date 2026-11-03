@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ResourceSurvey {
     /** Resources the economy reads from the ground (mines and farms); FUEL only on gas giants. */
     public static final List<Resource> SURVEYED = List.of(
-        Resource.ORE, Resource.SILICATE, Resource.ICE, Resource.BIOMASS, Resource.FUEL);
+        Resource.ORE, Resource.SILICATE, Resource.ICE, Resource.BIOMASS, Resource.HYDROGEN);
     /** A resource whose best spot is below this is "none" and left out. */
     public static final double NONE_BELOW = 0.02;
     public static final int GRID_LAT = 8;
@@ -76,7 +76,7 @@ public final class ResourceSurvey {
 
     /** Only gas-giant mines extract FUEL, so a rocky body's trace FUEL yield isn't reported. */
     private static boolean minable(Body b, Resource r) {
-        return r != Resource.FUEL || b.type == BodyType.GAS_GIANT;
+        return r != Resource.HYDROGEN || b.type == BodyType.GAS_GIANT;
     }
 
     public static void clearCache() { CACHE.clear(); }

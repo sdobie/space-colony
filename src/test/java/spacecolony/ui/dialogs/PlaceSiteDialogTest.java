@@ -25,6 +25,6 @@ class PlaceSiteDialogTest {
         assertEquals("ORE:", rows.get(0)[0]);
         double ore = mars.resourceYields.sample(Resource.ORE, 0.2, 1.0);
         assertTrue(rows.get(0)[1].endsWith(String.format("%.2f", ore).substring(1)), rows.get(0)[1]);
-        assertTrue(rows.stream().noneMatch(r -> r[0].equals("FUEL:") && r[1].endsWith(".00")));
+        assertTrue(rows.stream().noneMatch(r -> r[0].equals("HYDROGEN:") && r[1].endsWith(".00")));
     }
 }

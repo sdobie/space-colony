@@ -51,7 +51,8 @@ public final class ResourceGlyphs {
         add(Resource.WATER,      ResourceGlyphs::water,      new Color(84, 156, 240));
         add(Resource.FOOD,       ResourceGlyphs::food,       new Color(236, 196, 92));
         add(Resource.BIOMASS,    ResourceGlyphs::biomass,    new Color(112, 196, 100));
-        add(Resource.FUEL,       ResourceGlyphs::fuel,       new Color(255, 140, 52));
+        add(Resource.HYDROGEN,   ResourceGlyphs::fuel,       new Color(255, 140, 52));
+        add(Resource.SYNFUEL,    ResourceGlyphs::synfuel,    new Color(150, 210, 70));
         add(Resource.COMPONENTS, ResourceGlyphs::components, new Color(84, 196, 150));
         add(Resource.ENERGY,     ResourceGlyphs::energy,     new Color(255, 214, 80));
     }
@@ -300,6 +301,30 @@ public final class ResourceGlyphs {
         inner.closePath();
         h.setPaint(grad(0, 7.4, new Color(255, 240, 160), 0, 14.6, new Color(255, 255, 230)));
         h.fill(inner);
+    }
+
+    /** A green jerrycan with a small flame on its side: fuel brewed from biomass. */
+    private static void synfuel(Graphics2D h) {
+        fillOutlined(h, new RoundRectangle2D.Double(8.6, 1, 3.6, 2.6, 1, 1), new Color(120, 128, 142));
+        Path2D can = new Path2D.Double();
+        can.moveTo(3, 4.6);
+        can.lineTo(10.4, 3.2);
+        can.lineTo(13, 4.6);
+        can.lineTo(13, 15);
+        can.lineTo(3, 15);
+        can.closePath();
+        fillOutlined(h, can, grad(3, 0, new Color(176, 226, 96), 13, 0, new Color(70, 128, 40)));
+        h.setColor(new Color(40, 78, 24, 170));
+        h.draw(new Line2D.Double(4.4, 6.4, 11.6, 13.4));
+        h.draw(new Line2D.Double(11.6, 6.4, 4.4, 13.4));
+        Path2D flame = new Path2D.Double();
+        flame.moveTo(8, 7.4);
+        flame.curveTo(9.6, 9, 10.2, 10.2, 10.2, 11.4);
+        flame.curveTo(10.2, 12.8, 9.2, 13.6, 8, 13.6);
+        flame.curveTo(6.8, 13.6, 5.8, 12.8, 5.8, 11.4);
+        flame.curveTo(5.8, 10.2, 6.8, 9, 8, 7.4);
+        flame.closePath();
+        fillOutlined(h, flame, grad(0, 7.4, new Color(255, 230, 120), 0, 13.6, new Color(240, 110, 40)));
     }
 
     /** A microchip: dark board, silver pins, gold die. */

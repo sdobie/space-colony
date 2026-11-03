@@ -42,15 +42,15 @@ class TransitTechEffectsTest {
         w.findBody("mars").sites.add(mars);
 
         Ship s = new Ship("ship-h1", "H1", ShipClass.HAULER, "site-earth-hub");
-        s.fuel = 1_000_000.0;
+        s.setTank(Resource.HYDROGEN, 1_000_000.0);
         w.ships.add(s);
 
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("ship-h1", "site-mars-stub", Map.of(Resource.METAL, 50.0)));
-        double fuelBefore = s.fuel;
+        double fuelBefore = s.fuelValue();
         for (int i = 0; i < 200 && s.state != ShipState.IN_TRANSIT; i++) sim.advance(w);
         assertEquals(ShipState.IN_TRANSIT, s.state);
-        return fuelBefore - s.fuel;
+        return fuelBefore - s.fuelValue();
     }
 
     private static double fuelConsumedOnDispatch(boolean ionDrives) {

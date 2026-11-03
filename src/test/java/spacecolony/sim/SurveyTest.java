@@ -60,10 +60,11 @@ class SurveyTest {
 
     @Test void colonizer_inOrbit_doesNotSurvey_butFoundingDoes() {
         World w = WorldGenerator.generate(1L);
-        w.findSite(HUB).stockpile.put(Resource.FUEL, 1_000.0);
+        w.findSite(HUB).stockpile.put(Resource.HYDROGEN, 1_000.0);
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("c1", "Ark", ShipClass.COLONIZER, HUB));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         sim.enqueue(DispatchShipCommand.toBody("c1", "mars", Map.of()));
         for (int i = 0; i < 60 && w.findShip("c1").orbitingBodyId == null; i++) sim.advance(w);
         assertEquals("mars", w.findShip("c1").orbitingBodyId);

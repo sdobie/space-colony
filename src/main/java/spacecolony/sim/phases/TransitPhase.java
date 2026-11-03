@@ -4,6 +4,7 @@ import spacecolony.sim.Body;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
+import spacecolony.sim.Fuels;
 import spacecolony.sim.OrbitalGeometry;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
@@ -79,18 +80,12 @@ public final class TransitPhase {
                     long arrival = computeArrivalTick(w, s, depart);
                     double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(),
                         origin.bodyId, s.transit.destBody(w), depart, arrival);
-                    if (s.fuel < cost) {
-                        // Draw this trip's shortfall from the origin's FUEL stock (after the
-                        // manifest loaded, so shipped FUEL is taken first).
-                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
-                        double draw = Math.min(cost - s.fuel, have);
-                        if (draw > 0) {
-                            origin.stockpile.merge(Resource.FUEL, -draw, Double::sum);
-                            s.fuel += draw;
-                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -draw);
-                        }
+                    if (s.fuelValue() < cost) {
+                        // Draw this trip's shortfall from the origin's fuel, hydrogen first (after
+                        // the manifest loaded, so shipped fuel is taken first).
+                        drawFuel(origin, s, cost - s.fuelValue());
                     }
-                    if (s.fuel < cost) {
+                    if (s.fuelValue() + 1e-9 < cost) {
                         w.emit(new Event(w.tick, EventSeverity.WARNING, EventKind.SHIP_OUT_OF_FUEL,
                             "Ship " + s.name + " aborted: insufficient fuel", null, null, s.id));
                         // Return cargo to origin and reset state.
@@ -108,15 +103,10 @@ public final class TransitPhase {
                     }
                     if (s.shipClass.tankCap() > 0) {
                         // An explorer departs with a full tank, this trip included, so it can fly on from orbit.
-                        double have = origin.stockpile.getOrDefault(Resource.FUEL, 0.0);
-                        double topUp = Math.min(s.shipClass.tankCap() - s.fuel, have);
-                        if (topUp > 0) {
-                            origin.stockpile.merge(Resource.FUEL, -topUp, Double::sum);
-                            s.fuel += topUp;
-                            ship(origin, s, Shipping.Kind.FUEL, Resource.FUEL, -topUp);
-                        }
+                        double room = s.shipClass.tankCap() - s.fuelValue();
+                        if (room > 0) drawFuel(origin, s, room);
                     }
-                    s.fuel -= cost;
+                    Fuels.burn(s.tank, cost);
                     s.transit = new Transit(s.transit.originSiteId(), s.transit.destSiteId(),
                                             s.transit.destBodyId(), depart, arrival,
                                             Transit.snapshot(s.cargo), null);
@@ -175,8 +165,8 @@ public final class TransitPhase {
                                       Transit.snapshot(s.cargo), originBody);
         long arrival = arrivalTick(w, s.shipClass, planned, depart);
         double cost = fuelCostBetweenBodies(w, s.shipClass, s.cargoMass(), originBody, destBody, depart, arrival);
-        if (s.fuel + 1e-9 < cost) return tankShortfall(s, cost);
-        s.fuel = Math.max(0.0, s.fuel - cost);
+        if (s.fuelValue() + 1e-9 < cost) return tankShortfall(s, cost);
+        Fuels.burn(s.tank, cost);
         s.transit = new Transit(null, destSiteId, destBodyId, depart, arrival, Transit.snapshot(s.cargo), originBody);
         s.orbitingBodyId = null;
         s.currentSiteId = null;
@@ -191,7 +181,14 @@ public final class TransitPhase {
     /** The message for a trip of {@code cost} that {@code s}'s tank can't cover. */
     public static String tankShortfall(Ship s, double cost) {
         return String.format("Not enough fuel in %s's tank: need ≈%.0f, have %.0f. Send it to a colony to refuel.",
-                             s.name, cost, s.fuel);
+                             s.name, cost, s.fuelValue());
+    }
+
+    /** Moves up to {@code value} of fuel from {@code origin}'s stock into {@code s}'s tank, hydrogen first, with ledger lines. */
+    private static void drawFuel(Site origin, Ship s, double value) {
+        double[] moved = Fuels.transfer(origin.stockpile, s.tank, value);
+        for (int i = 0; i < moved.length; i++)
+            if (moved[i] > 0) ship(origin, s, Shipping.Kind.FUEL, Fuels.ALL.get(i), -moved[i]);
     }
 
     /**

@@ -11,7 +11,7 @@ class TransitMathTest {
     private static World worldWithHaulerAtEarth() {
         World w = WorldGenerator.generate(1L);
         Ship s = new Ship("ship-h1", "H1", ShipClass.HAULER, "site-earth-hub");
-        s.fuel = 1_000_000.0;
+        s.setTank(Resource.HYDROGEN, 1_000_000.0);
         w.ships.add(s);
         // Stock the site with metal so the manifest can fill.
         w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
@@ -32,7 +32,7 @@ class TransitMathTest {
         assertEquals(ShipState.IN_TRANSIT, s.state);
         assertTrue(s.transit.arrivalTick() > w.tick);
         assertEquals(50.0, s.cargo.get(Resource.METAL), 1e-9);
-        assertTrue(s.fuel < 1_000_000.0, "fuel should be deducted at departure");
+        assertTrue(s.fuelValue() < 1_000_000.0, "fuel should be deducted at departure");
     }
 
     @Test
@@ -57,8 +57,8 @@ class TransitMathTest {
     void insufficientFuel_rejectsDispatch() {
         World w = worldWithHaulerAtEarth();
         Ship s = w.findShip("ship-h1");
-        s.fuel = 0.0;
-        w.findSite(s.currentSiteId).stockpile.put(Resource.FUEL, 0.0); // nothing to top up from
+        s.setTank(Resource.HYDROGEN, 0.0);
+        w.findSite(s.currentSiteId).stockpile.put(Resource.HYDROGEN, 0.0); // nothing to top up from
         Site mars = createDummySiteAtMars(w);
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("ship-h1", mars.id, Map.of(Resource.METAL, 50.0)));

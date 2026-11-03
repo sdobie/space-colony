@@ -115,7 +115,7 @@ class DebugControllerTest {
         Edt.run(() -> {
             World w = WorldGenerator.generate(1L);
             Ship s = new Ship("ship-h1", "H1", ShipClass.HAULER, "site-earth-hub");
-            s.fuel = 1_000_000.0;
+            s.setTank(Resource.HYDROGEN, 1_000_000.0);
             w.ships.add(s);
             w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
             Site mars = new Site("site-mars-test", "Mars Test", "mars", 0.0, 0.0, 50);

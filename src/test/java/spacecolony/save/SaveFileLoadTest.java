@@ -68,7 +68,7 @@ class SaveFileLoadTest {
         Site mars = new Site("site-mars-1", "Mars 1", "mars", 0.0, 0.0, 100);
         w.findBody("mars").sites.add(mars);
         Ship h = new Ship("h1", "H1", ShipClass.HAULER, "site-earth-hub");
-        h.fuel = 1_000_000.0;
+        h.setTank(Resource.HYDROGEN, 1_000_000.0);
         w.ships.add(h);
         w.findSite("site-earth-hub").stockpile.put(Resource.METAL, 200.0);
         Simulator sim = new Simulator();

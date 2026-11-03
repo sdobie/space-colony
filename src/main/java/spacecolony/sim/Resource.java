@@ -8,7 +8,10 @@ public enum Resource {
     WATER,
     FOOD,
     BIOMASS,
-    FUEL,
+    /** Gas-giant fuel, the best: one unit is one unit of fuel value (Plan 10). */
+    HYDROGEN,
+    /** Fuel plant fuel, brewed from biomass anywhere; worth half a unit of hydrogen. */
+    SYNFUEL,
     COMPONENTS,
     ENERGY;
 

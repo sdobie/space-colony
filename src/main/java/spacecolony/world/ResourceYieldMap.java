@@ -45,7 +45,7 @@ public class ResourceYieldMap implements spacecolony.sim.ResourceYieldSampler {
         }
         if (type == BodyType.ASTEROID) {
             switch (r) {
-                case FUEL, FOOD, BIOMASS, ENERGY -> { return 0.0; }
+                case HYDROGEN, FOOD, BIOMASS, ENERGY -> { return 0.0; }
                 default -> {}
             }
         }
@@ -53,6 +53,8 @@ public class ResourceYieldMap implements spacecolony.sim.ResourceYieldSampler {
         if (r == Resource.ENERGY) return 0.0;
         // COMPONENTS are manufactured (METAL+SILICATE), never extracted from terrain.
         if (r == Resource.COMPONENTS) return 0.0;
+        // SYNFUEL is brewed in fuel plants, never found in the ground.
+        if (r == Resource.SYNFUEL) return 0.0;
 
         double base = baseBias(r);
         // Convert lat/lon to a 3D unit vector for seamless sampling.
@@ -74,7 +76,7 @@ public class ResourceYieldMap implements spacecolony.sim.ResourceYieldSampler {
                 case ORE, METAL, SILICATE -> 1.0;
                 case FOOD, BIOMASS, WATER -> 0.4;
                 case ICE -> 0.2;
-                case FUEL -> 0.1;
+                case HYDROGEN -> 0.1;
                 default -> 0.5;
             };
             case ASTEROID -> switch (r) {
@@ -88,7 +90,7 @@ public class ResourceYieldMap implements spacecolony.sim.ResourceYieldSampler {
                 default -> 0.0;
             };
             case GAS_GIANT -> switch (r) {
-                case FUEL -> 1.5;
+                case HYDROGEN -> 1.5;
                 default -> 0.0;
             };
             case MOON -> switch (r) {

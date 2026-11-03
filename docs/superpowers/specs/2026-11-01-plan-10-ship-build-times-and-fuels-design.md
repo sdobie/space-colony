@@ -1,7 +1,7 @@
 # Plan 10 — Ship Build Times, Fuel Types and Progress
 
 **Date:** 2026-11-01
-**Status:** Approved by Steve 2026-11-01 with the §9.3 defaults, except ships now cost METAL and COMPONENTS (§3.5).
+**Status:** Implemented (Plan 10) with the §9.3 defaults plus ship costs (§3.5). Deviations: the economy parity scenario places its hauler ready-built after the first tick, so the fixture doesn't depend on ship costs; the shipyard row's progress bar sits under the whole row (not nested), so wrapped text keeps its layout; the screenshot driver is `./gradlew shipsAndFuelShot` (`playtest/ShipsAndFuelDriver`). The continuous play-tester now builds a factory at the hub while it can still pay for one, since only factories make the COMPONENTS ships need.
 **Project root:** `/Users/steve/projects/space-colony/`
 **Predecessor:** Plans 1–9 merged to `main` (last: Plan 9 explorers and surveys, PRs #30 and #31), plus PRs through #40 (slower clock and travel #35, furnace #38, play-tester styles #39 and #40).
 **Source spec:** `2026-05-03-space-colony-game-design.md` §3.4 (ship classes), §3.5 (resources and buildings).

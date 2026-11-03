@@ -23,8 +23,13 @@ public class Ship {
      * - In IN_TRANSIT and UNLOADING: arrivalTick is the real computed arrival tick.
      */
     public Transit transit;
+    /** Work-days left while {@link ShipState#BUILDING}; 0 once built. */
+    public int buildDaysLeft;
+    /** The shipyard building (by its per-site id) building this ship; 0 once built. */
+    public int yardBuildingId;
     public final Map<Resource, Double> cargo = new EnumMap<>(Resource.class);
-    public double fuel;
+    /** Fuel aboard, per fuel (Plan 10): HYDROGEN and SYNFUEL. */
+    public final Map<Resource, Double> tank = new EnumMap<>(Resource.class);
 
     public Ship(String id, String name, ShipClass shipClass, String homeSiteId) {
         this.id = id;
@@ -33,9 +38,14 @@ public class Ship {
         this.state = ShipState.IDLE;
         this.currentSiteId = homeSiteId;
         this.transit = null;
-        this.fuel = 0.0;
+        for (Resource r : Fuels.ALL) tank.put(r, 0.0);
         for (Resource r : Resource.values()) cargo.put(r, 0.0);
     }
+
+    /** What the tank is worth in fuel value (hydrogen 1, synfuel 0.5 per unit). */
+    public double fuelValue() { return Fuels.valueOf(tank); }
+
+    public void setTank(Resource fuel, double amount) { tank.put(fuel, amount); }
 
     public double cargoMass() {
         double m = 0.0;

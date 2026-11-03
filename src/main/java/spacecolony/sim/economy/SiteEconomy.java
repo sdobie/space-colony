@@ -70,6 +70,7 @@ public final class SiteEconomy {
         ResourceYieldSampler yields = b.resourceYields;
         // Farms' replanting biomass lands at the end of the day, so it can't feed another farm today.
         List<FlowLine> harvests = new ArrayList<>();
+        List<Integer> fuelPlants = new ArrayList<>();
         for (int i = 0; i < buildings.size(); i++) {
             Building bd = buildings.get(i);
             FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
@@ -107,21 +108,21 @@ public final class SiteEconomy {
                     // Atmospheric mining: gas-giant MINE buildings extract FUEL when the tech is researched.
                     boolean gasGiant = b.type == BodyType.GAS_GIANT;
                     boolean fuelTech = TechEffects.gasGiantFuelEnabled(w.tech);
-                    double fy = gasGiant ? yields.sample(Resource.FUEL, s.lat, s.lon) : 0.0;
+                    double fy = gasGiant ? yields.sample(Resource.HYDROGEN, s.lat, s.lon) : 0.0;
                     if (gasGiant && fuelTech) {
                         double fuel = bd.level * BuildingCatalog.MINE_GAS_FUEL * fy * powerFactor;
-                        produce(stock, report, src, Resource.FUEL, fuel, bd.level * BuildingCatalog.MINE_GAS_FUEL * fy);
+                        produce(stock, report, src, Resource.HYDROGEN, fuel, bd.level * BuildingCatalog.MINE_GAS_FUEL * fy);
                     }
                     // A fuel-mining gas-giant mine is judged by its fuel yield, an ice mine by its ice,
                     // any other by its ore.
                     boolean fuelMine = gasGiant && fuelTech;
                     boolean iceMine = !fuelMine && iy > y;
                     double mainYield = fuelMine ? fy : iceMine ? iy : y;
-                    Resource mainRes = fuelMine ? Resource.FUEL : iceMine ? Resource.ICE : Resource.ORE;
+                    Resource mainRes = fuelMine ? Resource.HYDROGEN : iceMine ? Resource.ICE : Resource.ORE;
                     Limit limit = null;
                     Resource limitRes = null;
                     if (powerFactor < 1.0) limit = Limit.BROWNOUT;
-                    else if (gasGiant && !fuelTech && fy >= NO_YIELD) { limit = Limit.NEEDS_TECH; limitRes = Resource.FUEL; }
+                    else if (gasGiant && !fuelTech && fy >= NO_YIELD) { limit = Limit.NEEDS_TECH; limitRes = Resource.HYDROGEN; }
                     else if (mainYield < NO_YIELD) { limit = Limit.NO_YIELD; limitRes = mainRes; }
                     else if (mainYield < LOW_YIELD) { limit = Limit.LOW_YIELD; limitRes = mainRes; }
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
@@ -214,10 +215,23 @@ public final class SiteEconomy {
                     if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
                 }
+                case FUEL_PLANT -> fuelPlants.add(i); // after every farm has planted (Plan 10 §4.3)
                 case POWER_PLANT, HABITAT, SHIPYARD, RESEARCH_LAB ->
                     // Their effects (power, cap, ships, research) aren't slowed by brownouts.
                     report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, 1.0, null, null));
             }
+        }
+        for (int i : fuelPlants) {
+            Building bd = buildings.get(i);
+            FlowSource src = new FlowSource.Building(i, bd.type, bd.level);
+            double asked = bd.level * BuildingCatalog.FUEL_PLANT_BIOMASS * powerFactor;
+            double used = consume(stock, report, src, Resource.BIOMASS, asked, bd.level * BuildingCatalog.FUEL_PLANT_BIOMASS);
+            double perBiomass = BuildingCatalog.FUEL_PLANT_SYNFUEL / BuildingCatalog.FUEL_PLANT_BIOMASS;
+            produce(stock, report, src, Resource.SYNFUEL, used * perBiomass, bd.level * BuildingCatalog.FUEL_PLANT_SYNFUEL);
+            Limit limit = inputLimit(asked, used);
+            Resource limitRes = limit != null ? Resource.BIOMASS : null;
+            if (limit == null && powerFactor < 1.0) limit = Limit.BROWNOUT;
+            report.addOutcome(new BuildingOutcome(i, bd.type, bd.level, true, efficiency(report, i), limit, limitRes));
         }
         for (FlowLine h : harvests) produce(stock, report, h.source(), h.resource(), h.amount(), h.wanted());
         return report;

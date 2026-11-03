@@ -40,7 +40,7 @@ class ProductionParityTest {
             out.add(key + " " + s.id + " morale " + String.format("%.12e", s.morale));
         }
         for (Ship sh : w.ships)
-            out.add(key + " ship " + sh.id + " " + sh.state + " fuel " + String.format("%.12e", sh.fuel));
+            out.add(key + " ship " + sh.id + " " + sh.state + " fuel " + String.format("%.12e", sh.fuelValue()));
         out.add(key + " research " + String.format("%.12e", w.tech.accumulatedPoints) + " " + w.tech.researched.size());
     }
 

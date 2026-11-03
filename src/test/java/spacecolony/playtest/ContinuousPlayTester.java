@@ -135,9 +135,10 @@ public class ContinuousPlayTester {
         if (move % 50 == 0) {
             StringBuilder sb = new StringBuilder("STATUS move=" + move + " tick=" + w.tick + " ships=" + w.ships.size());
             for (Site s : allSites(w))
-                sb.append(String.format(" | %s pop=%d/%d F=%.0f W=%.0f I=%.0f M=%.0f O=%.0f FU=%.0f b=%d", s.id, s.population, s.populationCap,
+                sb.append(String.format(" | %s pop=%d/%d F=%.0f W=%.0f I=%.0f M=%.0f C=%.0f O=%.0f H2=%.0f SYN=%.0f b=%d", s.id, s.population, s.populationCap,
                     stock(s, Resource.FOOD), stock(s, Resource.WATER), stock(s, Resource.ICE), stock(s, Resource.METAL),
-                    stock(s, Resource.ORE), stock(s, Resource.FUEL), s.buildings.size()));
+                    stock(s, Resource.COMPONENTS), stock(s, Resource.ORE), stock(s, Resource.HYDROGEN),
+                    stock(s, Resource.SYNFUEL), s.buildings.size()));
             log(sb.toString());
         }
         checkCollapse(w);
@@ -217,6 +218,13 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.MINE, "no mine");
             if (p != null) return p;
         }
+        // Ships cost COMPONENTS since Plan 10, and only a factory makes more: get one before the
+        // hub runs out of the 5 it costs, once METAL can spare its 30 (it eats METAL too).
+        if (isHub && count(s, BuildingType.FACTORY) == 0 && style != Style.NEGLECTFUL
+                && stock(s, Resource.COMPONENTS) < 30 && metal >= 45) {
+            Plan p = build(s, BuildingType.FACTORY, "COMPONENTS only come from a factory");
+            if (p != null) return p;
+        }
         if (count(s, BuildingType.REFINERY) == 0 && (waterNet < 0 || isHub)) {
             Plan p = build(s, BuildingType.REFINERY, "no refinery");
             if (p != null) return p;
@@ -253,6 +261,12 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.MINE, "METAL low");
             if (p != null) return p;
         }
+        // Plan 10: the industrialist and expander styles brew synfuel once they have two farms.
+        if ((style == Style.INDUSTRIALIST || style == Style.EXPANDER) && count(s, BuildingType.FARM) >= 2
+                && count(s, BuildingType.FUEL_PLANT) == 0 && underway(s, BuildingType.FUEL_PLANT) == 0) {
+            Plan p = build(s, BuildingType.FUEL_PLANT, "make synfuel");
+            if (p != null) return p;
+        }
         return null;
     }
 
@@ -266,7 +280,7 @@ public class ContinuousPlayTester {
             boolean expand = style == Style.EXPANDER;
             int maxColonizers = expand ? 2 : style == Style.INDUSTRIALIST ? 0 : 1;
             if (colonizers < maxColonizers && sites.size() < (expand ? 8 : 5)
-                    && stock(hub, Resource.FUEL) > (expand ? 30 : 60)) return newShip(w, hub, ShipClass.COLONIZER);
+                    && stock(hub, Resource.HYDROGEN) > (expand ? 30 : 60)) return newShip(w, hub, ShipClass.COLONIZER);
             if (haulers < (expand ? 3 : 2) && sites.size() > 1) return newShip(w, hub, ShipClass.HAULER);
         }
         for (Ship s : w.ships) {
@@ -323,7 +337,7 @@ public class ContinuousPlayTester {
         Map<Resource, Double> none = Map.of();
         if (target != null && CommandPhase.fuelShortfall(w, s, target.id, none) == null) {
             // From orbit keep enough in the tank to reach some colony afterwards.
-            if (s.orbitingBodyId == null || s.fuel > s.shipClass.tankCap() * 0.6)
+            if (s.orbitingBodyId == null || s.fuelValue() > s.shipClass.tankCap() * 0.6)
                 return plain(DispatchShipCommand.toBody(s.id, target.id, none), "send explorer " + s.id + " to survey " + target.id);
         }
         if (s.orbitingBodyId != null) {
@@ -338,7 +352,7 @@ public class ContinuousPlayTester {
     static Plan hauler(World w, Ship s, List<Site> sites, Site hub) {
         Site at = w.findSite(s.currentSiteId);
         if (at == null || sites.size() < 2) return null;
-        for (Resource r : List.of(Resource.ICE, Resource.WATER, Resource.FOOD, Resource.METAL, Resource.FUEL)) {
+        for (Resource r : List.of(Resource.ICE, Resource.WATER, Resource.FOOD, Resource.METAL, Resource.HYDROGEN)) {
             double have = stock(at, r);
             if (have < 150) continue;
             for (Site d : sites) {
@@ -407,10 +421,12 @@ public class ContinuousPlayTester {
     }
 
     static Plan newShip(World w, Site hub, ShipClass c) {
+        // Ships cost METAL and COMPONENTS and wait for a free shipyard (Plan 10).
+        if (spacecolony.sim.ShipYards.whyNotBuild(w, hub, c) != null) return null;
         String id = "pt-ship-" + (++shipSeq);
         while (w.findShip(id) != null) id = "pt-ship-" + (++shipSeq);
-        return plain(new BuildShipCommand(id, c.name().charAt(0) + c.name().substring(1).toLowerCase() + " " + shipSeq, c, hub.id),
-            "build " + c + " " + id + " at " + hub.id);
+        return costed(new BuildShipCommand(id, c.name().charAt(0) + c.name().substring(1).toLowerCase() + " " + shipSeq, c, hub.id),
+            "build " + c + " " + id + " at " + hub.id, hub, c.cost().resources(), -1);
     }
 
     static Plan build(Site s, BuildingType t, String why) {
@@ -466,9 +482,9 @@ public class ContinuousPlayTester {
         for (Ship s : w.ships) {
             String at = s.id + "@t" + w.tick;
             if (!shipIds.add(s.id)) violation("duplicate ship id " + s.id);
-            if (!Double.isFinite(s.fuel) || s.fuel < -EPS) violation(at + " fuel " + s.fuel);
-            if (s.shipClass.tankCap() > 0 && s.fuel > s.shipClass.tankCap() + EPS && s.state == ShipState.IN_TRANSIT)
-                violation(at + " fuel " + s.fuel + " over tank " + s.shipClass.tankCap());
+            if (!Double.isFinite(s.fuelValue()) || s.fuelValue() < -EPS) violation(at + " fuel " + s.fuelValue());
+            if (s.shipClass.tankCap() > 0 && s.fuelValue() > s.shipClass.tankCap() + EPS && s.state == ShipState.IN_TRANSIT)
+                violation(at + " fuel " + s.fuelValue() + " over tank " + s.shipClass.tankCap());
             for (var e : s.cargo.entrySet())
                 if (!Double.isFinite(e.getValue()) || e.getValue() < -EPS) violation(at + " cargo " + e.getKey() + " = " + e.getValue());
             if (s.cargoMass() > s.shipClass.cargoCap() + 1e-3) violation(at + " cargo " + s.cargoMass() + " over cap " + s.shipClass.cargoCap());

@@ -58,12 +58,14 @@ public class SurveyDriver {
         onEdt(() -> {
             engine.enqueue(new BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, "site-earth-hub"));
             engine.tick();
+            for (int i = 0; i < 15 && engine.world().findShip("x1").state == spacecolony.sim.ShipState.BUILDING; i++)
+                engine.tick();
             engine.enqueue(DispatchShipCommand.toBody("x1", "mars", Map.of()));
             for (int i = 0; i < 120 && !engine.world().isSurveyed("mars"); i++) engine.tick();
         });
         Ship x = engine.world().findShip("x1");
         PlayTestDriver.check(engine.world().isSurveyed("mars"), "Explorer surveyed Mars",
-            "day " + engine.world().tick + ", tank " + Math.round(x.fuel));
+            "day " + engine.world().tick + ", tank " + Math.round(x.fuelValue()));
         onEdt(() -> engine.setSelection(Selection.body("mars")));
         Thread.sleep(300);
         PlayTestDriver.shot(frame.getRootPane(), "survey-02-mars-surveyed");

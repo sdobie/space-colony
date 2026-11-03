@@ -87,9 +87,9 @@ public record BuildForecast(BuildingType type, DayReport before, DayReport after
             }
             case SHIPYARD -> {
                 boolean has = s.buildings.stream().anyMatch(x -> x.type == BuildingType.SHIPYARD && x.isOperational());
-                if (upgrade) out.add("A higher level adds nothing yet.");
-                else out.add(has ? s.name + " already has a shipyard; a second one adds nothing yet."
-                                 : "Lets " + s.name + " build ships.");
+                if (upgrade) out.add("Builds ships faster: a day of work per level each day.");
+                else out.add(has ? "Lets " + s.name + " build one more ship at a time."
+                                 : "Lets " + s.name + " build ships, one at a time.");
             }
             case POWER_PLANT -> out.add(String.format("Power %.1f → %.1f made (%.1f used)",
                 before.powerMade, after.powerMade, after.powerUsed));

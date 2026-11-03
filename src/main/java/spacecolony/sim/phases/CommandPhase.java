@@ -11,10 +11,12 @@ import spacecolony.sim.Construction;
 import spacecolony.sim.Event;
 import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
+import spacecolony.sim.Fuels;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipClass;
 import spacecolony.sim.ShipState;
+import spacecolony.sim.ShipYards;
 import spacecolony.sim.Site;
 import spacecolony.sim.Tech;
 import spacecolony.sim.TechAvailability;
@@ -115,6 +117,9 @@ public final class CommandPhase {
         Building b = building(s, c.buildingId());
         String why = Construction.whyNotDemolish(b);
         if (why != null) throw new CommandRejectedException(why);
+        Ship onYard = b.type == BuildingType.SHIPYARD ? ShipYards.building(w, s, b) : null;
+        if (onYard != null)
+            throw new CommandRejectedException("Shipyard is building " + onYard.name + ": finish or cancel it first");
         refund(s, Construction.demolishRefund(b));
         s.buildings.remove(b);
     }
@@ -149,16 +154,29 @@ public final class CommandPhase {
     private static void applyBuildShip(World w, BuildShipCommand bs) {
         Site s = w.findSite(bs.shipyardSiteId());
         if (s == null) throw new CommandRejectedException("No such site: " + bs.shipyardSiteId());
-        boolean hasYard = s.buildings.stream().anyMatch(b -> b.type == BuildingType.SHIPYARD && b.isOperational());
-        if (!hasYard) throw new CommandRejectedException("Site has no shipyard: " + bs.shipyardSiteId());
         if (w.findShip(bs.shipId()) != null) throw new CommandRejectedException("Ship id taken: " + bs.shipId());
-        w.ships.add(new Ship(bs.shipId(), bs.name(), bs.shipClass(), bs.shipyardSiteId()));
+        String why = ShipYards.whyNotBuild(w, s, bs.shipClass());
+        if (why != null) throw new CommandRejectedException(why);
+        Building yard = ShipYards.freeYard(w, s);
+        pay(s, bs.shipClass().cost());
+        Ship ship = new Ship(bs.shipId(), bs.name(), bs.shipClass(), bs.shipyardSiteId());
+        ship.state = ShipState.BUILDING;
+        ship.buildDaysLeft = bs.shipClass().buildDays();
+        ship.yardBuildingId = yard.id;
+        w.ships.add(ship);
     }
 
     private static void applyRetireShip(World w, RetireShipCommand rs) {
         Ship s = w.findShip(rs.shipId());
         if (s == null) throw new CommandRejectedException("No such ship: " + rs.shipId());
         if (s.state == ShipState.IN_TRANSIT) throw new CommandRejectedException("Cannot retire ship in transit");
+        if (s.state == ShipState.BUILDING) {
+            // Cancelling a build refunds what it cost (Plan 10 §3.5).
+            Site yardSite = w.findSite(s.currentSiteId);
+            if (yardSite != null) refund(yardSite, s.shipClass.cost().resources());
+            w.ships.remove(s);
+            return;
+        }
         // A LOADING or UNLOADING ship is docked with cargo aboard; hand it to the site it's
         // docked at rather than scrapping it with the hull.
         Site dock = w.findSite(s.currentSiteId);
@@ -166,8 +184,8 @@ public final class CommandPhase {
             for (var entry : s.cargo.entrySet()) {
                 if (entry.getValue() > 0) dock.stockpile.merge(entry.getKey(), entry.getValue(), Double::sum);
             }
-            // Its tank drains back into the dock's FUEL too.
-            if (s.fuel > 1e-9) dock.stockpile.merge(Resource.FUEL, s.fuel, Double::sum);
+            // Its tank drains back into the dock's fuel stocks too.
+            drainTank(s, dock);
         }
         w.ships.remove(s);
     }
@@ -206,7 +224,7 @@ public final class CommandPhase {
             if (e.getValue() > 1e-9) s.stockpile.merge(e.getKey(), e.getValue(), Double::sum);
         }
         // So does whatever fuel is left in its tank.
-        if (colonizer.fuel > 1e-9) s.stockpile.merge(Resource.FUEL, colonizer.fuel, Double::sum);
+        drainTank(colonizer, s);
         w.ships.remove(colonizer); // colonizer is consumed
     }
 
@@ -218,6 +236,8 @@ public final class CommandPhase {
             throw new CommandRejectedException("Ship is orbiting " + (at != null ? at.name : s.orbitingBodyId)
                 + "; found a colony or retire it");
         }
+        if (s.state == ShipState.BUILDING)
+            throw new CommandRejectedException(s.name + " is still being built: " + ShipYards.daysLeftText(w, s));
         if (s.state != ShipState.IDLE) throw new CommandRejectedException("Ship not idle: " + ds.shipId());
         String destBodyId;
         if (ds.destSiteId() != null) {
@@ -272,20 +292,33 @@ public final class CommandPhase {
             // In orbit, an explorer flies on what's in its tank.
             if (s.orbitingBodyId == null || destBodyId == null) return null;
             double est = TransitPhase.estimateFuelBodies(w, s.shipClass, 0.0, s.orbitingBodyId, destBodyId, w.tick + 1);
-            return s.fuel + 1e-9 >= est ? null : TransitPhase.tankShortfall(s, est);
+            return s.fuelValue() + 1e-9 >= est ? null : TransitPhase.tankShortfall(s, est);
         }
         double manifestMass = 0.0;
         for (Double v : manifest.values()) if (v != null) manifestMass += v;
         double estCost = TransitPhase.estimateFuelBodies(w, s.shipClass, manifestMass,
                                                          originSite.bodyId, destBodyId, w.tick);
-        // The ship tops up from the origin's FUEL at departure, after loading any FUEL cargo.
-        double originFuel = originSite.stockpile.getOrDefault(Resource.FUEL, 0.0);
-        Double mf = manifest.get(Resource.FUEL);
-        double manifestFuel = mf == null ? 0.0 : mf;
-        double available = s.fuel + Math.max(0.0, originFuel - manifestFuel);
+        // The ship tops up from the origin's fuel at departure, after loading any fuel cargo.
+        java.util.Map<Resource, Double> left = new java.util.EnumMap<>(Resource.class);
+        for (Resource r : Fuels.ALL) {
+            Double m = manifest.get(r);
+            left.put(r, Math.max(0.0, originSite.stockpile.getOrDefault(r, 0.0) - (m == null ? 0.0 : m)));
+        }
+        double available = s.fuelValue() + Fuels.valueOf(left);
         if (available >= estCost) return null;
-        return String.format("Not enough fuel at %s for this trip: need ≈%.0f, have %.0f",
-                             originSite.name, estCost, available);
+        java.util.Map<Resource, Double> all = new java.util.EnumMap<>(left);
+        for (Resource r : Fuels.ALL) all.merge(r, s.tank.getOrDefault(r, 0.0), Double::sum);
+        return String.format("Not enough fuel at %s for this trip: need ≈%.0f, have %.0f (%s)",
+                             originSite.name, estCost, available, Fuels.describe(all));
+    }
+
+    /** Empties {@code s}'s tank into {@code into}'s stock, fuel by fuel. */
+    private static void drainTank(Ship s, Site into) {
+        for (Resource r : Fuels.ALL) {
+            double v = s.tank.getOrDefault(r, 0.0);
+            if (v > 1e-9) into.stockpile.merge(r, v, Double::sum);
+            s.tank.put(r, 0.0);
+        }
     }
 
     private static String currentBodyOf(World w, Ship s) {

@@ -104,16 +104,16 @@ class SiteEconomyTest {
 
     @Test
     void gasGiantMineNeedsTheTech() {
-        TestWorlds t = new TestWorlds(5.0, BodyType.GAS_GIANT, Map.of(Resource.FUEL, 0.8))
+        TestWorlds t = new TestWorlds(5.0, BodyType.GAS_GIANT, Map.of(Resource.HYDROGEN, 0.8))
             .with(POWER_PLANT, POWER_PLANT, MINE);
         t.site.buildings.get(0).level = 30;  // enough sun at 5 AU
         DayReport before = t.runOnCopy();
         assertEquals(Limit.NEEDS_TECH, before.outcome(2).limit());
-        assertEquals(Resource.FUEL, before.outcome(2).limitResource());
+        assertEquals(Resource.HYDROGEN, before.outcome(2).limitResource());
         t.world.tech.researched.add("atm-mining");
         DayReport after = t.runOnCopy();
         assertNull(after.outcome(2).limit());
-        assertEquals(1.6, after.net(Resource.FUEL), 1e-9);
+        assertEquals(1.6, after.net(Resource.HYDROGEN), 1e-9);
     }
 
     @Test

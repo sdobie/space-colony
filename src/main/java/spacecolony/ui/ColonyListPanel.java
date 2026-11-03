@@ -41,6 +41,7 @@ import spacecolony.sim.Body;
 import spacecolony.sim.Resource;
 import spacecolony.sim.Ship;
 import spacecolony.sim.ShipState;
+import spacecolony.sim.ShipYards;
 import spacecolony.sim.Site;
 import spacecolony.sim.Transit;
 import spacecolony.sim.World;
@@ -186,6 +187,7 @@ public class ColonyListPanel extends JPanel {
 
     private static String stateGlyph(Ship s) {
         return switch (s.state) {
+            case BUILDING    -> "⚒";
             case IDLE        -> "·";
             case LOADING     -> "▾";
             case IN_TRANSIT  -> "→";
@@ -198,6 +200,7 @@ public class ColonyListPanel extends JPanel {
         if (s.orbitingBodyId != null) return "Orbiting " + bodyName(w, s.orbitingBodyId);
         Transit t = s.transit;
         return switch (s.state) {
+            case BUILDING   -> "Building · " + ShipYards.daysLeftText(w, s);
             case IDLE       -> "Docked at " + siteName(w, s.currentSiteId);
             case LOADING    -> "Loading for " + destName(w, t);
             case UNLOADING  -> "Unloading at " + siteName(w, s.currentSiteId);
@@ -208,7 +211,23 @@ public class ColonyListPanel extends JPanel {
 
     /** Summed population and FOOD/WATER/FUEL stock and yesterday's net across all colonies. */
     record EmpireTotals(int population, int populationCap, Map<Resource, Double> stock, Map<Resource, Double> net) {
-        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.FUEL);
+        static final List<Resource> SHOWN = List.of(Resource.FOOD, Resource.WATER, Resource.HYDROGEN, Resource.SYNFUEL);
+
+        /** Hydrogen plus half the synfuel (Plan 10 §4.4): what the FUEL tile shows. */
+        double fuelValue() { return spacecolony.sim.Fuels.valueOf(stock); }
+        double fuelNet() { return spacecolony.sim.Fuels.valueOf(positive(net)) - spacecolony.sim.Fuels.valueOf(negative(net)); }
+
+        private static Map<Resource, Double> positive(Map<Resource, Double> m) {
+            Map<Resource, Double> out = new java.util.EnumMap<>(Resource.class);
+            m.forEach((r, v) -> out.put(r, Math.max(0.0, v)));
+            return out;
+        }
+
+        private static Map<Resource, Double> negative(Map<Resource, Double> m) {
+            Map<Resource, Double> out = new java.util.EnumMap<>(Resource.class);
+            m.forEach((r, v) -> out.put(r, Math.max(0.0, -v)));
+            return out;
+        }
 
         static EmpireTotals of(World w) {
             int pop = 0, cap = 0;
@@ -369,8 +388,9 @@ public class ColonyListPanel extends JPanel {
                     dc = UiColors.FOREGROUND_DIM;
                 } else {
                     Resource r = EmpireTotals.SHOWN.get(i - 1);
-                    v = compact(t.stock().get(r));
-                    double n = t.net().get(r);
+                    boolean fuel = r == Resource.HYDROGEN;
+                    v = compact(fuel ? t.fuelValue() : t.stock().get(r));
+                    double n = fuel ? t.fuelNet() : t.net().get(r);
                     d = Math.abs(n) < 0.05 ? "steady" : (n > 0 ? "▲ " : "▼ ") + String.format("%.1f", Math.abs(n));
                     dc = Math.abs(n) < 0.05 ? UiColors.FOREGROUND_DIM : n > 0 ? FOOD_BAR : UiColors.ERROR;
                 }
@@ -402,11 +422,12 @@ public class ColonyListPanel extends JPanel {
         @Override
         public String getToolTipText(MouseEvent e) {
             EmpireTotals t = EmpireTotals.of(engine.world());
-            return String.format("Population %d / %d · FOOD %.0f (%+.1f/d) · WATER %.0f (%+.1f/d) · FUEL %.0f (%+.1f/d)",
+            return String.format("Population %d / %d · FOOD %.0f (%+.1f/d) · WATER %.0f (%+.1f/d) · FUEL value %.0f (%+.1f/d):"
+                    + " %.0f hydrogen, %.0f synfuel",
                 t.population(), t.populationCap(),
                 t.stock().get(Resource.FOOD), t.net().get(Resource.FOOD),
                 t.stock().get(Resource.WATER), t.net().get(Resource.WATER),
-                t.stock().get(Resource.FUEL), t.net().get(Resource.FUEL));
+                t.fuelValue(), t.fuelNet(), t.stock().get(Resource.HYDROGEN), t.stock().get(Resource.SYNFUEL));
         }
     }
 
@@ -541,20 +562,31 @@ public class ColonyListPanel extends JPanel {
                 case IN_TRANSIT -> UiColors.INFO;
                 case LOADING, UNLOADING -> UiColors.WARNING;
                 case IDLE -> UiColors.PANEL_BORDER.brighter();
+                case BUILDING -> UiColors.PANEL_BORDER;
             };
             g.setColor(UiColors.STARFIELD_BG);
             g.fill(new Ellipse2D.Double(14, iy, ICON, ICON));
             g.setColor(ring);
             g.setStroke(new BasicStroke(1.5f));
             g.draw(new Ellipse2D.Double(14.75, iy + 0.75, ICON - 1.5, ICON - 1.5));
-            hull(g, s, 14 + ICON / 2.0, iy + ICON / 2.0);
+            if (s.state == ShipState.BUILDING) {
+                // Half-drawn while it's still on the slipway.
+                java.awt.Composite c = g.getComposite();
+                g.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
+                hull(g, s, 14 + ICON / 2.0, iy + ICON / 2.0);
+                g.setComposite(c);
+            } else {
+                hull(g, s, 14 + ICON / 2.0, iy + ICON / 2.0);
+            }
 
             int x = 14 + ICON + 10;
             title(g, s.name, UiColors.FOREGROUND, s.shipClass.name(), x, 19);
             dim(g, shipStatusText(w, s), x, 34);
             int bw = getWidth() - x - 12;
             Transit t = s.transit;
-            if (s.state == ShipState.IN_TRANSIT && t != null && t.arrivalTick() > t.departureTick()) {
+            if (s.state == ShipState.BUILDING) {
+                bar(g, x, 42, bw, ShipYards.progress(s), UiColors.WARNING);
+            } else if (s.state == ShipState.IN_TRANSIT && t != null && t.arrivalTick() > t.departureTick()) {
                 double p = (double) (w.tick - t.departureTick()) / (t.arrivalTick() - t.departureTick());
                 bar(g, x, 42, bw, Math.max(0, Math.min(1, p)), UiColors.INFO);
             } else if (s.cargoMass() > 1e-6) {
@@ -566,7 +598,7 @@ public class ColonyListPanel extends JPanel {
         public String getToolTipText(MouseEvent e) {
             Ship s = engine.world().findShip(sel.id());
             return s == null ? null : shipRowText(engine.world(), s) + String.format("  ·  cargo %.0f / %.0f · fuel %.0f",
-                s.cargoMass(), s.shipClass.cargoCap(), s.fuel);
+                s.cargoMass(), s.shipClass.cargoCap(), s.fuelValue());
         }
 
         /** The ship's class drawing, nose up and to the right; flame lit while in flight. */

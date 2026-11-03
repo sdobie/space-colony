@@ -90,12 +90,18 @@ public final class DebugActions {
             return;
         }
         engine.applyDebugEdit("finish construction at " + sel.id(),
-            w -> finishConstruction(w.findSite(sel.id())));
+            w -> finishConstruction(w, w.findSite(sel.id())));
     }
 
-    /** Sets every build and upgrade under way at {@code s} to one day left. */
-    static void finishConstruction(Site s) {
+    /**
+     * Sets every build and upgrade under way at {@code s}, and every ship its shipyards are
+     * building, to finish on the next day.
+     */
+    static void finishConstruction(spacecolony.sim.World w, Site s) {
         for (Building b : s.buildings) if (b.daysLeft > 1) b.daysLeft = 1;
+        for (spacecolony.sim.Ship ship : w.ships)
+            if (ship.state == spacecolony.sim.ShipState.BUILDING && s.id.equals(ship.currentSiteId))
+                ship.buildDaysLeft = Math.min(ship.buildDaysLeft, 1);
     }
 
     private void doStep() {

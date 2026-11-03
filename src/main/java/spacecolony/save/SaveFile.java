@@ -25,15 +25,17 @@ import spacecolony.sim.Transit;
 import spacecolony.sim.World;
 import spacecolony.world.WorldGenerator;
 
-/** Save/load entry points. Schema version 5. */
+/** Save/load entry points. Schema version 6. */
 public final class SaveFile {
     /**
      * v2 (Plan 6) adds randomEventsEnabled, ship orbitingBodyId and transit destBodyId.
      * v3 (Plan 8) adds building id and daysLeft.
      * v4 (Plan 9) adds surveyedBodies and transit originBodyId.
      * v5 (Plan 11) adds building offlineDays, damagedBy and damagedTick, and site dustDays and dustFactor.
+     * v6 (Plan 10) renames FUEL to HYDROGEN, adds SYNFUEL, replaces ship fuel with a per-fuel tank,
+     * and adds ship buildDaysLeft and yardBuildingId (state BUILDING).
      */
-    public static final int SCHEMA_VERSION = 5;
+    public static final int SCHEMA_VERSION = 6;
     /** Oldest schema {@link #fromJson} still reads; v1 files load with the v2 defaults. */
     public static final int MIN_READABLE_VERSION = 1;
     private SaveFile() {}
@@ -143,7 +145,11 @@ public final class SaveFile {
             o.put("state", str(s.state.name()));
             o.put("currentSiteId", optStr(s.currentSiteId));
             o.put("orbitingBodyId", optStr(s.orbitingBodyId));
-            o.put("fuel", num(Double.toString(s.fuel)));
+            o.put("tank", resourceMap(s.tank));
+            if (s.state == ShipState.BUILDING) {
+                o.put("buildDaysLeft", num(s.buildDaysLeft));
+                o.put("yardBuildingId", num(s.yardBuildingId));
+            }
             o.put("cargo", resourceMap(s.cargo));
             if (s.transit != null) {
                 Map<String, JsonValue> t = new LinkedHashMap<>();
@@ -331,7 +337,10 @@ public final class SaveFile {
         Ship s = new Ship(id, name, cls, currentSiteId);
         s.orbitingBodyId = optString(o, "orbitingBodyId");
         s.state = ShipState.valueOf(((JsonValue.JsonString) o.values().get("state")).value());
-        s.fuel = ((JsonValue.JsonNumber) o.values().get("fuel")).asDouble();
+        if (o.values().get("tank") instanceof JsonValue.JsonObject tk) loadResourceMap(tk, s.tank);
+        else if (o.values().get("fuel") instanceof JsonValue.JsonNumber f) s.tank.put(Resource.HYDROGEN, f.asDouble()); // before v5
+        if (o.values().get("buildDaysLeft") instanceof JsonValue.JsonNumber bd) s.buildDaysLeft = (int) bd.asLong();
+        if (o.values().get("yardBuildingId") instanceof JsonValue.JsonNumber yd) s.yardBuildingId = (int) yd.asLong();
         loadResourceMap((JsonValue.JsonObject) o.values().get("cargo"), s.cargo);
         JsonValue tv = o.values().get("transit");
         if (tv instanceof JsonValue.JsonObject to) {
@@ -374,6 +383,9 @@ public final class SaveFile {
             JsonValue v = o.values().get(r.name());
             if (v instanceof JsonValue.JsonNumber jn) target.put(r, jn.asDouble());
         }
+        // Saves before schema v5 called hydrogen FUEL.
+        if (o.values().get("FUEL") instanceof JsonValue.JsonNumber jn && !o.values().containsKey("HYDROGEN"))
+            target.put(Resource.HYDROGEN, jn.asDouble());
     }
 
     // ===== helpers =====

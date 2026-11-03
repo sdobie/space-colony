@@ -50,6 +50,7 @@ public final class BuildingGlyphs {
         GLYPHS.put(BuildingType.POWER_PLANT, BuildingGlyphs::powerPlant);
         GLYPHS.put(BuildingType.SHIPYARD, BuildingGlyphs::shipyard);
         GLYPHS.put(BuildingType.RESEARCH_LAB, BuildingGlyphs::researchLab);
+        GLYPHS.put(BuildingType.FUEL_PLANT, BuildingGlyphs::fuelPlant);
     }
 
     private BuildingGlyphs() {}
@@ -190,6 +191,19 @@ public final class BuildingGlyphs {
         h.draw(new Line2D.Double(10, 6.4, 10, 8.4));
         Shape mouth = new Arc2D.Double(5.4, 8.8, 5.2, 7.6, 0, 180, Arc2D.CHORD);
         fillOutlined(h, mouth, grad(0, 8.8, new Color(255, 236, 140), 0, 12.6, new Color(240, 96, 30)));
+    }
+
+    /** A fat green fermenting tank fed by a pipe, with a fuel-orange gauge (Plan 10). */
+    private static void fuelPlant(Graphics2D h) {
+        ground(h, GROUND);
+        fillOutlined(h, new Rectangle2D.Double(1.8, 8.4, 4.4, 1.6), STEEL_DARK);
+        fillOutlined(h, new Rectangle2D.Double(1.8, 8.4, 1.6, 4.2), STEEL_DARK);
+        Shape tank = new RoundRectangle2D.Double(5.6, 3, 8, 9.6, 4, 3.4);
+        fillOutlined(h, tank, grad(5.6, 0, new Color(170, 222, 96), 13.6, 0, new Color(64, 118, 40)));
+        h.setColor(new Color(40, 78, 24, 160));
+        h.draw(new Line2D.Double(6, 6.4, 13.2, 6.4));
+        h.draw(new Line2D.Double(6, 9.4, 13.2, 9.4));
+        fillOutlined(h, new Ellipse2D.Double(8.2, 6.9, 3, 3), new Color(255, 160, 60));
     }
 
     /** A sawtooth-roofed works with a row of lit windows. */

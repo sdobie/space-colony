@@ -21,7 +21,7 @@ public final class TutorialScenario {
         World w = WorldGenerator.generate(TUTORIAL_SEED);
         w.randomEventsEnabled = false;
         Site hub = w.findSite("site-earth-hub");
-        hub.stockpile.put(Resource.FUEL, 400.0);
+        hub.stockpile.put(Resource.HYDROGEN, 400.0);
         hub.stockpile.put(Resource.FOOD, 300.0);
         hub.stockpile.put(Resource.WATER, 300.0);
         return w;

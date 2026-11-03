@@ -9,5 +9,7 @@ public enum BuildingType {
     FACTORY,
     POWER_PLANT,
     SHIPYARD,
-    RESEARCH_LAB
+    RESEARCH_LAB,
+    /** Brews SYNFUEL from BIOMASS (Plan 10). */
+    FUEL_PLANT
 }

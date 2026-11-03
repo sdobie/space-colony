@@ -158,7 +158,8 @@ class PanelSmokeTest {
             Engine engine = new Engine(WorldGenerator.generate(1L));
             var hub = engine.world().findSite("site-earth-hub");
             for (var t : spacecolony.sim.BuildingType.values()) hub.buildings.add(new spacecolony.sim.Building(t, 1));
-            hub.buildings.get(hub.buildings.size() - 1).enabled = false;
+            hub.buildings.stream().filter(b -> b.type == spacecolony.sim.BuildingType.RESEARCH_LAB)
+                .reduce((a, b) -> b).orElseThrow().enabled = false;
             DetailPanel p = new DetailPanel(engine);
             engine.setSelection(Selection.site("site-earth-hub"));
             p.setSize(330, 900);
@@ -168,7 +169,7 @@ class PanelSmokeTest {
             paintToImage(p, 330, 900);
             String text = allText(p);
             assertTrue(text.contains("Research lab L1   damaged: repair 5 METAL, 3 COMPONENTS"), text);
-            assertTrue(text.contains("Refinery L1   59%: short of ICE"), text);
+            assertTrue(text.contains("Refinery L1   54%: short of ICE"), text);
             assertTrue(text.contains("Furnace L1   idle: no ORE"), text);
         });
     }

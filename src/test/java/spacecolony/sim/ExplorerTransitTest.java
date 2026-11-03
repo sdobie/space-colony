@@ -15,10 +15,11 @@ class ExplorerTransitTest {
     /** Seed 1, explorer x1 ("Scout-1") idle at Earth Hub with 1000 FUEL in stock. */
     static World withExplorer() {
         World w = WorldGenerator.generate(1L);
-        w.findSite(HUB).stockpile.put(Resource.FUEL, 1_000.0);
+        w.findSite(HUB).stockpile.put(Resource.HYDROGEN, 1_000.0);
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, HUB));
         sim.advance(w);
+        TestShips.finishBuilds(w);
         return w;
     }
 
@@ -54,9 +55,9 @@ class ExplorerTransitTest {
         double cost = TransitPhase.fuelCostToBody(w, ShipClass.EXPLORER, 0.0, HUB, "mars",
             x.transit.departureTick(), x.transit.arrivalTick());
         assertTrue(cost > 0);
-        assertEquals(100.0 - cost, x.fuel, 1e-9);
+        assertEquals(100.0 - cost, x.fuelValue(), 1e-9);
         // The hub paid for exactly one full tank, this trip included.
-        assertEquals(1_000.0 - 100.0, w.findSite(HUB).stockpile.get(Resource.FUEL), 1e-6);
+        assertEquals(1_000.0 - 100.0, w.findSite(HUB).stockpile.get(Resource.HYDROGEN), 1e-6);
     }
 
     @Test void shortStock_leavesWithWhatThereIs() {
@@ -64,21 +65,21 @@ class ExplorerTransitTest {
         Site hub = w.findSite(HUB);
         Simulator sim = new Simulator();
         sim.enqueue(DispatchShipCommand.toBody("x1", "mars", Map.of()));
-        hub.stockpile.put(Resource.FUEL, 30.0);
+        hub.stockpile.put(Resource.HYDROGEN, 30.0);
         for (int i = 0; i < 5 && w.findShip("x1").state != ShipState.IN_TRANSIT; i++) sim.advance(w);
         Ship x = w.findShip("x1");
         assertEquals(ShipState.IN_TRANSIT, x.state);
         double cost = TransitPhase.fuelCostToBody(w, ShipClass.EXPLORER, 0.0, HUB, "mars",
             x.transit.departureTick(), x.transit.arrivalTick());
         assertTrue(cost < 30.0, "trip " + cost);
-        assertEquals(30.0 - cost, x.fuel, 1e-9);
-        assertEquals(0.0, hub.stockpile.get(Resource.FUEL), 1e-9);
+        assertEquals(30.0 - cost, x.fuelValue(), 1e-9);
+        assertEquals(0.0, hub.stockpile.get(Resource.HYDROGEN), 1e-9);
     }
 
     @Test void hopsFromOrbit_onItsTank() {
         World w = orbiting("mars");
         Ship x = w.findShip("x1");
-        double before = x.fuel;
+        double before = x.fuelValue();
         Simulator sim = new Simulator();
         sim.enqueue(DispatchShipCommand.toBody("x1", "belt-a", Map.of()));
         sim.advance(w);
@@ -89,7 +90,7 @@ class ExplorerTransitTest {
         assertEquals("mars", x.transit.originBody(w));
         double cost = TransitPhase.fuelCostBodies(w, ShipClass.EXPLORER, 0.0, "mars", "belt-a",
             x.transit.departureTick(), x.transit.arrivalTick());
-        assertEquals(before - cost, x.fuel, 1e-9);
+        assertEquals(before - cost, x.fuelValue(), 1e-9);
         for (int i = 0; i < 80 && x.orbitingBodyId == null; i++) sim.advance(w);
         assertEquals("belt-a", x.orbitingBodyId);
         assertTrue(w.isSurveyed("belt-a"));
@@ -118,7 +119,7 @@ class ExplorerTransitTest {
     @Test void hopItCantAfford_isRejectedWithTheTankMessage() {
         World w = orbiting("mars");
         Ship x = w.findShip("x1");
-        x.fuel = 0.5;
+        x.setTank(Resource.HYDROGEN, 0.5);
         Simulator sim = new Simulator();
         sim.enqueue(DispatchShipCommand.toBody("x1", "jovian", Map.of()));
         sim.advance(w);
@@ -133,18 +134,18 @@ class ExplorerTransitTest {
         Simulator sim = new Simulator();
         sim.enqueue(new DispatchShipCommand("x1", HUB, Map.of()));
         sim.advance(w);
-        double left = x.fuel;
+        double left = x.fuelValue();
         for (int i = 0; i < 80 && !(x.state == ShipState.IDLE && HUB.equals(x.currentSiteId)); i++) sim.advance(w);
         assertEquals(ShipState.IDLE, x.state);
         assertEquals(HUB, x.currentSiteId);
-        assertEquals(left, x.fuel, 1e-9);
+        assertEquals(left, x.fuelValue(), 1e-9);
     }
 
     @Test void orbitingColonizer_stillCantBeDispatched() {
         World w = WorldGenerator.generate(1L);
         Ship c = new Ship("c1", "Ark", ShipClass.COLONIZER, null);
         c.orbitingBodyId = "mars";
-        c.fuel = 500;
+        c.setTank(Resource.HYDROGEN, 500);
         w.ships.add(c);
         Simulator sim = new Simulator();
         sim.enqueue(DispatchShipCommand.toBody("c1", "belt-a", Map.of()));
@@ -164,6 +165,8 @@ class ExplorerTransitTest {
         World w = withExplorer();
         Simulator sim = new Simulator();
         sim.enqueue(new BuildShipCommand("h1", "H1", ShipClass.HAULER, HUB));
+        sim.advance(w);
+        TestShips.finishBuilds(w);
         sim.enqueue(DispatchShipCommand.toBody("h1", "mars", Map.of()));
         sim.advance(w);
         assertTrue(rejected(w, "Only colonizers and explorers can travel to a body without a site"));

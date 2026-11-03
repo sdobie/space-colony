@@ -110,7 +110,8 @@ class DeterminismTest {
         java.util.List<Command> out = new java.util.ArrayList<>();
         Ship x = w.findShip("x1");
         if (t == 0) out.add(new spacecolony.sim.commands.BuildShipCommand("x1", "Scout-1", ShipClass.EXPLORER, "site-earth-hub"));
-        if (t == 1) out.add(spacecolony.sim.commands.DispatchShipCommand.toBody("x1", "mars", java.util.Map.of()));
+        // Explorers take 10 days to build (Plan 10).
+        if (t == 12) out.add(spacecolony.sim.commands.DispatchShipCommand.toBody("x1", "mars", java.util.Map.of()));
         if (x != null && "mars".equals(x.orbitingBodyId))
             out.add(new spacecolony.sim.commands.DispatchShipCommand("x1", "site-earth-hub", java.util.Map.of()));
         return out;

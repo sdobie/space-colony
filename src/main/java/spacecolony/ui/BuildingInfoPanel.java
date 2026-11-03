@@ -131,7 +131,7 @@ public class BuildingInfoPanel extends JPanel implements Scrollable {
         }
         if (!makes.isEmpty()) out.add("makes " + String.join(", ", makes) + (yields ? " (× ground yield)" : ""));
         if (spec.type() == BuildingType.MINE) out.add("at a gas giant, with Atmospheric Mining: "
-            + fmt(BuildingCatalog.MINE_GAS_FUEL) + " FUEL × yield");
+            + fmt(BuildingCatalog.MINE_GAS_FUEL) + " HYDROGEN × yield");
         String tn = DetailPanel.techNote(spec.type(), tech).trim();
         if (!tn.isEmpty()) out.add("techs: " + tn);
         return out;

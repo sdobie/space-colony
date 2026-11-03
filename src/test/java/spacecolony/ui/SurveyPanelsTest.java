@@ -69,7 +69,7 @@ class SurveyPanelsTest {
             World w = WorldGenerator.generate(1L);
             Ship x = new Ship("x1", "Scout-1", ShipClass.EXPLORER, null);
             x.orbitingBodyId = "mars";
-            x.fuel = 64;
+            x.setTank(Resource.HYDROGEN, 64);
             w.ships.add(x);
             Ship c = new Ship("c1", "Ark", ShipClass.COLONIZER, null);
             c.orbitingBodyId = "mars";
@@ -78,7 +78,7 @@ class SurveyPanelsTest {
             DetailPanel p = new DetailPanel(engine);
             p.setSize(330, 600);
             engine.setSelection(Selection.ship("x1"));
-            assertTrue(PanelSmokeTest.allText(p).contains("Tank: 64 / 100 FUEL"));
+            assertTrue(PanelSmokeTest.allText(p).contains("Tank: 64 / 100 (64 hydrogen)"));
             assertNotNull(button(p, "Dispatch..."));
             assertNull(button(p, DetailPanel.FOUND_COLONY_LABEL));
             engine.setSelection(Selection.ship("c1"));

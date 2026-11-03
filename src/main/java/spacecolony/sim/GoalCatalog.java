@@ -41,7 +41,7 @@ public final class GoalCatalog {
             w -> totalPop(w) >= 10000, w -> totalPop(w) / 10000.0));
 
         add(new Goal("fleet-10", "Fleet of 10", "Own at least 10 ships.", GoalCategory.FLEET, 3000, 0,
-            w -> w.ships.size() >= 10, w -> w.ships.size() / 10.0));
+            w -> builtShips(w) >= 10, w -> builtShips(w) / 10.0));
 
         add(new Goal("five-bodies", "Five-Body Network",
             "Have sites on 5 distinct bodies.", GoalCategory.EXPANSION, 12000, 1000,
@@ -66,4 +66,9 @@ public final class GoalCatalog {
     public static Goal get(String id) { return BY_ID.get(id); }
     public static java.util.Collection<Goal> all() { return BY_ID.values(); }
     private GoalCatalog() {}
+
+    /** Ships that are finished; one under construction doesn't count yet (Plan 10). */
+    static long builtShips(World w) {
+        return w.ships.stream().filter(s -> s.state != ShipState.BUILDING).count();
+    }
 }

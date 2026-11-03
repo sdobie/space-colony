@@ -151,9 +151,17 @@ public class StartupDriver {
         }
 
         expectStep(frame, 8);
+        tutorialShot(frame, 8, "wait-colonizer");
+        // The colonizer takes 40 days; run the clock out of sight rather than wait at 1×.
+        onEdt(() -> {
+            for (int i = 0; i < 60 && engine.world().findShip("c1") != null
+                    && engine.world().findShip("c1").state == spacecolony.sim.ShipState.BUILDING; i++)
+                engine.advanceSilently(1);
+        });
+        expectStep(frame, 9);
         waitFor(() -> target(frame, ColonyListPanel.cardName("c1")) != null, 3000);
         click(target(frame, ColonyListPanel.cardName("c1")));
-        tutorialShot(frame, 8, "dispatch");
+        tutorialShot(frame, 9, "dispatch");
         click(target(frame, TutorialScript.T_DISPATCH));
         JDialog dispatch = waitForDialog("Dispatch");
         if (dispatch != null) {
@@ -167,10 +175,10 @@ public class StartupDriver {
 
         // Mars is only days away in this seed, so at 1× the colonizer can arrive before the
         // driver sees step 9; the script then moves straight on, which is what a player gets too.
-        waitFor(() -> stepNumber(frame) >= 9, 6000);
-        check("tutorial moves past dispatch", stepNumber(frame) >= 9);
-        if (stepNumber(frame) == 9) {
-            tutorialShot(frame, 9, "fast-forward");
+        waitFor(() -> stepNumber(frame) >= 10, 6000);
+        check("tutorial moves past dispatch", stepNumber(frame) >= 10);
+        if (stepNumber(frame) == 10) {
+            tutorialShot(frame, 10, "fast-forward");
             click(target(frame, TutorialScript.T_X16));
         }
         // Shorten the flight: silent ticks until the colonizer is in orbit.
@@ -179,24 +187,24 @@ public class StartupDriver {
         });
         check("colonizer reaches Mars orbit", "mars".equals(engine.world().findShip("c1").orbitingBodyId));
 
-        expectStep(frame, 10);
+        expectStep(frame, 11);
         waitFor(() -> target(frame, TutorialScript.T_FOUND_COLONY) != null, 3000);
-        tutorialShot(frame, 10, "found-colony");
+        tutorialShot(frame, 11, "found-colony");
         click(target(frame, TutorialScript.T_FOUND_COLONY));
         waitFor(() -> target(frame, TutorialScript.T_SPHERE) != null, 3000);
         click(target(frame, TutorialScript.T_SPHERE));
         JDialog place = waitForDialog("Place site");
         if (place != null) click(button(place, "OK"));
 
-        expectStep(frame, 11);
-        tutorialShot(frame, 11, "goals");
+        expectStep(frame, 12);
+        tutorialShot(frame, 12, "goals");
         click(target(frame, TutorialScript.T_GOALS));
         JDialog goals = waitForDialog("Goals");
         if (goals != null) click(button(goals, "Close"));
         click(button(frame.getLayeredPane(), "Next step"));
 
-        expectStep(frame, 12);
-        tutorialShot(frame, 12, "finish");
+        expectStep(frame, 13);
+        tutorialShot(frame, 13, "finish");
         check("a colony stands on Mars",
             !engine.world().findBody("mars").sites.isEmpty());
 
@@ -233,8 +241,8 @@ public class StartupDriver {
     // ---- tutorial helpers ----
 
     static void expectStep(SpaceColonyFrame f, int n) throws Exception {
-        waitFor(() -> ("Step " + n + " of 12").equals(stepHeader(f)), 4000);
-        check("tutorial reaches step " + n, ("Step " + n + " of 12").equals(stepHeader(f)));
+        waitFor(() -> ("Step " + n + " of " + spacecolony.tutorial.TutorialScript.steps().size()).equals(stepHeader(f)), 4000);
+        check("tutorial reaches step " + n, ("Step " + n + " of " + spacecolony.tutorial.TutorialScript.steps().size()).equals(stepHeader(f)));
     }
 
     static int stepNumber(SpaceColonyFrame f) {

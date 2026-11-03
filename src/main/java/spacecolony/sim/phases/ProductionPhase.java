@@ -8,6 +8,8 @@ import spacecolony.sim.EventKind;
 import spacecolony.sim.EventSeverity;
 import spacecolony.sim.PopCapBreakdown;
 import spacecolony.sim.Resource;
+import spacecolony.sim.Ship;
+import spacecolony.sim.ShipState;
 import spacecolony.sim.Site;
 import spacecolony.sim.TechEffects;
 import spacecolony.sim.TechState;
@@ -54,6 +56,7 @@ public final class ProductionPhase {
 
                 // 9. Construction: a day off every build and upgrade under way (damage pauses it).
                 advanceConstruction(w, b, s);
+                advanceShipBuilds(w, b, s);
             }
         }
     }
@@ -67,6 +70,22 @@ public final class ProductionPhase {
             String msg = bd.level == 1 ? name + " finished at " + s.name
                                        : name + " upgraded to L" + bd.level + " at " + s.name;
             w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.BUILDING_COMPLETED, msg, b.id, s.id, null));
+        }
+    }
+
+    /** A day's work on every ship under construction at {@code s}: its yard's level (damage pauses it). */
+    private static void advanceShipBuilds(World w, Body b, Site s) {
+        for (Ship ship : w.ships) {
+            if (ship.state != ShipState.BUILDING || !s.id.equals(ship.currentSiteId)) continue;
+            Building yard = s.findBuilding(ship.yardBuildingId);
+            if (yard == null || !yard.isOperational()) continue;
+            ship.buildDaysLeft -= yard.level;
+            if (ship.buildDaysLeft > 0) continue;
+            ship.buildDaysLeft = 0;
+            ship.yardBuildingId = 0;
+            ship.state = ShipState.IDLE;
+            w.emit(new Event(w.tick, EventSeverity.INFO, EventKind.SHIP_COMPLETED,
+                ship.name + " is ready at " + s.name, b.id, s.id, ship.id));
         }
     }
 

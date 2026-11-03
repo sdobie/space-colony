@@ -73,15 +73,21 @@ public final class TutorialScript {
                 c -> c.world().tech.activeId != null || !c.world().tech.researched.isEmpty()),
             auto("build-colonizer", "Build a colonizer",
                 "<p>New colonies start with a colonizer ship. With Earth Hub selected, click"
-                + " <b>Build ship...</b>, choose <b>COLONIZER</b> and press OK.</p>",
+                + " <b>Build ship...</b>, choose <b>COLONIZER</b> and press OK.</p>"
+                + "<p>It costs 60 METAL and 20 COMPONENTS and takes 40 days at Earth Hub's shipyard.</p>",
                 List.of(T_BUILD_SHIP), "Select Earth Hub in the colony list first.",
                 c -> hasColonizer(c.world()) || settledBeyondEarth(c.world())),
+            auto("wait-colonizer", "Wait for your colonizer",
+                "<p>Its card in the colony list counts the days down. Try <b>16×</b> to speed things up;"
+                + " an event says when it's ready.</p>",
+                List.of(T_X16), null,
+                c -> colonizerBuilt(c.world()) || settledBeyondEarth(c.world())),
             auto("dispatch", "Send it to Mars",
                 "<p>Select your colonizer in the colony list and click <b>Dispatch...</b>, then choose"
                 + " <b>Mars (unsettled)</b> and pack FOOD 40, WATER 30, METAL 20 and COMPONENTS 10:"
                 + " whatever it carries becomes the new colony's first stock, and its METAL and"
                 + " COMPONENTS pay for its first buildings.</p>"
-                + "<p>Fuel for the trip comes from Earth Hub's stockpile when the ship leaves.</p>",
+                + "<p>Fuel for the trip comes from Earth Hub's hydrogen when the ship leaves.</p>",
                 List.of(T_DISPATCH), "Select your colonizer in the colony list.",
                 c -> colonizerHeadingOut(c.world()) || orbiting(c.world()) || settledBeyondEarth(c.world())),
             auto("fast-forward", "Speed things up",
@@ -121,6 +127,11 @@ public final class TutorialScript {
 
     private static boolean hasColonizer(World w) {
         return w.ships.stream().anyMatch(s -> s.shipClass == ShipClass.COLONIZER);
+    }
+
+    /** A colonizer exists and isn't still being built (or has already flown). */
+    private static boolean colonizerBuilt(World w) {
+        return w.ships.stream().anyMatch(s -> s.shipClass == ShipClass.COLONIZER && s.state != ShipState.BUILDING);
     }
 
     /** A colonizer loading for, or flying to, a body with no site. */

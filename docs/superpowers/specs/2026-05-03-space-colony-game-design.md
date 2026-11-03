@@ -93,7 +93,8 @@ Working list (final names locked in implementation plan):
 - **WATER** — refined from ice; consumed by population and farms
 - **FOOD** — grown by farms; consumed by population
 - **BIOMASS** — input to farms (closes loop on repeat planting; can be supplemented from Earth-analog)
-- **FUEL** — propellant for ships; produced from atmospheric mining (gas giant) or chemical synthesis
+- **HYDROGEN** (was FUEL) — the best ship fuel, one unit per unit of fuel value; mined at gas giants with Atmospheric Mining
+- **SYNFUEL** — ship fuel worth half a unit of hydrogen; brewed from BIOMASS by a FUEL_PLANT anywhere (Plan 10, `2026-11-01-plan-10-ship-build-times-and-fuels-design.md`)
 - **COMPONENTS** — assembled from metal + silicate; used to construct buildings, ships, maintenance
 - **ENERGY** — flow-only (not stockpiled). Production must meet consumption per tick or brownout.
 
@@ -104,11 +105,11 @@ Production chains are intentionally light: ORE → METAL, ICE → WATER, METAL+S
 A discrete fleet. Each ship is its own entity with:
 
 - `class` ∈ {HAULER, TANKER, COLONIZER, EXPLORER}, defining `dryMass`, `cargoCap`, `thrust` (EXPLORER, added in Plan 9, surveys the bodies it reaches; see `2026-10-01-plan-9-explorer-and-surveys-design.md`)
-- `state` ∈ {IDLE, LOADING, IN_TRANSIT, UNLOADING}
+- `state` ∈ {BUILDING, IDLE, LOADING, IN_TRANSIT, UNLOADING} (BUILDING since Plan 10)
 - `currentSiteId` when not in transit
 - `Transit` when in transit: `originSiteId`, `destSiteId`, `departureTick`, `arrivalTick`, `cargoSnapshot`
 - `cargo: Map<Resource, Double>`
-- `fuel: double`
+- `tank: Map<Resource, Double>` (hydrogen and synfuel; trip costs are in fuel value since Plan 10)
 
 **Transit math** (computed at the moment the ship physically departs — i.e., when LOADING completes, not when the dispatch command is enqueued):
 - Compute origin position at departure tick.
@@ -117,7 +118,7 @@ A discrete fleet. Each ship is its own entity with:
 - `fuelCost = k_fuel · (dryMass + cargoMass) · distance`. Fuel is deducted immediately at departure.
 - The dispatch command itself does an estimated-fuel check at command time (using current positions) and rejects if the ship clearly can't afford the manifest, emitting a warning event ("Ship X has insufficient fuel for this manifest"). A second check at actual departure can still abort the trip if positions have drifted enough during loading to make the trip infeasible.
 
-Ships are built at SHIPYARD sites; cost is a manifest of COMPONENTS + METAL paid from local stockpile and credits paid from world.
+Ships are built at SHIPYARD sites (Plan 10): METAL and COMPONENTS paid from the colony up front (explorer 15/5, hauler 30/10, tanker 35/10, colonizer 60/20), then 10, 20, 25 or 40 work-days; a shipyard builds one ship at a time and does its level in work each day.
 
 ### 3.8 Tech tree
 

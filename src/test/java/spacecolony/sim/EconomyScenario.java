@@ -2,7 +2,6 @@ package spacecolony.sim;
 
 import java.util.List;
 import java.util.Map;
-import spacecolony.sim.commands.BuildShipCommand;
 import spacecolony.sim.commands.DispatchShipCommand;
 import spacecolony.sim.commands.QueueResearchCommand;
 import spacecolony.world.WorldGenerator;
@@ -33,7 +32,7 @@ public final class EconomyScenario {
         mars.stockpile.put(Resource.ORE, 100.0);
         mars.stockpile.put(Resource.FOOD, 60.0);
         mars.stockpile.put(Resource.WATER, 40.0);
-        mars.stockpile.put(Resource.FUEL, 900.0);
+        mars.stockpile.put(Resource.HYDROGEN, 900.0);
         world.findBody("mars").sites.add(mars);
         Site jov = new Site(JOVIAN, "Cloudtop", "jovian", 0.3, 0.4, 100);
         jov.buildings.add(new Building(BuildingType.POWER_PLANT, 2));
@@ -46,7 +45,6 @@ public final class EconomyScenario {
         for (BuildingType t : List.of(BuildingType.HABITAT, BuildingType.FARM, BuildingType.MINE,
                 BuildingType.REFINERY, BuildingType.POWER_PLANT, BuildingType.SHIPYARD, BuildingType.RESEARCH_LAB))
             hub.addBuilding(new Building(t, 1));
-        sim.enqueue(new BuildShipCommand("h1", "Mule", ShipClass.HAULER, HUB));
         sim.enqueue(new QueueResearchCommand("basic-mining"));
     }
 
@@ -64,5 +62,8 @@ public final class EconomyScenario {
             }
         }
         sim.advance(world);
+        // The hauler appears ready-built and free after the first tick, as a build command did
+        // before Plan 10, so the fixture doesn't depend on ship costs or build times.
+        if (t == 0 && world.findShip("h1") == null) world.ships.add(new Ship("h1", "Mule", ShipClass.HAULER, HUB));
     }
 }

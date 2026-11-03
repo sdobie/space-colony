@@ -37,7 +37,7 @@ public final class YieldOverlay {
             case SILICATE -> new Color(0xFF, 0xE0, 0x4D); // sand yellow
             case ICE -> new Color(0x5C, 0xE1, 0xFF);      // ice blue
             case BIOMASS -> new Color(0x6B, 0xE0, 0x4A);  // leaf green
-            case FUEL -> new Color(0xE0, 0x6C, 0xFF);     // violet
+            case HYDROGEN -> new Color(0xE0, 0x6C, 0xFF);     // violet
             default -> new Color(0xF0, 0xF0, 0xF0);
         };
     }
