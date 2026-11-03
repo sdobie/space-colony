@@ -32,6 +32,14 @@ class ConstructionTest {
         assertEquals(3, Construction.upgradeCost(FARM, 5).days());
     }
 
+    /** A spent-out colony can always start making COMPONENTS again; upgrades still take them. */
+    @Test void factoryNeedsOnlyMetalToBuild() {
+        assertEquals(Map.of(Resource.METAL, 30.0), Construction.buildCost(FACTORY).resources());
+        assertNull(Construction.whyNotBuild(site(30, 0), FACTORY));
+        assertEquals(mc(30, 5), Construction.upgradeCost(FACTORY, 2).resources());
+        assertNotNull(Construction.whyNotUpgrade(site(100, 0), new Building(FACTORY, 1)));
+    }
+
     @Test void investedAndDemolishRefund() {
         Building farm = new Building(FARM, 3);
         assertEquals(mc(53, 18), Construction.invested(farm));

@@ -73,7 +73,7 @@ A site holds a list of **Buildings**. Each building has a type and a level. Buil
 - FARM — produces FOOD, consumes WATER + ENERGY
 - MINE — produces ORE / SILICATE / ICE depending on body and yield
 - REFINERY — converts ORE → METAL, ICE → WATER
-- FACTORY — converts METAL + SILICATE → COMPONENTS (Plan 8)
+- FACTORY — converts METAL + SILICATE → COMPONENTS (Plan 8). Level 1 costs METAL only, so a colony out of COMPONENTS can recover; upgrades still cost COMPONENTS
 - POWER_PLANT — produces ENERGY (solar; output scales with distance from sun)
 - SHIPYARD — required to build/dock ships at this site
 - RESEARCH_LAB — produces research points
