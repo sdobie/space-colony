@@ -61,7 +61,7 @@ public final class BuildingMenu {
                 () -> engine.enqueue(new CancelConstructionCommand(s.id, b.id)));
         } else {
             Map<Resource, Double> refund = Construction.demolishRefund(b);
-            item(menu, DEMOLISH, "Demolish… · refund " + BuildCost.describe(refund), Construction.whyNotDemolish(b),
+            item(menu, DEMOLISH, "Demolish… · refund " + BuildCost.describe(refund), Construction.whyNotDemolish(engine.world(), s, b),
                 () -> {
                     String msg = "Demolish " + name + " L" + b.level + " at " + s.name + "?\nRefund: "
                         + BuildCost.describe(refund) + "." + lostNote(s, refund);

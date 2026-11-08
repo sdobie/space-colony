@@ -11,7 +11,9 @@ import spacecolony.engine.Engine;
 import spacecolony.sim.Building;
 import spacecolony.sim.BuildingType;
 import spacecolony.sim.Resource;
+import spacecolony.sim.ShipClass;
 import spacecolony.sim.Site;
+import spacecolony.sim.commands.BuildShipCommand;
 import spacecolony.testutil.Edt;
 import spacecolony.world.WorldGenerator;
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,6 +56,18 @@ class BuildingMenuTest {
             assertNull(item(m, BuildingMenu.CANCEL));
             up.doClick();
             assertEquals(1, engine.commandQueueDepth());
+        });
+    }
+
+    @Test
+    void busyShipyardCannotBeDemolished() throws Exception {
+        Edt.run(() -> {
+            Building yard = hub.buildings.stream().filter(b -> b.type == BuildingType.SHIPYARD).findFirst().orElseThrow();
+            engine.enqueue(new BuildShipCommand("x1", "Explorer 1", ShipClass.EXPLORER, hub.id));
+            engine.tick();
+            JMenuItem demolish = item(BuildingMenu.create(engine, hub, yard), BuildingMenu.DEMOLISH);
+            assertFalse(demolish.isEnabled());
+            assertEquals("Shipyard is building Explorer 1: finish or cancel it first", demolish.getToolTipText());
         });
     }
 

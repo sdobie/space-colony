@@ -87,6 +87,14 @@ public final class Construction {
         return b.isUnderConstruction() ? "Under construction: cancel it instead" : null;
     }
 
+    /** As {@link #whyNotDemolish(Building)}, and a shipyard can't go while a ship is on it. */
+    public static String whyNotDemolish(World w, Site s, Building b) {
+        String why = whyNotDemolish(b);
+        if (why != null) return why;
+        Ship onYard = b.type == BuildingType.SHIPYARD ? ShipYards.building(w, s, b) : null;
+        return onYard != null ? "Shipyard is building " + onYard.name + ": finish or cancel it first" : null;
+    }
+
     /**
      * "Need 12 more METAL (have 8 of 20)", naming the first missing resource and adding
      * "and 3 more COMPONENTS" for each other one; null when {@code stock} covers the cost.

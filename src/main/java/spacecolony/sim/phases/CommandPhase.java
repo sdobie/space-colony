@@ -115,11 +115,8 @@ public final class CommandPhase {
     private static void applyDemolish(World w, DemolishBuildingCommand c) {
         Site s = site(w, c.siteId());
         Building b = building(s, c.buildingId());
-        String why = Construction.whyNotDemolish(b);
+        String why = Construction.whyNotDemolish(w, s, b);
         if (why != null) throw new CommandRejectedException(why);
-        Ship onYard = b.type == BuildingType.SHIPYARD ? ShipYards.building(w, s, b) : null;
-        if (onYard != null)
-            throw new CommandRejectedException("Shipyard is building " + onYard.name + ": finish or cancel it first");
         refund(s, Construction.demolishRefund(b));
         s.buildings.remove(b);
     }

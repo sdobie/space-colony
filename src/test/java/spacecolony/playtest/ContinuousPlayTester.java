@@ -381,7 +381,7 @@ public class ContinuousPlayTester {
             return costed(new CancelConstructionCommand(s.id, b.id), "explore: cancel " + b.type + " #" + b.id + " at " + s.id,
                 s, Construction.cancelRefund(b), +1);
         if (pick == 8 && b.type == BuildingType.HABITAT && count(s, BuildingType.HABITAT) > 2
-                && s.population < s.populationCap * 0.5 && Construction.whyNotDemolish(b) == null)
+                && s.population < s.populationCap * 0.5 && Construction.whyNotDemolish(w, s, b) == null)
             return costed(new DemolishBuildingCommand(s.id, b.id), "explore: demolish spare HABITAT #" + b.id + " at " + s.id,
                 s, Construction.demolishRefund(b), +1);
         if (pick == 9) {
@@ -407,7 +407,7 @@ public class ContinuousPlayTester {
         }
         if (pick == 1 && !s.buildings.isEmpty()) {
             Building b = s.buildings.get(rng.nextInt(s.buildings.size()));
-            if (Construction.whyNotDemolish(b) == null)
+            if (Construction.whyNotDemolish(w, s, b) == null)
                 return costed(new DemolishBuildingCommand(s.id, b.id), "chaos: demolish " + b.type + " #" + b.id + " at " + s.id,
                     s, Construction.demolishRefund(b), +1);
         }
