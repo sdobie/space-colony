@@ -15,7 +15,7 @@ public final class Construction {
     /** Building slots per colony; buildings under construction use one too. */
     public static final int SLOTS = 10;
     public static final int MAX_LEVEL = 5;
-    /** An upgrade to level L costs the base cost × L × this. */
+    /** An upgrade to level L costs the type's upgrade base × L × this. */
     static final double UPGRADE_STEP = 0.5;
     static final double REPAIR = 0.25;
     static final double DEMOLISH_REFUND = 0.5;
@@ -25,7 +25,7 @@ public final class Construction {
     public static BuildCost buildCost(BuildingType t) { return BuildingCatalog.get(t).cost(); }
 
     public static BuildCost upgradeCost(BuildingType t, int toLevel) {
-        return buildCost(t).scaled(toLevel * UPGRADE_STEP);
+        return BuildingCatalog.get(t).upgradeBase().scaled(toLevel * UPGRADE_STEP);
     }
 
     /** Repairs are instant, so the cost has no days. */

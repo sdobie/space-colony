@@ -88,14 +88,17 @@ public final class BuildingCatalog {
                 new Rate(Resource.ORE, FURNACE_ORE, Kind.INPUT),
                 new Rate(Resource.METAL, FURNACE_ORE * FURNACE_METAL_PER_ORE, Kind.OUTPUT)),
             new BuildCost(Map.of(Resource.COMPONENTS, 5.0), 3));
+        // Level 1 needs no COMPONENTS, so a colony that has spent them all can still make more;
+        // upgrades scale the old cost and still take COMPONENTS.
         add(BuildingType.FACTORY, "Factory",
             "Assembles components from metal and silicate. Components pay for new buildings and"
-                + " upgrades.",
+                + " upgrades. It needs only metal to build, so a colony that has spent its components"
+                + " can still make more.",
             POWER_DRAW, List.of(
                 new Rate(Resource.METAL, FACTORY_METAL, Kind.INPUT),
                 new Rate(Resource.SILICATE, FACTORY_SILICATE, Kind.INPUT),
                 new Rate(Resource.COMPONENTS, FACTORY_COMPONENTS, Kind.OUTPUT)),
-            BuildCost.of(30, 5, 5));
+            new BuildCost(Map.of(Resource.METAL, 30.0), 5), BuildCost.of(30, 5, 5));
         add(BuildingType.FUEL_PLANT, "Fuel plant",
             "Brews synfuel from biomass. Synfuel burns at half the value of hydrogen, but any colony"
                 + " with biomass can make it. It only takes biomass the farms have left over.",
@@ -120,7 +123,12 @@ public final class BuildingCatalog {
 
     private static void add(BuildingType t, String name, String summary, double draw, List<Rate> rates,
                             BuildCost cost) {
-        SPECS.put(t, new BuildingSpec(t, name, summary, draw, rates, cost));
+        add(t, name, summary, draw, rates, cost, cost);
+    }
+
+    private static void add(BuildingType t, String name, String summary, double draw, List<Rate> rates,
+                            BuildCost cost, BuildCost upgradeBase) {
+        SPECS.put(t, new BuildingSpec(t, name, summary, draw, rates, cost, upgradeBase));
     }
 
     public static BuildingSpec get(BuildingType t) { return SPECS.get(t); }
