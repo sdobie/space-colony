@@ -64,4 +64,18 @@ class HabitatCapTest {
         // (200 + 100) * 1.20 * 1.30 = 468
         assertEquals(468, s.populationCap);
     }
+
+    @Test
+    void growth_stopsAtCap_evenWhenStepIsLargerThanGap() {
+        World w = WorldGenerator.generate(1L);
+        Site s = w.findSite("site-earth-hub");
+        s.buildings.add(new Building(BuildingType.HABITAT, 3));   // 200 + 100 + 300 = 600
+        s.population = 599;                                        // growth step is 599/200 = 2
+        s.morale = 1.0;
+        s.stockpile.put(Resource.FOOD, 1000.0);
+        s.stockpile.put(Resource.WATER, 1000.0);
+        new Simulator().advance(w);
+        assertEquals(600, s.populationCap);
+        assertEquals(600, s.population, "growth must not overshoot the cap");
+    }
 }

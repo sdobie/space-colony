@@ -229,10 +229,15 @@ public class ContinuousPlayTester {
             Plan p = build(s, BuildingType.REFINERY, "no refinery");
             if (p != null) return p;
         }
-        // Can't afford a refinery: a furnace makes metal slowly without costing any.
-        if (count(s, BuildingType.REFINERY) == 0 && count(s, BuildingType.FURNACE) == 0
-                && Construction.whyNotBuild(s, BuildingType.REFINERY) != null) {
-            Plan p = build(s, BuildingType.FURNACE, "no METAL for a refinery");
+        // Can't afford a refinery, or the only ones are broken and can't be repaired: a furnace
+        // makes metal slowly without costing any.
+        boolean noRefinery = count(s, BuildingType.REFINERY) == 0
+                && Construction.whyNotBuild(s, BuildingType.REFINERY) != null;
+        boolean refineriesStuck = count(s, BuildingType.REFINERY) > 0 && s.buildings.stream()
+                .filter(b -> b.type == BuildingType.REFINERY)
+                .allMatch(b -> b.level > 0 && !b.enabled && Construction.whyNotRepair(s, b) != null);
+        if ((noRefinery || refineriesStuck) && count(s, BuildingType.FURNACE) == 0) {
+            Plan p = build(s, BuildingType.FURNACE, noRefinery ? "no METAL for a refinery" : "refinery broken, no METAL to repair it");
             if (p != null) return p;
         }
         boolean neglect = style == Style.NEGLECTFUL;

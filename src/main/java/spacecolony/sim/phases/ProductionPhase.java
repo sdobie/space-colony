@@ -104,7 +104,7 @@ public final class ProductionPhase {
 
     private static void updatePopulation(Site s) {
         if (s.morale > 0.7 && s.population < s.populationCap) {
-            s.population += Math.max(1, s.population / 200);
+            s.population = Math.min(s.populationCap, s.population + Math.max(1, s.population / 200));
         } else if (s.morale < 0.3) {
             s.population = Math.max(0, s.population - Math.max(1, s.population / 100));
         }
